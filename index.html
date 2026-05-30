@@ -320,7 +320,8 @@ function detectMerges(){
       const a=plushies[i],b=plushies[j];
       if(a.level!==b.level||a.level>=11) continue;
       const dx=b.x-a.x,dy=b.y-a.y;
-      if(dx*dx+dy*dy<(a.r+b.r+1)*(a.r+b.r+1)){
+      const mr=(a.r+b.r)*1.2; // merge circle 120% of physics r — polygon stays unchanged
+      if(dx*dx+dy*dy<mr*mr){
         mergeQ.push([i,j]); used.add(i); used.add(j);
       }
     }
@@ -784,7 +785,12 @@ function setMx(raw){mx=Math.max(WALL,Math.min(W-WALL,raw));}
 cv.addEventListener('mousemove',e=>{const r=cv.getBoundingClientRect();setMx((e.clientX-r.left)*(W/r.width));});
 cv.addEventListener('click',drop);
 cv.addEventListener('touchmove',e=>{e.preventDefault();const r=cv.getBoundingClientRect();setMx((e.touches[0].clientX-r.left)*(W/r.width));},{passive:false});
-cv.addEventListener('touchend',e=>{e.preventDefault();drop();});
+cv.addEventListener('touchend',e=>{
+  e.preventDefault();
+  const r=cv.getBoundingClientRect();
+  setMx((e.changedTouches[0].clientX-r.left)*(W/r.width));
+  drop();
+});
 
 // ── UI ────────────────────────────────────────────────────────────────
 function rnd(){const r=Math.random();return r<.5?1:r<.82?2:3;}
