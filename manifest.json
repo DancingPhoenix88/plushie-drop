@@ -1,0 +1,14 @@
+{
+  "name": "Plushie Drop",
+  "short_name": "Plushie",
+  "description": "Drop and merge cute plushies!",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#e8d4b8",
+  "theme_color": "#c87830",
+  "icons": [
+    { "src": "Sprites/level_11.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "Sprites/level_11.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
