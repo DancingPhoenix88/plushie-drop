@@ -50,9 +50,9 @@ h1{font-size:12px;font-weight:500;color:#8a6848;letter-spacing:.06em;text-transf
 #tb-next .sl{font-size:9px;color:#b09878;text-transform:uppercase;letter-spacing:.05em;}
 #tb-next .sn{font-size:8px;color:#b09878;}
 #tb-ctrl{display:flex;align-items:center;gap:6px;margin-left:auto;}
-#tb-ctrl button{background:none;border:.5px solid #dfc8b0;border-radius:8px;font-size:18px;padding:2px 6px;cursor:pointer;line-height:1;}
-#tb-ctrl label{display:flex;align-items:center;gap:3px;font-size:9px;color:#b09878;cursor:pointer;text-transform:uppercase;}
-#tb-ctrl input[type=checkbox]{width:13px;height:13px;accent-color:#c05020;}
+#tb-ctrl button{background:none;border:.5px solid #dfc8b0;border-radius:8px;font-size:24px;padding:4px 8px;cursor:pointer;line-height:1;}
+#tb-ctrl label{display:flex;align-items:center;gap:4px;font-size:11px;color:#b09878;cursor:pointer;text-transform:uppercase;}
+#tb-ctrl input[type=checkbox]{width:18px;height:18px;accent-color:#c05020;}
 /* ── PORTRAIT: evo strip (1 row, bottom) ── */
 #ev-s{width:460px;display:grid;grid-template-columns:repeat(11,1fr);gap:2px;padding:5px 6px;background:#fdf2ea;border-top:.5px solid #dfc8b0;
   /* extend background into bottom home-indicator area */
@@ -96,6 +96,7 @@ h1{font-size:12px;font-weight:500;color:#8a6848;letter-spacing:.06em;text-transf
       <button id="mute-btn" onclick="toggleMute()">🔊</button>
       <label><input type="checkbox" id="bgm-cb" onchange="toggleBGM(this.checked)"><span>BGM</span></label>
       <label><input type="checkbox" id="ap"><span>Auto</span></label>
+      <label><input type="checkbox" id="claw-cb" onchange="toggleClaw(this.checked)"><span>Claw</span></label>
     </div>
   </div>
 
@@ -129,6 +130,7 @@ h1{font-size:12px;font-weight:500;color:#8a6848;letter-spacing:.06em;text-transf
     <hr class="sep">
     <label class="ar"><input type="checkbox" id="ap-ls" onchange="syncAp(this.checked)"><span>Autoplay</span></label>
     <label class="ar"><input type="checkbox" id="bgm-ls" onchange="toggleBGM(this.checked)"><span>BGM</span></label>
+    <label class="ar"><input type="checkbox" id="claw-ls" onchange="toggleClaw(this.checked)"><span>Claw</span></label>
     <button id="mute-ls" onclick="toggleMute()" style="margin-top:4px;width:100%;padding:5px 0;background:#fdf2ea;border:.5px solid #dfc8b0;border-radius:8px;font-size:16px;cursor:pointer;">🔊</button>
   </div>
 
@@ -168,6 +170,25 @@ let plushies=[], parts=[], mergeQ=[], popups=[];
 let score=0,best=0,cur=1,nxt=1;
 let mx=W/2, cooling=false, dead=false;
 let danger={};
+
+let showClaw=false;
+function toggleClaw(v){
+  showClaw=v;
+  document.getElementById('claw-cb').checked=v;
+  document.getElementById('claw-ls').checked=v;
+}
+
+// ── CLAW STATE ────────────────────────────────────────────────────────────
+let clawY=DROPY, clawX=W/2, clawDropX=W/2, clawLvl=1;
+let clawState='idle'; // idle | dropping | opening | retracting
+let clawOpenTimer=0;
+const CLAW_OPEN_FRAMES=18;
+const clawImg={
+  back :new Image(), front:new Image(), open:new Image()
+};
+clawImg.back.src ='Sprites/claw_back.png';
+clawImg.front.src='Sprites/claw_front.png';
+clawImg.open.src ='Sprites/claw_open.png'; // user-supplied open-claw variant
 
 const dpr=window.devicePixelRatio||1;
 
@@ -375,6 +396,7 @@ function restart(){
   plushies=[]; parts=[]; mergeQ=[]; popups=[]; danger={}; score=0; updUI();
   document.getElementById('ov').classList.remove('show');
   cur=rnd(); nxt=rnd(); updNext();
+  clawState='idle'; clawY=DROPY; clawLvl=cur;
 }
 
 // ── PARTICLES ─────────────────────────────────────────────────────────
@@ -407,6 +429,7 @@ function processKeys(){
 function loop(){
   processKeys();
   if(!dead){step();detectMerges();processMerges();}
+  updateClaw();
   tickParts(); tickPopups(); if(!dead) checkDanger(); render();
   requestAnimationFrame(loop);
 }
@@ -429,8 +452,8 @@ function predictLanding(x, r){
 
 // ── RENDER ────────────────────────────────────────────────────────────
 function render(){
-  ctx.fillStyle='#f5e6c8'; ctx.fillRect(0,0,W,H);
-  // danger line — blinks when any collider enters the warning zone (DY + 60px below)
+  ctx.fillStyle='#f5f0e6'; ctx.fillRect(0,0,W,H);
+  // danger line — blinks when any collider enters the warning zone
   const inWarning=!cooling&&plushies.some(p=>(p.y-p.r)<(DY+60)&&p.speed<2);
   const blink=inWarning&&(Date.now()%600)<300;
   ctx.save(); ctx.setLineDash([7,5]);
@@ -440,30 +463,71 @@ function render(){
   ctx.setLineDash([]); ctx.font=blink?'bold 9px sans-serif':'9px sans-serif';
   ctx.fillStyle=blink?'rgba(220,30,30,.95)':'rgba(210,55,55,.65)'; ctx.textAlign='left';
   ctx.fillText('▲ danger zone',WALL+5,DY-4); ctx.restore();
-  if(!dead){
-    const gx=clamp(mx,cur);
-    const gr=PD[cur].r;
-    const gy=predictLanding(gx,gr);
+  // ── CLAW + held plushie ───────────────────────────────────────────────
+  if(!dead && !showClaw){
+    // claw off — show classic ghost preview
+    const gx=clamp(mx,cur), gr=PD[cur].r, gy=predictLanding(gx,gr);
     ctx.save();
-    // vertical guide line — always visible so player can aim during cooldown
-    ctx.setLineDash([3,5]);
-    ctx.strokeStyle='rgba(140,90,40,.18)'; ctx.lineWidth=1;
+    ctx.setLineDash([3,5]); ctx.strokeStyle='rgba(140,90,40,.18)'; ctx.lineWidth=1;
     ctx.beginPath(); ctx.moveTo(gx,DROPY+gr); ctx.lineTo(gx,gy-gr); ctx.stroke();
     ctx.setLineDash([]);
-    // landing prediction circle — hidden during cooldown
     if(!cooling){
       ctx.beginPath(); ctx.arc(gx,gy,gr,0,Math.PI*2);
-      ctx.setLineDash([5,4]);
-      ctx.strokeStyle=PD[cur].stroke+'d0'; ctx.lineWidth=2; ctx.stroke();
+      ctx.setLineDash([5,4]); ctx.strokeStyle=PD[cur].stroke+'d0'; ctx.lineWidth=2; ctx.stroke();
       ctx.setLineDash([]);
     }
     ctx.restore();
     drawAt(ctx,gx,DROPY,cur,.6);
   }
+  if(!dead && showClaw){
+    const lvl  = (clawState==='opening') ? clawLvl : cur;
+    const gr   = PD[lvl].r;
+    const cx   = clawX;
+    const cy   = DROPY;
+    // claw visual size scales with plushie radius
+    const cw   = Math.max(70, gr * 3.0);
+    const imgY = cy - cw * 0.78; // positions round body above plushie center
+
+    // landing guide (idle only)
+    if(clawState==='idle'){
+      const gy=predictLanding(cx,gr);
+      ctx.save();
+      ctx.setLineDash([3,5]);
+      ctx.strokeStyle='rgba(140,90,40,.18)'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(cx,cy+gr); ctx.lineTo(cx,gy-gr); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.beginPath(); ctx.arc(cx,gy,gr,0,Math.PI*2);
+      ctx.setLineDash([5,4]);
+      ctx.strokeStyle=PD[cur].stroke+'d0'; ctx.lineWidth=2; ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
+
+    // wire from top of canvas to claw top-peg
+    ctx.save();
+    ctx.strokeStyle='#a09080'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(cx,0); ctx.lineTo(cx, imgY + cw*0.06); ctx.stroke();
+    ctx.restore();
+
+    // claw_back (behind plushie)
+    if(clawImg.back.naturalWidth)
+      ctx.drawImage(clawImg.back,  cx-cw/2, imgY, cw, cw);
+
+    // plushie — held while idle; hidden once released (opening state after spawn)
+    if(clawState==='idle' || (clawState==='opening' && clawOpenTimer>CLAW_OPEN_FRAMES-2))
+      drawAt(ctx, cx, cy, lvl, 1);
+
+    // claw_front / claw_open on release (fallback to front if open not loaded)
+    const useOpen = clawState==='opening' && clawImg.open.naturalWidth;
+    const frontImg = useOpen ? clawImg.open : clawImg.front;
+    if(frontImg.naturalWidth)
+      ctx.drawImage(frontImg, cx-cw/2, imgY, cw, cw);
+  }
   // draw higher levels first (behind), lower levels on top
   const byLevel=[...plushies].sort((a,b)=>b.level-a.level);
   for(const p of byLevel){
     ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.angle);
+    ctx.shadowColor='rgba(0,0,0,0.28)'; ctx.shadowBlur=10; ctx.shadowOffsetX=2; ctx.shadowOffsetY=5;
     const rs=rendSprites[p.level];
     if(rs) ctx.drawImage(rs.c,-rs.lw/2,-rs.lh/2,rs.lw,rs.lh);
     ctx.restore();
@@ -485,6 +549,32 @@ function render(){
   });
   ctx.globalAlpha=1; ctx.restore();
 
+  // ── Glass glare (in front of plushies, claw mode only) ───────────────
+  if(showClaw){
+    ctx.save();
+    // main diagonal streak — top-left to centre
+    // streak 1 — starts below drop zone
+    const g1=ctx.createLinearGradient(WALL+20,H*0.18,W*0.60,H*0.80);
+    g1.addColorStop(0,  'rgba(255,255,255,0)');
+    g1.addColorStop(0.42,'rgba(255,255,255,0)');
+    g1.addColorStop(0.47,'rgba(255,255,255,0.55)');
+    g1.addColorStop(0.50,'rgba(255,255,255,0.70)');
+    g1.addColorStop(0.53,'rgba(255,255,255,0.55)');
+    g1.addColorStop(0.58,'rgba(255,255,255,0)');
+    g1.addColorStop(1,  'rgba(255,255,255,0)');
+    ctx.fillStyle=g1; ctx.fillRect(WALL,0,W-WALL*2,H);
+    // streak 2 — offset right
+    const g2=ctx.createLinearGradient(W*0.50,H*0.22,W*0.90,H*0.72);
+    g2.addColorStop(0,  'rgba(255,255,255,0)');
+    g2.addColorStop(0.44,'rgba(255,255,255,0)');
+    g2.addColorStop(0.48,'rgba(255,255,255,0.40)');
+    g2.addColorStop(0.50,'rgba(255,255,255,0.55)');
+    g2.addColorStop(0.52,'rgba(255,255,255,0.40)');
+    g2.addColorStop(0.56,'rgba(255,255,255,0)');
+    g2.addColorStop(1,  'rgba(255,255,255,0)');
+    ctx.fillStyle=g2; ctx.fillRect(WALL,0,W-WALL*2,H);
+    ctx.restore();
+  }
   ctx.fillStyle='#c8a888';
   ctx.fillRect(0,0,WALL,H); ctx.fillRect(W-WALL,0,WALL,H); ctx.fillRect(0,H-WALL,W,WALL);
   ctx.fillStyle='rgba(255,235,210,.4)';
@@ -743,6 +833,25 @@ function drawRacoon(c,r,d){
 
 // prerender() removed — images loaded via loadSprites()
 
+// ── CLAW ANIMATION ────────────────────────────────────────────────────────
+function updateClaw(){
+  if(dead) return;
+  if(clawState==='idle'){
+    clawX=clamp(mx,cur); clawY=DROPY;
+  } else if(clawState==='opening'){
+    clawOpenTimer--;
+    if(clawOpenTimer===CLAW_OPEN_FRAMES-2){
+      // spawn plushie a couple frames in so player sees it "fall out"
+      sfxDrop(); if(bgmOn&&!bgmRunning) startBGM();
+      const b=new Ball(clawDropX, DROPY, clawLvl);
+      b.av=(Math.random()-.5)*AV_MAX*0.3;
+      plushies.push(b);
+      cur=nxt; nxt=rnd(); updNext();
+    }
+    if(clawOpenTimer<=0){ clawState='idle'; cooling=false; }
+  }
+}
+
 // ── INPUT ─────────────────────────────────────────────────────────────
 function clamp(x,lvl){const r=PD[lvl].r;return Math.max(WALL+r+1,Math.min(W-WALL-r-1,x));}
 let dbg=false, dbgPoly=false;
@@ -778,13 +887,9 @@ setInterval(()=>{
 }, 820);
 
 function drop(){
-  if(cooling||dead)return;
-  sfxDrop(); if(bgmOn&&!bgmRunning) startBGM();
-  const b=new Ball(clamp(mx,cur),DROPY,cur);
-  b.av=(Math.random()-.5)*AV_MAX*0.3;
-  plushies.push(b);
-  cur=nxt; nxt=rnd(); updNext();
-  cooling=true; setTimeout(()=>{cooling=false;},650);
+  if(cooling||dead) return;
+  clawDropX=clamp(mx,cur); clawLvl=cur;
+  clawState='opening'; clawOpenTimer=CLAW_OPEN_FRAMES; cooling=true;
 }
 function setMx(raw){mx=Math.max(WALL,Math.min(W-WALL,raw));}
 cv.addEventListener('mousemove',e=>{const r=cv.getBoundingClientRect();setMx((e.clientX-r.left)*(W/r.width));});
@@ -977,7 +1082,7 @@ document.addEventListener('touchmove',e=>{if(e.touches.length>1)e.preventDefault
 // Re-fit on orientation change
 window.addEventListener('orientationchange',()=>setTimeout(fitToViewport,200));
 
-cur=rnd();nxt=rnd();updUI();buildEvo();
+cur=rnd();nxt=rnd();clawLvl=cur;updUI();buildEvo();
 loadSprites(()=>{ updNext(); fitToViewport(); requestAnimationFrame(loop); });
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 </script>
