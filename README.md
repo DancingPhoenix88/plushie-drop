@@ -54,11 +54,10 @@ lv11 Racoon diameter = ~56% of the tank width. Two of any same level touching �
 ## Nice-to-have Features
 
 ### Physics
-- **Custom physics engine** — no external library; sub-step Euler integration with iterative position correction
-- **Polygon SAT colliders** — each plushie uses an N-gon (hexagon for small, 12-gon for large), matching image-space collider radius (65 px for lv1–8, 90 px for lv9–11)
-- **Mass-based collision** — impulse proportional to r²; a tiny Vincam barely nudges a Racoon
-- **Anti-tunneling** — per-substep speed cap prevents fast plushies from passing through each other
-- **Rotation killer** — 30-frame rolling average of position delta; phantom spin from settled contacts is zeroed out
+- **Custom physics engine** — no external library; accurate collision and stacking
+- **Polygon colliders** — each character has a shape that matches its visual body
+- **Mass-based collision** — a tiny Vincam barely nudges a Racoon
+- **Stable stacking** — settled plushies don't spin or jitter
 
 ### Rendering
 - **Pre-rendered sprites** — each sprite is drawn once to an offscreen canvas at `scale × DPR` physical pixels, then blitted 1:1 in the game loop — zero upscaling blur even on Retina screens
@@ -72,6 +71,7 @@ lv11 Racoon diameter = ~56% of the tank width. Two of any same level touching �
 - **Danger zone blink** — the red danger line pulses when any plushie's top enters the 60 px warning zone above it; the earlier the warning the brighter the pulse
 - **60 fps input polling** — arrow key movement is processed every frame (not OS key-repeat rate), giving smooth, lag-free cursor movement
 - **Modulo cursor wrap** — pressing left at the leftmost position wraps to the rightmost, and vice versa, for quick traversal
+- **Autoplay** — drops at the current cursor position on a fixed interval; player can freely move the cursor between drops to aim
 
 ### Audio
 - **BGM** — cheerful looping melody via Web Audio API (triangle oscillators); off by default, toggled with the BGM checkbox

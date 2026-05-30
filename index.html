@@ -427,7 +427,7 @@ function predictLanding(x, r){
 function render(){
   ctx.fillStyle='#f5e6c8'; ctx.fillRect(0,0,W,H);
   // danger line — blinks when any collider enters the warning zone (DY + 60px below)
-  const inWarning=plushies.some(p=>(p.y-p.r)<(DY+60)&&p.speed<2);
+  const inWarning=!cooling&&plushies.some(p=>(p.y-p.r)<(DY+60)&&p.speed<2);
   const blink=inWarning&&(Date.now()%600)<300;
   ctx.save(); ctx.setLineDash([7,5]);
   ctx.strokeStyle=blink?'rgba(220,30,30,.95)':'rgba(210,55,55,.55)';
@@ -768,7 +768,7 @@ document.addEventListener('keydown',e=>{
 // ── AUTOPLAY (reads portrait #ap; landscape #ap-ls syncs to it via syncAp) ──
 setInterval(()=>{
   if(!document.getElementById('ap').checked) return;
-  mx=W/2; drop();
+  drop();
 }, 820);
 
 function drop(){
