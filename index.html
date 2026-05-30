@@ -12,70 +12,126 @@
 <link rel="apple-touch-icon" href="Sprites/level_11.png">
 <style>
 :root{color-scheme:light}
-*{margin:0;padding:0;box-sizing:border-box}
-body{background-color:#e8d4b8;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='52' height='62'%3E%3Cg transform='rotate(20,26,32)'%3E%3Cellipse cx='18' cy='14' rx='7' ry='13' fill='rgba(255,255,255,0.13)'/%3E%3Cellipse cx='34' cy='14' rx='7' ry='13' fill='rgba(255,255,255,0.13)'/%3E%3Ccircle cx='26' cy='38' r='16' fill='rgba(255,255,255,0.13)'/%3E%3C/g%3E%3C/svg%3E");background-repeat:repeat;width:100vw;height:100vh;overflow:hidden;position:relative;font-family:'Segoe UI',system-ui,sans-serif}
-#game-root{position:absolute;top:0;left:50%;transform:translateX(-50%);transform-origin:top center;display:flex;align-items:flex-start;gap:10px;padding:16px 10px;}
-.panel{width:118px;background:#fdf2ea;border:.5px solid #dfc8b0;border-radius:14px;padding:12px 10px;flex-shrink:0;overflow-y:auto;height:536px;margin-top:24px}
-.lbl{font-size:10px;color:#b09878;text-align:center;letter-spacing:.06em;text-transform:uppercase}
-.val{font-size:21px;font-weight:500;color:#5a3820;text-align:center;margin:2px 0 10px}
-.sep{border:none;border-top:.5px solid #dfc8b0;margin:7px 0}
-#nc{display:block;margin:4px auto 0}
-.nlbl{font-size:10px;color:#b09878;text-align:center;margin-top:3px}
-.er{display:flex;align-items:center;gap:5px;padding:2px 0}
-.ed{border-radius:50%;flex-shrink:0;border:.5px solid rgba(0,0,0,.07)}
-.en{font-size:9px;color:#8a7060}
-.game-col{display:flex;flex-direction:column;align-items:center}
-h1{font-size:12px;font-weight:500;color:#8a6848;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;text-align:center}
-.cw{position:relative}
-#gc{display:block;cursor:crosshair;border-radius:0 0 10px 10px}
-#ov{display:none;position:absolute;inset:0;background:rgba(253,246,240,.93);border-radius:0 0 10px 10px;flex-direction:column;align-items:center;justify-content:center;gap:8px}
-#ov.show{display:flex}
-#ov h2{font-size:20px;font-weight:500;color:#5a3820}
-#ov .sub{font-size:12px;color:#a09078}
-#ov .fs{font-size:28px;font-weight:500;color:#c05020}
-#ov button{margin-top:4px;padding:10px 26px;background:#c05020;color:#fff;border:none;border-radius:8px;font-size:13px;font-family:inherit;cursor:pointer}
-#ov button:hover{background:#a03c10}
-.autoplay-row{display:flex;align-items:center;gap:6px;padding:6px 0 2px;cursor:pointer}
-.autoplay-row input{width:14px;height:14px;cursor:pointer;accent-color:#c05020}
-.autoplay-row span{font-size:10px;color:#b09878;text-transform:uppercase;letter-spacing:.05em}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{width:100vw;height:100dvh;overflow:hidden;position:relative;font-family:'Segoe UI',system-ui,sans-serif;
+  background-color:#e8d4b8;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='52' height='62'%3E%3Cg transform='rotate(20,26,32)'%3E%3Cellipse cx='18' cy='14' rx='7' ry='13' fill='rgba(255,255,255,0.13)'/%3E%3Cellipse cx='34' cy='14' rx='7' ry='13' fill='rgba(255,255,255,0.13)'/%3E%3Ccircle cx='26' cy='38' r='16' fill='rgba(255,255,255,0.13)'/%3E%3C/g%3E%3C/svg%3E");
+  background-repeat:repeat;}
+/* ── game root ──────────────────── */
+#game-root{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);transform-origin:center center;}
+.game-col{display:flex;flex-direction:column;align-items:center;}
+.cw{position:relative;}
+#gc{display:block;cursor:crosshair;border-radius:0 0 10px 10px;touch-action:none;}
+/* ── game over overlay ──────────── */
+#ov{display:none;position:absolute;inset:0;background:rgba(253,246,240,.93);border-radius:0 0 10px 10px;flex-direction:column;align-items:center;justify-content:center;gap:8px;}
+#ov.show{display:flex;}
+#ov h2{font-size:20px;font-weight:500;color:#5a3820;}
+#ov .sub{font-size:12px;color:#a09078;}
+#ov .fs{font-size:28px;font-weight:500;color:#c05020;}
+#ov button{margin-top:4px;padding:10px 26px;background:#c05020;color:#fff;border:none;border-radius:8px;font-size:13px;font-family:inherit;cursor:pointer;}
+/* ── shared util ────────────────── */
+.lbl{font-size:10px;color:#b09878;text-align:center;letter-spacing:.06em;text-transform:uppercase;}
+.val{font-size:21px;font-weight:500;color:#5a3820;text-align:center;margin:2px 0 8px;}
+.sep{border:none;border-top:.5px solid #dfc8b0;margin:7px 0;}
+h1{font-size:12px;font-weight:500;color:#8a6848;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;text-align:center;}
+/* ── LANDSCAPE: side panel ──────── */
+#ls-panel{width:118px;background:#fdf2ea;border:.5px solid #dfc8b0;border-radius:14px;padding:12px 10px;flex-shrink:0;overflow-y:auto;height:536px;margin-top:24px;}
+.ar{display:flex;align-items:center;gap:6px;padding:4px 0;cursor:pointer;}
+.ar input{width:14px;height:14px;cursor:pointer;accent-color:#c05020;}
+.ar span{font-size:10px;color:#b09878;text-transform:uppercase;letter-spacing:.05em;}
+/* ── PORTRAIT: top bar ──────────── */
+#tb{width:460px;display:flex;align-items:flex-start;gap:8px;padding:7px 12px;background:#fdf2ea;border-bottom:.5px solid #dfc8b0;
+  padding-top:max(7px,calc(7px + env(safe-area-inset-top,0px)));}
+#tb-score{display:flex;flex-direction:column;align-items:center;min-width:58px;}
+#tb-score .sl{font-size:9px;color:#b09878;text-transform:uppercase;letter-spacing:.05em;}
+/* height:52px matches canvas height so the number centers at the same point as the sprite */
+#tb-score .sv{font-size:20px;font-weight:500;color:#5a3820;line-height:1;height:52px;display:flex;align-items:center;justify-content:center;}
+#tb-next{display:flex;flex-direction:column;align-items:center;gap:1px;}
+#tb-next .sl{font-size:9px;color:#b09878;text-transform:uppercase;letter-spacing:.05em;}
+#tb-next .sn{font-size:8px;color:#b09878;}
+#tb-ctrl{display:flex;align-items:center;gap:6px;margin-left:auto;}
+#tb-ctrl button{background:none;border:.5px solid #dfc8b0;border-radius:8px;font-size:18px;padding:2px 6px;cursor:pointer;line-height:1;}
+#tb-ctrl label{display:flex;align-items:center;gap:3px;font-size:9px;color:#b09878;cursor:pointer;text-transform:uppercase;}
+#tb-ctrl input[type=checkbox]{width:13px;height:13px;accent-color:#c05020;}
+/* ── PORTRAIT: evo strip (1 row, bottom) ── */
+#ev-s{width:460px;display:grid;grid-template-columns:repeat(11,1fr);gap:2px;padding:5px 6px;background:#fdf2ea;border-top:.5px solid #dfc8b0;
+  /* extend background into bottom home-indicator area */
+  padding-bottom:max(5px,calc(5px + env(safe-area-inset-bottom,0px)));}
+#ev-s .ec{display:flex;flex-direction:column;align-items:center;}
+#ev-s img{width:100%;aspect-ratio:1;object-fit:contain;}
+#ev-s .en{font-size:6px;color:#8a7060;text-align:center;}
+/* ── ORIENTATION SWITCHES ───────── */
+@media (orientation:landscape){
+  #game-root{display:flex;flex-direction:row;align-items:flex-start;gap:10px;padding:16px 10px;}
+  #tb,#ev-s{display:none !important;}
+  #ls-panel{display:block;}
+  h1{display:block;}
+}
+@media (orientation:portrait){
+  #game-root{display:flex;flex-direction:column;align-items:stretch;padding:0;}
+  #tb{display:flex;order:1;}
+  .game-col{order:2;flex:1;}
+  #ev-s{display:grid;order:3;}
+  #ls-panel{display:none !important;}
+  h1{display:none;}
+}
 </style>
 </head>
 <body>
 
 <div id="game-root">
-<div class="game-col">
-  <h1>Plushie Drop</h1>
-  <div class="cw">
-    <canvas id="gc" width="460" height="560"></canvas>
-    <div id="ov">
-      <h2>Game Over!</h2>
-      <div class="sub">final score</div>
-      <div class="fs" id="fs">0</div>
-      <button onclick="restart()">Play Again ↺</button>
+
+  <!-- PORTRAIT: compact top bar (hidden in landscape) -->
+  <div id="tb">
+    <div id="tb-score">
+      <span class="sl">Score</span>
+      <span class="sv" id="sc-p">0</span>
+    </div>
+    <div id="tb-next">
+      <span class="sl">Next</span>
+      <canvas id="nc" width="52" height="52"></canvas>
+      <span class="sn" id="nl">—</span>
+    </div>
+    <div id="tb-ctrl">
+      <button id="mute-btn" onclick="toggleMute()">🔊</button>
+      <label><input type="checkbox" id="bgm-cb" onchange="toggleBGM(this.checked)"><span>BGM</span></label>
+      <label><input type="checkbox" id="ap"><span>Auto</span></label>
     </div>
   </div>
-</div>
 
-<div class="panel">
-  <div class="lbl">Score</div><div class="val" id="sc">0</div>
-  <hr class="sep">
-  <div class="lbl">Next</div>
-  <canvas id="nc" width="98" height="80"></canvas>
-  <div class="nlbl" id="nl">—</div>
-  <hr class="sep">
-  <div class="lbl" style="margin-bottom:6px">Evolution</div>
-  <div id="ev"></div>
-  <hr class="sep">
-  <label class="autoplay-row">
-    <input type="checkbox" id="ap">
-    <span>Autoplay</span>
-  </label>
-  <label class="autoplay-row" style="margin-top:4px;">
-    <input type="checkbox" id="bgm-cb" onchange="toggleBGM(this.checked)">
-    <span>BGM</span>
-  </label>
-  <button id="mute-btn" onclick="toggleMute()" style="margin-top:4px;width:100%;padding:5px 0;background:#fdf2ea;border:.5px solid #dfc8b0;border-radius:8px;font-size:16px;cursor:pointer;">🔊</button>
-</div>
+  <!-- PORTRAIT: 2-row evolution grid (hidden in landscape) -->
+  <div id="ev-s"></div>
+
+  <!-- CANVAS — always visible -->
+  <div class="game-col">
+    <h1>Plushie Drop</h1>
+    <div class="cw">
+      <canvas id="gc" width="460" height="560"></canvas>
+      <div id="ov">
+        <h2>Game Over!</h2>
+        <div class="sub">final score</div>
+        <div class="fs" id="fs">0</div>
+        <button onclick="restart()">Play Again ↺</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LANDSCAPE: side panel (hidden in portrait) -->
+  <div id="ls-panel">
+    <div class="lbl">Score</div><div class="val" id="sc">0</div>
+    <hr class="sep">
+    <div class="lbl">Next</div>
+    <canvas id="nc-ls" width="98" height="80" style="display:block;margin:4px auto 0;"></canvas>
+    <div style="font-size:10px;color:#b09878;text-align:center;margin-top:3px;" id="nl-ls">—</div>
+    <hr class="sep">
+    <div class="lbl" style="margin-bottom:6px">Evolution</div>
+    <div id="ev"></div>
+    <hr class="sep">
+    <label class="ar"><input type="checkbox" id="ap-ls" onchange="syncAp(this.checked)"><span>Autoplay</span></label>
+    <label class="ar"><input type="checkbox" id="bgm-ls" onchange="toggleBGM(this.checked)"><span>BGM</span></label>
+    <button id="mute-ls" onclick="toggleMute()" style="margin-top:4px;width:100%;padding:5px 0;background:#fdf2ea;border:.5px solid #dfc8b0;border-radius:8px;font-size:16px;cursor:pointer;">🔊</button>
+  </div>
+
 </div><!-- #game-root -->
 
 <script>
@@ -108,24 +164,33 @@ const V_EPS=0.08;   // velocity epsilon — zero out micro-motion
 const AV_MAX=0.12;  // max angular velocity (rad/frame)
 
 // ── STATE ─────────────────────────────────────────────────────────────
-let plushies=[], parts=[], mergeQ=[];
+let plushies=[], parts=[], mergeQ=[], popups=[];
 let score=0,best=0,cur=1,nxt=1;
 let mx=W/2, cooling=false, dead=false;
 let danger={};
 
 const dpr=window.devicePixelRatio||1;
 
+// Main game canvas
 const cv=document.getElementById('gc'), ctx=cv.getContext('2d');
 cv.width=W*dpr; cv.height=H*dpr;
 cv.style.width=W+'px'; cv.style.height=H+'px';
 ctx.scale(dpr,dpr);
 ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
 
+// Portrait next canvas (52×52)
 const nc=document.getElementById('nc'), nctx=nc.getContext('2d');
-nc.width=98*dpr; nc.height=80*dpr;
-nc.style.width='98px'; nc.style.height='80px';
+nc.width=52*dpr; nc.height=52*dpr;
+nc.style.width='52px'; nc.style.height='52px';
 nctx.scale(dpr,dpr);
 nctx.imageSmoothingEnabled=true; nctx.imageSmoothingQuality='high';
+
+// Landscape next canvas (98×80)
+const ncls=document.getElementById('nc-ls'), nctxls=ncls.getContext('2d');
+ncls.width=98*dpr; ncls.height=80*dpr;
+ncls.style.width='98px'; ncls.style.height='80px';
+nctxls.scale(dpr,dpr);
+nctxls.imageSmoothingEnabled=true; nctxls.imageSmoothingQuality='high';
 
 // ── POLYGON COLLIDERS ─────────────────────────────────────────────────
 // Sides per level: small=hexagon, large=12-gon (more circular, more stable)
@@ -274,6 +339,7 @@ function processMerges(){
     toAdd.push({x:px,y:py,lvl:nl});
     score+=PTS[nl]; if(score>best) best=score;
     burst(px,py,PD[nl].body); updUI(); sfxMerge(nl);
+    popups.push({x:px,y:py,text:'+'+PTS[nl],color:PD[nl].body,life:1});
   }
   plushies=plushies.filter((_,i)=>!toRemove.has(i));
   for(const {x,y,lvl} of toAdd){
@@ -302,7 +368,7 @@ function gameOver(){
 
 function restart(){
   dead=false; cooling=false;
-  plushies=[]; parts=[]; mergeQ=[]; danger={}; score=0; updUI();
+  plushies=[]; parts=[]; mergeQ=[]; popups=[]; danger={}; score=0; updUI();
   document.getElementById('ov').classList.remove('show');
   cur=rnd(); nxt=rnd(); updNext();
 }
@@ -318,11 +384,15 @@ function tickParts(){
   parts=parts.filter(p=>p.life>0);
   parts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.18;p.life-=.044;p.r*=.93;});
 }
+function tickPopups(){
+  popups=popups.filter(p=>p.life>0);
+  popups.forEach(p=>{p.y-=1.2;p.life-=0.022;}); // float up, fade ~1.5s
+}
 
 // ── LOOP ──────────────────────────────────────────────────────────────
 function loop(){
   if(!dead){step();detectMerges();processMerges();}
-  tickParts(); if(!dead) checkDanger(); render();
+  tickParts(); tickPopups(); if(!dead) checkDanger(); render();
   requestAnimationFrame(loop);
 }
 
@@ -385,6 +455,19 @@ function render(){
     ctx.save(); ctx.globalAlpha=p.life*.85; ctx.fillStyle=p.color;
     ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill(); ctx.restore();
   }
+  // score popups
+  ctx.save(); ctx.textAlign='center';
+  popups.forEach(p=>{
+    const sz=Math.round(14+p.life*8); // shrinks as it fades
+    ctx.font=`700 ${sz}px 'Segoe UI',sans-serif`;
+    ctx.globalAlpha=p.life*0.92;
+    // dark stroke for readability over any background
+    ctx.strokeStyle='rgba(0,0,0,0.45)'; ctx.lineWidth=3;
+    ctx.strokeText(p.text,p.x,p.y);
+    ctx.fillStyle=p.color; ctx.fillText(p.text,p.x,p.y);
+  });
+  ctx.globalAlpha=1; ctx.restore();
+
   ctx.fillStyle='#c8a888';
   ctx.fillRect(0,0,WALL,H); ctx.fillRect(W-WALL,0,WALL,H); ctx.fillRect(0,H-WALL,W,WALL);
   ctx.fillStyle='rgba(255,235,210,.4)';
@@ -452,7 +535,7 @@ function prerenderSprites(){
   }
 }
 
-// drawAt: uses pre-rendered sprite (1:1 pixel, no scaling blur)
+// drawAt: centered at (x,y), 1:1 pixel — used in game loop
 function drawAt(c,x,y,lvl,alpha=1,angle=0){
   const rs=rendSprites[lvl];
   if(!rs) return;
@@ -626,18 +709,24 @@ function clamp(x,lvl){const r=PD[lvl].r;return Math.max(WALL+r+1,Math.min(W-WALL
 let dbg=false;
 document.addEventListener('keydown',e=>{
   if(e.key==='d'||e.key==='D'){ dbg=!dbg; return; }
+
+  // ── keyboard gameplay ──────────────────────────────
+  const step=e.shiftKey?22:6; // Shift = fast
+  if(e.key==='ArrowLeft' ){e.preventDefault();mx=clamp(mx-step,cur);return;}
+  if(e.key==='ArrowRight'){e.preventDefault();mx=clamp(mx+step,cur);return;}
+  if(e.key===' '         ){e.preventDefault();drop();return;}
+
   // debug spawn: 2-9 → lv2-9, 0 → lv10, 1 → lv11
   const lvMap={'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'0':10,'1':11};
   const lvl=lvMap[e.key];
   if(lvl&&!dead){
-    const x=clamp(mx,lvl);
-    const b=new Ball(x,DROPY,lvl);
+    const b=new Ball(clamp(mx,lvl),DROPY,lvl);
     b.av=(Math.random()-.5)*AV_MAX*0.3;
     plushies.push(b);
   }
 });
 
-// ── AUTOPLAY ──────────────────────────────────────────────────────────
+// ── AUTOPLAY (reads portrait #ap; landscape #ap-ls syncs to it via syncAp) ──
 setInterval(()=>{
   if(!document.getElementById('ap').checked) return;
   mx=W/2; drop();
@@ -659,17 +748,50 @@ cv.addEventListener('touchend',e=>{e.preventDefault();drop();});
 
 // ── UI ────────────────────────────────────────────────────────────────
 function rnd(){const r=Math.random();return r<.5?1:r<.82?2:3;}
-function updUI(){document.getElementById('sc').textContent=score.toLocaleString();}
-function updNext(){nctx.clearRect(0,0,98,80);drawAt(nctx,49,44,nxt);document.getElementById('nl').textContent=PD[nxt].name+' · Lv'+nxt;}
+function updUI(){
+  const s=score.toLocaleString();
+  document.getElementById('sc').textContent=s;
+  document.getElementById('sc-p').textContent=s;
+}
+// drawAtFit: scale sprite to fill cW×cH preview, centered, no crop
+function drawAtFit(c,cW,cH,lvl,alpha=1){
+  const rs=rendSprites[lvl]; if(!rs) return;
+  const sc=Math.min(cW/rs.lw, cH/rs.lh);
+  const w=rs.lw*sc, h=rs.lh*sc;
+  c.save(); c.globalAlpha=alpha;
+  c.drawImage(rs.c,(cW-w)/2,(cH-h)/2,w,h);
+  c.restore();
+}
+function updNext(){
+  const name=PD[nxt].name;
+  // portrait (52×52) — fit sprite so it's never cropped
+  nctx.clearRect(0,0,52,52); drawAtFit(nctx,52,52,nxt);
+  document.getElementById('nl').textContent=name;
+  // landscape (98×80)
+  nctxls.clearRect(0,0,98,80); drawAtFit(nctxls,98,80,nxt);
+  document.getElementById('nl-ls').textContent=name+' · Lv'+nxt;
+}
 function buildEvo(){
-  const el=document.getElementById('ev');el.innerHTML='';
+  // landscape list
+  const el=document.getElementById('ev'); el.innerHTML='';
+  // portrait grid
+  const es=document.getElementById('ev-s'); es.innerHTML='';
   for(let i=1;i<=11;i++){
+    const img=`<img src="Sprites/level_${i}.png" style="object-fit:contain;flex-shrink:0;">`;
+    // landscape row
     const row=document.createElement('div');
     row.style.cssText='display:flex;align-items:center;gap:6px;padding:0;';
-    row.innerHTML=`<img src="Sprites/level_${i}.png" style="width:32px;height:32px;object-fit:contain;flex-shrink:0;"><span style="font-size:9px;color:#8a7060;">${PD[i].name}</span>`;
+    row.innerHTML=`${img.replace('style="','style="width:32px;height:32px;')}
+      <span style="font-size:9px;color:#8a7060;">${PD[i].name}</span>`;
     el.appendChild(row);
+    // portrait cell
+    const cell=document.createElement('div'); cell.className='ec';
+    cell.innerHTML=`${img.replace('style="','style="width:100%;aspect-ratio:1;')}
+      <span class="en">${PD[i].name}</span>`;
+    es.appendChild(cell);
   }
 }
+function syncAp(v){ document.getElementById('ap').checked=v; }
 
 // ── AUDIO ─────────────────────────────────────────────────────────────
 let ac=null, muted=false, bgmRunning=false, bgmTO=null, bgmOn=false;
@@ -764,24 +886,38 @@ function toggleBGM(on){
 }
 function toggleMute(){
   muted=!muted;
-  document.getElementById('mute-btn').textContent=muted?'🔇':'🔊';
+  const icon=muted?'🔇':'🔊';
+  document.getElementById('mute-btn').textContent=icon;
+  document.getElementById('mute-ls').textContent=icon;
   if(muted) stopBGM();
   else if(bgmOn){bgmRunning=false;startBGM();}
+}
+function toggleBGMAll(v){
+  document.getElementById('bgm-cb').checked=v;
+  document.getElementById('bgm-ls').checked=v;
+  toggleBGM(v);
 }
 
 // ── VIEWPORT SCALE ────────────────────────────────────────────────────
 function fitToViewport(){
   const root=document.getElementById('game-root');
-  root.style.transform='translateX(-50%)'; // reset to measure natural size
+  root.style.transform='translate(-50%,-50%)'; // reset to measure natural size
   const scale=Math.min(
     window.innerHeight / root.offsetHeight,
     window.innerWidth  / root.offsetWidth
   );
-  root.style.transform=`translateX(-50%) scale(${scale.toFixed(4)})`;
+  root.style.transform=`translate(-50%,-50%) scale(${scale.toFixed(4)})`;
 }
 window.addEventListener('resize', fitToViewport);
 
 // ── BOOT ──────────────────────────────────────────────────────────────
+// Disable right-click
+document.addEventListener('contextmenu',e=>e.preventDefault());
+// Prevent pinch-zoom (user-scalable=no handles double-tap)
+document.addEventListener('touchmove',e=>{if(e.touches.length>1)e.preventDefault();},{passive:false});
+// Re-fit on orientation change
+window.addEventListener('orientationchange',()=>setTimeout(fitToViewport,200));
+
 cur=rnd();nxt=rnd();updUI();buildEvo();
 loadSprites(()=>{ updNext(); fitToViewport(); requestAnimationFrame(loop); });
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
