@@ -61,6 +61,7 @@ h1{font-size:12px;font-weight:500;color:#8a6848;letter-spacing:.06em;text-transf
 #tb-next .sn{font-size:8px;color:#b09878;}
 #tb-ctrl{display:flex;align-items:center;gap:6px;margin-left:auto;}
 #tb-ctrl button{background:none;border:.5px solid #dfc8b0;border-radius:8px;font-size:24px;padding:4px 8px;cursor:pointer;line-height:1;}
+#tb-ctrl button.active,#gyro-ls.active{background:#fde8d8;border-color:#c05020;}
 #tb-ctrl label{display:flex;align-items:center;gap:4px;font-size:11px;color:#b09878;cursor:pointer;text-transform:uppercase;}
 #tb-ctrl input[type=checkbox]{width:18px;height:18px;accent-color:#c05020;}
 /* ── PORTRAIT: evo strip (1 row, bottom) ── */
@@ -104,6 +105,7 @@ h1{font-size:12px;font-weight:500;color:#8a6848;letter-spacing:.06em;text-transf
     </div>
     <div id="tb-ctrl">
       <button id="mute-btn" onclick="toggleMute()">🔊</button>
+      <button id="gyro-btn" onclick="toggleGyro()" title="Tilt control">🌀</button>
       <label><input type="checkbox" id="bgm-cb" onchange="toggleBGM(this.checked)"><span>BGM</span></label>
       <label><input type="checkbox" id="ap"><span>Auto</span></label>
       <label><input type="checkbox" id="claw-cb" onchange="toggleClaw(this.checked)"><span>Claw</span></label>
@@ -142,6 +144,7 @@ h1{font-size:12px;font-weight:500;color:#8a6848;letter-spacing:.06em;text-transf
     <label class="ar"><input type="checkbox" id="bgm-ls" onchange="toggleBGM(this.checked)"><span>BGM</span></label>
     <label class="ar"><input type="checkbox" id="claw-ls" onchange="toggleClaw(this.checked)"><span>Claw</span></label>
     <button id="mute-ls" onclick="toggleMute()" style="margin-top:4px;width:100%;padding:5px 0;background:#fdf2ea;border:.5px solid #dfc8b0;border-radius:8px;font-size:16px;cursor:pointer;">🔊</button>
+    <button id="gyro-ls" onclick="toggleGyro()" style="margin-top:4px;width:100%;padding:5px 0;background:#fdf2ea;border:.5px solid #dfc8b0;border-radius:8px;font-size:16px;cursor:pointer;" title="Tilt control">🌀</button>
   </div>
 
 </div><!-- #game-root -->
@@ -305,7 +308,8 @@ function step(){
   for(let s=0;s<SUBSTEPS;s++){
     // 1. integrate + clamp av (stronger 0.93 damping so spin dies fast)
     for(const p of plushies){
-      p.vy+=GRAV*dt;
+      p.vx+=GRAV*Math.sin(tiltAngle)*dt;
+      p.vy+=GRAV*Math.cos(tiltAngle)*dt;
       p.vx*=Math.pow(DAMP,dt);
       p.vy*=Math.pow(DAMP,dt);
       // anti-tunneling: cap per-substep movement to < smallest plushie radius
@@ -818,6 +822,12 @@ function render(){
     g2.addColorStop(1,  'rgba(255,255,255,0)');
     ctx.fillStyle=g2; ctx.fillRect(WALL,0,W-WALL*2,H);
     ctx.restore();
+  }
+  // ── visual tilt (gyro mode) — rotate canvas to match gravity direction ──
+  if(gyroOn){
+    const deg=(tiltAngle*180/Math.PI).toFixed(2);
+    cv.style.transform=`rotate(${deg}deg)`;
+    cv.style.transformOrigin='center center';
   }
   // walls + inner bevel are now part of the 9-slice panel sprite above
   // ── DEBUG OVERLAY (press D) ──────────────────────────────────────────
@@ -1374,6 +1384,48 @@ function toggleBGMAll(v){
   document.getElementById('bgm-cb').checked=v;
   document.getElementById('bgm-ls').checked=v;
   toggleBGM(v);
+}
+
+// ── GYRO / TILT ───────────────────────────────────────────────────────
+const TILT_MAX_DEG = 15;                          // configurable cap (degrees)
+const TILT_MAX = TILT_MAX_DEG * Math.PI / 180;   // in radians
+let tiltAngle = 0;   // current effective tilt (radians), updated by deviceorientation
+let gyroOn = false;
+
+function onDeviceOrientation(e){
+  if(e.gamma === null) return;
+  // gamma: left(-) / right(+), degrees. Portrait mode is the natural frame.
+  const raw = e.gamma * Math.PI / 180;
+  tiltAngle = Math.max(-TILT_MAX, Math.min(TILT_MAX, raw));
+}
+
+function toggleGyro(){
+  if(gyroOn){ disableGyro(); return; }
+  // iOS 13+ requires explicit permission from a user gesture
+  if(typeof DeviceOrientationEvent !== 'undefined' &&
+     typeof DeviceOrientationEvent.requestPermission === 'function'){
+    DeviceOrientationEvent.requestPermission().then(state => {
+      if(state === 'granted'){ enableGyro(); }
+      else { alert('Tilt permission denied.'); }
+    }).catch(err => alert('Could not request tilt permission: ' + err));
+  } else {
+    // Android & desktop — no permission needed
+    enableGyro();
+  }
+}
+function enableGyro(){
+  window.addEventListener('deviceorientation', onDeviceOrientation);
+  gyroOn = true;
+  document.getElementById('gyro-btn').classList.add('active');
+  document.getElementById('gyro-ls').classList.add('active');
+}
+function disableGyro(){
+  window.removeEventListener('deviceorientation', onDeviceOrientation);
+  gyroOn = false; tiltAngle = 0;
+  document.getElementById('gyro-btn').classList.remove('active');
+  document.getElementById('gyro-ls').classList.remove('active');
+  // reset canvas visual tilt
+  cv.style.transform = '';
 }
 
 // ── VIEWPORT SCALE ────────────────────────────────────────────────────
