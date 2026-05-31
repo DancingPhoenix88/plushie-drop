@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Claw Machine</title>
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: #c28060;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/*
+  border-image syntax:
+    url(...) slice-top slice-right slice-bottom slice-left fill
+    / border-image-width-top border-image-width-right ...
+    round   ← tiles edges/center to fit evenly
+
+  border-width matches the slice values so layout space is correct.
+  box-sizing: border-box means borders count inside the element's height.
+*/
+
+/* ── PORTRAIT: viewport taller than 9:16 ─────────────────────────── */
+@media (max-aspect-ratio: 9/16) {
+  #top-tile    { flex: 1; width: 100%; }
+  #content     { width: 100%; aspect-ratio: 9/16; flex-shrink: 0; }
+  #bottom-tile { flex: 1; width: 100%; }
+}
+
+/* ── LANDSCAPE: viewport wider than 9:16 ─────────────────────────── */
+@media (min-aspect-ratio: 9/16) {
+  body { justify-content: center; }
+  #top-tile, #bottom-tile { display: none; }
+  #content { height: 100%; aspect-ratio: 9/16; flex-shrink: 0; }
+}
+
+#content {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── TOP TILE (blue) — slice: 48 48 48 48 ────────────────────────── */
+#top-tile {
+  border: 48px solid transparent;
+  border-image: url('Sprites/claw_machine_top_tile.png')
+    48 48 48 48 fill / 48px 48px 48px 48px round;
+}
+
+/* ── MIDDLE (main content) — slice: top:70 right:116 bottom:174 left:116 ─ */
+#middle {
+  flex: 1;
+  border: 70px 116px 174px 116px solid transparent;
+  border-image: url('Sprites/claw_machine_middle_tile.png')
+    70 116 174 116 fill / 70px 116px 174px 116px round;
+}
+
+/* ── BOTTOM TILE (cyan) — top row always unscaled at 66px, clips below ── */
+#bottom-tile {
+  position: relative;
+  overflow: hidden;
+}
+/* pseudo-element is at least top(66)+bottom(48)=114px so border-image
+   never squishes the top row; overflow:hidden on parent clips the rest */
+#bottom-tile::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: max(100%, 114px);
+  border-width: 66px 54px 48px 54px;
+  border-style: solid;
+  border-color: transparent;
+  border-image: url('Sprites/claw_machine_bottom_tile.png')
+    66 54 48 54 fill / 66px 54px 48px 54px round;
+}
+</style>
+</head>
+<body>
+  <div id="top-tile"></div>
+  <div id="content">
+    <div id="middle"></div>
+  </div>
+  <div id="bottom-tile"></div>
+</body>
+</html>

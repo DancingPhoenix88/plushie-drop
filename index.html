@@ -14,22 +14,26 @@
 :root{color-scheme:light}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;}
 html,body{width:100vw;height:100dvh;overflow:hidden;position:relative;font-family:'Segoe UI',system-ui,sans-serif;
-  background-color:#e8d4b8;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='52' height='62'%3E%3Cg transform='rotate(20,26,32)'%3E%3Cellipse cx='18' cy='14' rx='7' ry='13' fill='rgba(255,255,255,0.13)'/%3E%3Cellipse cx='34' cy='14' rx='7' ry='13' fill='rgba(255,255,255,0.13)'/%3E%3Ccircle cx='26' cy='38' r='16' fill='rgba(255,255,255,0.13)'/%3E%3C/g%3E%3C/svg%3E");
-  background-repeat:repeat;}
-/* ── game root ──────────────────── */
-#game-root{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);transform-origin:center center;}
-.game-col{display:flex;flex-direction:column;align-items:center;}
+  background-color:#A27766;}
+/* ── REFERENCE: 720×1280 group, zones: game=720×771, floor=720×315, evo=720×194 ──
+   Border-image-width uses % of element dimensions (height for top/bottom, width for sides).
+   Absolute % insets on .cw and #fz-inner reference their containing block's width/height. ── */
+/* ── GAME ROOT ── */
+#game-root{
+  position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-50%);transform-origin:center center;
+  display:flex;flex-direction:column;align-items:center;
+}
 .cw{position:relative;}
-#gc{display:block;cursor:crosshair;border-radius:0 0 10px 10px;touch-action:none;}
-/* ── game over overlay ──────────── */
-#ov{display:none;position:absolute;inset:0;background:rgba(253,246,240,.93);border-radius:0 0 10px 10px;flex-direction:column;align-items:center;justify-content:center;gap:8px;}
+#gc{display:block;cursor:crosshair;touch-action:none;}
+/* ── GAME OVER OVERLAY ── */
+#ov{display:none;position:absolute;inset:0;background:rgba(253,246,240,.93);flex-direction:column;align-items:center;justify-content:center;gap:8px;}
 #ov.show{display:flex;}
 #ov h2{font-size:20px;font-weight:500;color:#5a3820;}
 #ov .sub{font-size:12px;color:#a09078;}
 #ov .fs{font-size:28px;font-weight:500;color:#c05020;}
 #ov button{margin-top:4px;padding:10px 26px;background:#c05020;color:#fff;border:none;border-radius:8px;font-size:13px;font-family:inherit;cursor:pointer;}
-/* ── keyboard help popup ── */
+/* ── KEYBOARD HELP ── */
 #help-popup{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:999;align-items:center;justify-content:center;}
 #help-popup.show{display:flex;}
 #help-box{background:#fdf6f0;border-radius:14px;padding:20px 24px;max-width:340px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.3);}
@@ -39,52 +43,143 @@ html,body{width:100vw;height:100dvh;overflow:hidden;position:relative;font-famil
 #help-box td:first-child{font-family:monospace;background:#f0e4d4;border-radius:4px;text-align:center;width:80px;font-weight:600;color:#c05020;}
 #help-box tr+tr td{border-top:.5px solid #e8d8c8;}
 #help-box .close-btn{display:block;margin:14px auto 0;padding:7px 22px;background:#c05020;color:#fff;border:none;border-radius:8px;font-size:12px;font-family:inherit;cursor:pointer;}
-/* ── shared util ────────────────── */
+/* ── SHARED UTIL ── */
 .lbl{font-size:10px;color:#b09878;text-align:center;letter-spacing:.06em;text-transform:uppercase;}
 .val{font-size:21px;font-weight:500;color:#5a3820;text-align:center;margin:2px 0 8px;}
 .sep{border:none;border-top:.5px solid #dfc8b0;margin:7px 0;}
-h1{font-size:12px;font-weight:500;color:#8a6848;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;text-align:center;}
-/* ── LANDSCAPE: side panel ──────── */
-#ls-panel{width:118px;background:#fdf2ea;border:.5px solid #dfc8b0;border-radius:14px;padding:12px 10px;flex-shrink:0;overflow-y:auto;height:536px;margin-top:24px;}
-.ar{display:flex;align-items:center;gap:6px;padding:4px 0;cursor:pointer;}
-.ar input{width:14px;height:14px;cursor:pointer;accent-color:#c05020;}
-.ar span{font-size:10px;color:#b09878;text-transform:uppercase;letter-spacing:.05em;}
-/* ── PORTRAIT: top bar ──────────── */
-#tb{width:460px;display:flex;align-items:flex-start;gap:8px;padding:7px 12px;background:#fdf2ea;border-bottom:.5px solid #dfc8b0;
-  padding-top:max(7px,calc(7px + env(safe-area-inset-top,0px)));}
-#tb-score{display:flex;flex-direction:column;align-items:center;min-width:58px;}
-#tb-score .sl{font-size:9px;color:#b09878;text-transform:uppercase;letter-spacing:.05em;}
-/* height:52px matches canvas height so the number centers at the same point as the sprite */
-#tb-score .sv{font-size:20px;font-weight:500;color:#5a3820;line-height:1;height:52px;display:flex;align-items:center;justify-content:center;}
-#tb-next{display:flex;flex-direction:column;align-items:center;gap:1px;}
-#tb-next .sl{font-size:9px;color:#b09878;text-transform:uppercase;letter-spacing:.05em;}
-#tb-next .sn{font-size:8px;color:#b09878;}
-#tb-ctrl{display:flex;align-items:center;gap:6px;margin-left:auto;}
-#tb-ctrl button{background:none;border:.5px solid #dfc8b0;border-radius:8px;font-size:24px;padding:4px 8px;cursor:pointer;line-height:1;}
-#tb-ctrl button.active,#gyro-ls.active{background:#fde8d8;border-color:#c05020;}
-#tb-ctrl label{display:flex;align-items:center;gap:4px;font-size:11px;color:#b09878;cursor:pointer;text-transform:uppercase;}
-#tb-ctrl input[type=checkbox]{width:18px;height:18px;accent-color:#c05020;}
-/* ── PORTRAIT: evo strip (1 row, bottom) ── */
-#ev-s{width:460px;display:grid;grid-template-columns:repeat(11,1fr);gap:2px;padding:5px 6px;background:#fdf2ea;border-top:.5px solid #dfc8b0;
-  /* extend background into bottom home-indicator area */
-  padding-bottom:max(5px,calc(5px + env(safe-area-inset-bottom,0px)));}
+/* ── BLUE: top tile (portrait only) ── */
+#top-tile{
+  width:calc(460px + var(--bms)*2);
+  border-width:24px;border-style:solid;border-color:transparent;
+  border-image:url('Sprites/claw_machine_top_tile.png') 48 fill / 24px round;
+  display:flex;align-items:center;justify-content:center;
+}
+#top-tile h1{
+  font-size:14px;font-weight:700;color:#5a3820;
+  letter-spacing:.1em;text-transform:uppercase;position:relative;z-index:1;
+}
+/* ── MAIN CONTENT: 9:16 sizing wrapper for game-frame ── */
+#main-content{flex-shrink:0;}
+
+/* ── GAME FRAME: full 9:16 zone — all content inside ── */
+#game-frame{
+  width:100%;height:100%;
+  position:relative;
+  border-style:solid;border-color:transparent;border-width:0;
+  border-image:url('Sprites/claw_machine_middle_tile.png') 70 116 240 116 fill / 9.08% 16.11% 22.57% 16.11% round;
+}
+
+/* .cw: canvas area — 626×1034 at 720×1280 reference */
+#game-frame .cw{
+  position:absolute;
+  top:18px;
+  left:calc(36/720*100%);
+  width:calc(646/720*100%);
+  height:calc(1034/1280*100%);
+  overflow:hidden;
+}
+#game-frame canvas{display:block;width:100%;height:auto;aspect-ratio:646/1034;}
+
+/* floor-zone */
+#floor-zone{
+  position:absolute;
+  left:20px;right:20px;
+  bottom:calc(82/1280*100%);
+  height:calc(112/1280*100%);
+  border-style:solid;border-color:transparent;border-width:0;
+  /* border-image: url(Sprites/claw_machine_floor_tile.png) 2 120 173 120 fill / 0.63% 16.67% 54.92% 16.67% round; */
+}
+#fz-inner{
+  position:absolute;inset:0;
+  display:flex;align-items:center;gap:8px;overflow:hidden;padding:0 4px;
+}
+#fz-score{display:flex;flex-direction:column;align-items:center;flex-shrink:0;}
+#fz-score .sl{font-size:9px;color:#b09878;text-transform:uppercase;letter-spacing:.05em;}
+#fz-score .sv{font-size:20px;font-weight:500;color:#5a3820;line-height:1;}
+#fz-next{display:flex;flex-direction:column;align-items:center;gap:1px;flex-shrink:0;}
+#fz-next .sl{font-size:9px;color:#b09878;text-transform:uppercase;letter-spacing:.05em;}
+#fz-next .sn{font-size:8px;color:#b09878;}
+#fz-ctrl{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-left:auto;}
+#fz-ctrl button{background:none;border:.5px solid #dfc8b0;border-radius:8px;font-size:20px;padding:2px 6px;cursor:pointer;line-height:1;}
+#fz-ctrl button.active,#gyro-ls.active{background:#fde8d8;border-color:#c05020;}
+#fz-ctrl label{display:flex;align-items:center;gap:3px;font-size:10px;color:#b09878;cursor:pointer;text-transform:uppercase;}
+#fz-ctrl input[type=checkbox]{width:16px;height:16px;accent-color:#c05020;}
+
+/* ev-s */
+#ev-s{
+  position:absolute;
+  left:20px;right:20px;
+  bottom:0;
+  height:calc(81/1280*100%);
+  display:grid;grid-template-columns:repeat(11,1fr);gap:2px;
+  padding:4px 6px;box-sizing:border-box;
+}
 #ev-s .ec{display:flex;flex-direction:column;align-items:center;}
 #ev-s img{width:100%;aspect-ratio:1;object-fit:contain;}
 #ev-s .en{font-size:6px;color:#8a7060;text-align:center;}
-/* ── ORIENTATION SWITCHES ───────── */
-@media (orientation:landscape){
-  #game-root{display:flex;flex-direction:row;align-items:flex-start;gap:10px;padding:16px 10px;}
-  #tb,#ev-s{display:none !important;}
-  #ls-panel{display:block;}
-  h1{display:block;}
+
+/* ── BLUE top / CYAN bottom tiles ── */
+#top-tile{display:flex;align-items:center;justify-content:center;width:100%;}
+#bottom-tile{position:relative;overflow:hidden;width:100%;}
+#bottom-tile::before{
+  content:'';position:absolute;top:0;left:0;right:0;
+  height:max(100%,57px);
+  border-width:33px 27px 24px 27px;border-style:solid;border-color:transparent;
+  border-image:url('Sprites/claw_machine_bottom_tile.png')
+    66 54 48 54 fill / 33px 27px 24px 27px round;
 }
-@media (orientation:portrait){
-  #game-root{display:flex;flex-direction:column;align-items:stretch;padding:0;}
-  #tb{display:flex;order:1;}
-  .game-col{order:2;flex:1;}
-  #ev-s{display:grid;order:3;}
-  #ls-panel{display:none !important;}
-  h1{display:none;}
+
+/* ── LANDSCAPE SIDEBAR ── */
+#evo-panel{
+  width:118px;background:#fdf2ea;border:.5px solid #dfc8b0;
+  border-radius:14px;padding:12px 10px;flex-shrink:0;overflow-y:auto;
+}
+.ar{display:flex;align-items:center;gap:6px;padding:4px 0;cursor:pointer;}
+.ar input{width:14px;height:14px;cursor:pointer;accent-color:#c05020;}
+.ar span{font-size:10px;color:#b09878;text-transform:uppercase;letter-spacing:.05em;}
+
+
+/* ── PORTRAIT: tall viewport (< 9:16) — game-root full width, game-frame 9:16 centered ── */
+@media (max-aspect-ratio: 9/16){
+  /* html+body must both have explicit height for flex:1 tiles to distribute correctly */
+  html,body{height:100dvh;}
+  body{display:flex;flex-direction:column;align-items:center;}
+  #game-root{
+    position:relative !important;top:auto !important;left:auto !important;
+    transform:none !important;
+    width:100%;flex:1;min-height:0;
+    display:flex;flex-direction:column;align-items:center;
+  }
+  /* top-tile: fixed to text height only — no growing */
+  #top-tile{flex:0 0 auto;width:100%;}
+  /* main-content: 9:16, sits right below top-tile */
+  #main-content{width:100%;aspect-ratio:9/16;flex-shrink:0;}
+  /* bottom-tile: fills remaining space; if viewport is short, collapses to 0 */
+  #bottom-tile{flex:1 1 0;width:100%;min-height:0;}
+  /* justify-content:flex-end ensures content anchors to viewport bottom
+     when top+content exceed viewport height (bottom-tile = 0, overflow hidden) */
+  #game-root{overflow:hidden;justify-content:flex-end;}
+  #evo-panel{display:none;}
+  #ev-s{display:grid;}
+}
+
+/* ── LANDSCAPE: wide viewport (> 9:16) — game-frame full height, top/bottom cut off ── */
+@media (min-aspect-ratio: 9/16){
+  body{display:flex;}
+  #game-root{
+    position:relative !important;top:auto !important;left:auto !important;
+    transform:none !important;
+    width:100vw;height:100dvh;overflow:hidden;
+    display:flex;flex-direction:row;align-items:center;gap:10px;
+    padding:0 10px;box-sizing:border-box;
+  }
+  #top-tile,#bottom-tile{display:none;}
+  #main-content{height:100dvh;aspect-ratio:9/16;flex-shrink:0;}
+  #evo-panel{display:none;}
+}
+/* sidebar only when ratio > 12:16 */
+@media (min-aspect-ratio: 12/16){
+  #evo-panel{display:flex;flex-direction:column;align-self:stretch;overflow-y:auto;}
 }
 </style>
 </head>
@@ -92,45 +187,54 @@ h1{font-size:12px;font-weight:500;color:#8a6848;letter-spacing:.06em;text-transf
 
 <div id="game-root">
 
-  <!-- PORTRAIT: compact top bar (hidden in landscape) -->
-  <div id="tb">
-    <div id="tb-score">
-      <span class="sl">Score</span>
-      <span class="sv" id="sc-p">0</span>
-    </div>
-    <div id="tb-next">
-      <span class="sl">Next</span>
-      <canvas id="nc" width="52" height="52"></canvas>
-      <span class="sn" id="nl">—</span>
-    </div>
-    <div id="tb-ctrl">
-      <button id="mute-btn" onclick="toggleMute()">🔊</button>
-      <button id="gyro-btn" onclick="toggleGyro()" title="Tilt control">🌀</button>
-      <label><input type="checkbox" id="bgm-cb" onchange="toggleBGM(this.checked)"><span>BGM</span></label>
-      <label><input type="checkbox" id="ap"><span>Auto</span></label>
-      <label><input type="checkbox" id="claw-cb" onchange="toggleClaw(this.checked)"><span>Claw</span></label>
-    </div>
-  </div>
+  <!-- BLUE: "BB Tower" header (portrait only) -->
+  <div id="top-tile"><h1>BB Tower</h1></div>
 
-  <!-- PORTRAIT: 2-row evolution grid (hidden in landscape) -->
-  <div id="ev-s"></div>
+  <!-- MAIN CONTENT: 9:16 block — all zones inside game-frame -->
+  <div id="main-content">
+    <div id="game-frame">
 
-  <!-- CANVAS — always visible -->
-  <div class="game-col">
-    <h1>Plushie Drop</h1>
-    <div class="cw">
-      <canvas id="gc" width="460" height="560"></canvas>
-      <div id="ov">
-        <h2>Game Over!</h2>
-        <div class="sub">final score</div>
-        <div class="fs" id="fs">0</div>
-        <button onclick="restart()">Play Again ↺</button>
+      <!-- Canvas — fills .cw area (top:2% left:6% right:6% bottom:23%) -->
+      <div class="cw">
+        <canvas id="gc" width="870" height="1046"></canvas>
+        <div id="ov">
+          <h2>Game Over!</h2>
+          <div class="sub">final score</div>
+          <div class="fs" id="fs">0</div>
+          <button onclick="restart()">Play Again ↺</button>
+        </div>
       </div>
-    </div>
-  </div>
 
-  <!-- LANDSCAPE: side panel (hidden in portrait) -->
-  <div id="ls-panel">
+      <!-- Floor zone: score/next/controls — inside game-frame bottom area -->
+      <div id="floor-zone">
+        <div id="fz-inner">
+          <div id="fz-score">
+            <span class="sl">Score</span>
+            <span class="sv" id="sc-p">0</span>
+          </div>
+          <div id="fz-next">
+            <span class="sl">Next</span>
+            <canvas id="nc" width="52" height="52"></canvas>
+            <span class="sn" id="nl">—</span>
+          </div>
+          <div id="fz-ctrl">
+            <button id="mute-btn" onclick="toggleMute()">🔊</button>
+            <button id="gyro-btn" onclick="toggleGyro()" title="Tilt control">🌀</button>
+            <label><input type="checkbox" id="bgm-cb" onchange="toggleBGM(this.checked)"><span>BGM</span></label>
+            <label><input type="checkbox" id="ap" checked><span>Auto</span></label>
+            <label><input type="checkbox" id="claw-cb" onchange="toggleClaw(this.checked)" checked><span>Claw</span></label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Evolution chart — inside game-frame bottom area -->
+      <div id="ev-s"></div>
+
+    </div><!-- #game-frame -->
+  </div><!-- #main-content -->
+
+  <!-- LANDSCAPE RIGHT SIDEBAR -->
+  <div id="evo-panel">
     <div class="lbl">Score</div><div class="val" id="sc">0</div>
     <hr class="sep">
     <div class="lbl">Next</div>
@@ -146,6 +250,9 @@ h1{font-size:12px;font-weight:500;color:#8a6848;letter-spacing:.06em;text-transf
     <button id="mute-ls" onclick="toggleMute()" style="margin-top:4px;width:100%;padding:5px 0;background:#fdf2ea;border:.5px solid #dfc8b0;border-radius:8px;font-size:16px;cursor:pointer;">🔊</button>
     <button id="gyro-ls" onclick="toggleGyro()" style="margin-top:4px;width:100%;padding:5px 0;background:#fdf2ea;border:.5px solid #dfc8b0;border-radius:8px;font-size:16px;cursor:pointer;" title="Tilt control">🌀</button>
   </div>
+
+  <!-- CYAN: decorative filler (portrait only, no content) -->
+  <div id="bottom-tile"></div>
 
 </div><!-- #game-root -->
 
@@ -177,23 +284,25 @@ h1{font-size:12px;font-weight:500;color:#8a6848;letter-spacing:.06em;text-transf
 // stroke = same hue but darker
 // r values: linear 18→89 so lv11 diameter = 40% of tank width (444px)
 // scale: linear 0.277 → 1.108 (lv1→lv11 = 400% size). r = imgR × scale
+// r values scaled ×(626/460≈1.36) to match new W=626 canvas
 const PD=[null,
-  {name:'Mây',       r:18,  body:'#8ee8ff', stroke:'#38a8d0'},
-  {name:'Bơ',        r:23,  body:'#4a8c40', stroke:'#245820'},
-  {name:'Vincam',    r:29,  body:'#f5f5f5', stroke:'#b8b8b8'},
-  {name:'Mini Dora', r:34,  body:'#e83030', stroke:'#980808'},
-  {name:'Baby Bunny',r:40,  physR:36, body:'#fff0f8', stroke:'#d89ab8'},
-  {name:'Poko',      r:45,  physR:43, body:'#c87830', stroke:'#884808'},
-  {name:'Doraemi',   r:50,  physR:48, body:'#f0c820', stroke:'#b08800'},
-  {name:'Doraemon',  r:56,  body:'#1090e8', stroke:'#0055b0'},
-  {name:'Bunny',     r:85,  body:'#f060a0', stroke:'#a81858'},
-  {name:'Mimi',      r:92,  body:'#9848d4', stroke:'#601898'},
-  {name:'Racoon',    r:100, physR:95, body:'#282838', stroke:'#080818'},
+  {name:'Mây',       r:24,  body:'#8ee8ff', stroke:'#38a8d0'},
+  {name:'Bơ',        r:31,  body:'#4a8c40', stroke:'#245820'},
+  {name:'Vincam',    r:39,  body:'#f5f5f5', stroke:'#b8b8b8'},
+  {name:'Mini Dora', r:46,  body:'#e83030', stroke:'#980808'},
+  {name:'Baby Bunny',r:54,  physR:49, body:'#fff0f8', stroke:'#d89ab8'},
+  {name:'Poko',      r:61,  physR:58, body:'#c87830', stroke:'#884808'},
+  {name:'Doraemi',   r:68,  physR:65, body:'#f0c820', stroke:'#b08800'},
+  {name:'Doraemon',  r:76,  body:'#1090e8', stroke:'#0055b0'},
+  {name:'Bunny',     r:116, body:'#f060a0', stroke:'#a81858'},
+  {name:'Mimi',      r:125, body:'#9848d4', stroke:'#601898'},
+  {name:'Racoon',    r:136, physR:129, body:'#282838', stroke:'#080818'},
 ];
 const PTS=[0,10,30,60,100,150,210,280,360,450,550,1000];
 
 // ── CONSTANTS ─────────────────────────────────────────────────────────
-const W=460,H=560,WALL=8,DY=95,DROPY=50;
+const W=646,H=1034,WALL=11,DY=175,DROPY=92;
+const FS=W/460; // font/size scale factor (~1.36) — multiply all px sizes by this
 const GRAV=0.38, DAMP=0.994, REST=0.35, FRIC=0.84;
 const SUBSTEPS=6, ITERS=4;
 const V_EPS=0.08;   // velocity epsilon — zero out micro-motion
@@ -206,7 +315,7 @@ let mx=W/2, cooling=false, dead=false;
 let danger={};
 let firstMerged=new Set(); // tracks levels merged for the first time this game
 
-let showClaw=false;
+let showClaw=true;
 function toggleClaw(v){
   showClaw=v;
   document.getElementById('claw-cb').checked=v;
@@ -230,7 +339,7 @@ const dpr=window.devicePixelRatio||1;
 // Main game canvas
 const cv=document.getElementById('gc'), ctx=cv.getContext('2d');
 cv.width=W*dpr; cv.height=H*dpr;
-cv.style.width=W+'px'; cv.style.height=H+'px';
+// canvas CSS size controlled by .cw inset (width:100%;height:100%) — do not set inline style
 ctx.scale(dpr,dpr);
 ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
 
@@ -639,18 +748,18 @@ function drawNineSlice(gctx, img, corner, dx, dy, dw, dh){
 
 // ── RENDER ────────────────────────────────────────────────────────────
 function render(){
-  // 9-slice panel: corners stay crisp at any canvas size; center/edges stretch
-  drawNineSlice(ctx, _panelSpr, PANEL_C, 0, 0, W, H);
+  ctx.clearRect(0, 0, W, H); // transparent canvas — background comes from CSS tile
   // danger line — blinks when any collider enters the warning zone
   const inWarning=!cooling&&plushies.some(p=>(p.y-p.r)<(DY+60)&&p.speed<2);
   const blink=inWarning&&(Date.now()%600)<300;
   ctx.save(); ctx.setLineDash([7,5]);
   ctx.strokeStyle=blink?'rgba(220,30,30,.95)':'rgba(210,55,55,.55)';
   ctx.lineWidth=blink?2.5:1.5;
-  ctx.beginPath(); ctx.moveTo(WALL,DY); ctx.lineTo(W-WALL,DY); ctx.stroke();
-  ctx.setLineDash([]); ctx.font=blink?'bold 9px sans-serif':'9px sans-serif';
+  const dzPad=W*0.1;
+  ctx.beginPath(); ctx.moveTo(dzPad,DY); ctx.lineTo(W-dzPad,DY); ctx.stroke();
+  ctx.setLineDash([]); ctx.font=blink?`bold ${Math.round(16*FS)}px sans-serif`:`${Math.round(16*FS)}px sans-serif`;
   ctx.fillStyle=blink?'rgba(220,30,30,.95)':'rgba(210,55,55,.65)'; ctx.textAlign='left';
-  ctx.fillText('▲ danger zone',WALL+5,DY-4); ctx.restore();
+  ctx.fillText('▲ danger zone',dzPad+5,DY-4); ctx.restore();
   // ── CLAW + held plushie ───────────────────────────────────────────────
   if(!dead && !showClaw){
     // claw off — show classic ghost preview
@@ -731,7 +840,7 @@ function render(){
   // score popups
   ctx.save(); ctx.textAlign='center';
   popups.forEach(p=>{
-    const sz=Math.round(22+p.life*14); // shrinks as it fades
+    const sz=Math.round((22+p.life*14)*FS); // shrinks as it fades
     ctx.font=`700 ${sz}px 'Segoe UI',sans-serif`;
     ctx.globalAlpha=p.life*0.92;
     // dark stroke for readability over any background
@@ -772,7 +881,7 @@ function render(){
     ctx.shadowColor=c.stroke;
     ctx.shadowBlur=22;
     // outer stroke
-    ctx.font=`900 52px 'Segoe UI',system-ui,sans-serif`;
+    ctx.font=`900 ${Math.round(52*FS)}px 'Segoe UI',system-ui,sans-serif`;
     ctx.lineWidth=8;
     ctx.strokeStyle=c.stroke;
     ctx.strokeText(c.name,0,0);
@@ -781,7 +890,7 @@ function render(){
     ctx.fillText(c.name,0,0);
     // white inner highlight
     ctx.shadowBlur=0;
-    ctx.font=`900 52px 'Segoe UI',system-ui,sans-serif`;
+    ctx.font=`900 ${Math.round(52*FS)}px 'Segoe UI',system-ui,sans-serif`;
     ctx.fillStyle='rgba(255,255,255,0.38)';
     ctx.fillText(c.name,0,-2);
     // sub-label: level + points
