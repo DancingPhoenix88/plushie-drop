@@ -29,6 +29,16 @@ html,body{width:100vw;height:100dvh;overflow:hidden;position:relative;font-famil
 #ov .sub{font-size:12px;color:#a09078;}
 #ov .fs{font-size:28px;font-weight:500;color:#c05020;}
 #ov button{margin-top:4px;padding:10px 26px;background:#c05020;color:#fff;border:none;border-radius:8px;font-size:13px;font-family:inherit;cursor:pointer;}
+/* ── keyboard help popup ── */
+#help-popup{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:999;align-items:center;justify-content:center;}
+#help-popup.show{display:flex;}
+#help-box{background:#fdf6f0;border-radius:14px;padding:20px 24px;max-width:340px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.3);}
+#help-box h3{font-size:14px;font-weight:600;color:#5a3820;margin-bottom:12px;text-align:center;letter-spacing:.05em;text-transform:uppercase;}
+#help-box table{width:100%;border-collapse:collapse;font-size:12px;}
+#help-box td{padding:4px 6px;color:#5a3820;}
+#help-box td:first-child{font-family:monospace;background:#f0e4d4;border-radius:4px;text-align:center;width:80px;font-weight:600;color:#c05020;}
+#help-box tr+tr td{border-top:.5px solid #e8d8c8;}
+#help-box .close-btn{display:block;margin:14px auto 0;padding:7px 22px;background:#c05020;color:#fff;border:none;border-radius:8px;font-size:12px;font-family:inherit;cursor:pointer;}
 /* ── shared util ────────────────── */
 .lbl{font-size:10px;color:#b09878;text-align:center;letter-spacing:.06em;text-transform:uppercase;}
 .val{font-size:21px;font-weight:500;color:#5a3820;text-align:center;margin:2px 0 8px;}
@@ -136,6 +146,25 @@ h1{font-size:12px;font-weight:500;color:#8a6848;letter-spacing:.06em;text-transf
 
 </div><!-- #game-root -->
 
+<div id="help-popup">
+  <div id="help-box">
+    <h3>⌨️ Keyboard Shortcuts</h3>
+    <table>
+      <tr><td>← / →</td><td>Move aim (hold Shift for fast)</td></tr>
+      <tr><td>Space</td><td>Drop plushie</td></tr>
+      <tr><td>H</td><td>Toggle solid n-gon shapes</td></tr>
+      <tr><td>D</td><td>Debug overlay (velocity / spin)</td></tr>
+      <tr><td>C</td><td>Show polygon colliders</td></tr>
+      <tr><td>[ / ]</td><td>Decrease / increase polygon sides</td></tr>
+      <tr><td>S</td><td>Toggle spawn rate display</td></tr>
+      <tr><td>2–9, 0, 1</td><td>Spawn lv2–lv11 (debug)</td></tr>
+      <tr><td>A</td><td>Toggle auto-drop mode</td></tr>
+      <tr><td>? or /</td><td>Show this help</td></tr>
+    </table>
+    <button class="close-btn" onclick="toggleHelp(false)">Close</button>
+  </div>
+</div>
+
 <script>
 'use strict';
 
@@ -148,15 +177,15 @@ const PD=[null,
   {name:'Bơ',        r:23,  body:'#4a8c40', stroke:'#245820'},
   {name:'Vincam',    r:29,  body:'#f5f5f5', stroke:'#b8b8b8'},
   {name:'Mini Dora', r:34,  body:'#e83030', stroke:'#980808'},
-  {name:'Baby Bunny',r:40,  body:'#fff0f8', stroke:'#d89ab8'},
-  {name:'Poko',      r:45,  body:'#c87830', stroke:'#884808'},
-  {name:'Doraemi',   r:50,  body:'#f0c820', stroke:'#b08800'},
+  {name:'Baby Bunny',r:40,  physR:36, body:'#fff0f8', stroke:'#d89ab8'},
+  {name:'Poko',      r:45,  physR:43, body:'#c87830', stroke:'#884808'},
+  {name:'Doraemi',   r:50,  physR:48, body:'#f0c820', stroke:'#b08800'},
   {name:'Doraemon',  r:56,  body:'#1090e8', stroke:'#0055b0'},
   {name:'Bunny',     r:85,  body:'#f060a0', stroke:'#a81858'},
   {name:'Mimi',      r:92,  body:'#9848d4', stroke:'#601898'},
-  {name:'Racoon',    r:100, body:'#282838', stroke:'#080818'},
+  {name:'Racoon',    r:100, physR:95, body:'#282838', stroke:'#080818'},
 ];
-const PTS=[0,1,3,6,10,15,21,28,36,45,55,100];
+const PTS=[0,10,30,60,100,150,210,280,360,450,550,1000];
 
 // ── CONSTANTS ─────────────────────────────────────────────────────────
 const W=460,H=560,WALL=8,DY=95,DROPY=50;
@@ -166,10 +195,11 @@ const V_EPS=0.08;   // velocity epsilon — zero out micro-motion
 const AV_MAX=0.12;  // max angular velocity (rad/frame)
 
 // ── STATE ─────────────────────────────────────────────────────────────
-let plushies=[], parts=[], mergeQ=[], popups=[];
+let plushies=[], parts=[], mergeQ=[], popups=[], confetti=[], celebrations=[];
 let score=0,best=0,cur=1,nxt=1;
 let mx=W/2, cooling=false, dead=false;
 let danger={};
+let firstMerged=new Set(); // tracks levels merged for the first time this game
 
 let showClaw=false;
 function toggleClaw(v){
@@ -258,7 +288,7 @@ function satTest(av,bv){
 // ── PHYSICS ───────────────────────────────────────────────────────────
 class Ball {
   constructor(x,y,lvl){
-    this.x=x; this.y=y; this.r=PD[lvl].r;
+    this.x=x; this.y=y; this.r=PD[lvl].physR??PD[lvl].r;
     this.vx=0; this.vy=0; this.angle=0; this.av=0;
     this.level=lvl; this.born=Date.now();
     this.px=x; this.py=y;
@@ -366,6 +396,7 @@ function processMerges(){
     burst(px,py,PD[nl].body); updUI(); sfxMerge(nl);
     if(showSpawnRate) updateEvoLabels();
     popups.push({x:px,y:py,text:'+'+PTS[nl],color:PD[nl].body,life:1});
+    if(!firstMerged.has(nl)){ firstMerged.add(nl); spawnCelebration(px,py,nl); }
   }
   plushies=plushies.filter((_,i)=>!toRemove.has(i));
   for(const {x,y,lvl} of toAdd){
@@ -394,7 +425,7 @@ function gameOver(){
 
 function restart(){
   dead=false; cooling=false;
-  plushies=[]; parts=[]; mergeQ=[]; popups=[]; danger={}; score=0; updUI();
+  plushies=[]; parts=[]; mergeQ=[]; popups=[]; confetti=[]; celebrations=[]; danger={}; firstMerged=new Set(); score=0; updUI();
   document.getElementById('ov').classList.remove('show');
   cur=rnd(); nxt=rnd(); updNext();
   clawState='idle'; clawY=DROPY; clawLvl=cur;
@@ -416,6 +447,69 @@ function tickPopups(){
   popups.forEach(p=>{p.y-=1.2;p.life-=0.022;}); // float up, fade ~1.5s
 }
 
+// ── FIRST-MERGE CELEBRATION ────────────────────────────────────────────
+const CONFETTI_COLORS=['#ff5a5a','#ffb830','#ffe234','#4ddc7a','#38c5f5','#c84dff','#ff6eb4','#ffffff'];
+function spawnCelebration(x,y,lvl){
+  // confetti burst: 60 particles from the merge point + along top
+  for(let i=0;i<60;i++){
+    const fromTop=i<20; // first 20 rain from above
+    const cx=fromTop?Math.random()*W:x;
+    const cy=fromTop?-10:y;
+    const a=fromTop?(Math.PI/2+Math.random()*.8-.4):(Math.random()*Math.PI*2);
+    const spd=fromTop?(3+Math.random()*5):(4+Math.random()*7);
+    confetti.push({
+      x:cx, y:cy,
+      vx:Math.cos(a)*spd*(fromTop?1:1),
+      vy:Math.sin(a)*spd,
+      r:3+Math.random()*4,
+      rot:Math.random()*Math.PI*2,
+      rv:(Math.random()-.5)*0.25,
+      w:4+Math.random()*5, // width for rect confetti
+      h:6+Math.random()*8, // height for rect confetti
+      color:CONFETTI_COLORS[Math.floor(Math.random()*CONFETTI_COLORS.length)],
+      life:1,
+      shape:Math.random()<0.6?'rect':'circle'
+    });
+  }
+  // big name celebration text
+  celebrations.push({
+    x:W/2, y:H/2-30,
+    name:PD[lvl].name,
+    level:lvl,
+    pts:PTS[lvl],
+    color:PD[lvl].body,
+    stroke:PD[lvl].stroke,
+    life:1,      // 1→0 over ~3s
+    scale:0.1,   // starts tiny, pops to 1
+    phase:'in'   // 'in' | 'hold' | 'out'
+  });
+}
+function tickConfetti(){
+  confetti=confetti.filter(p=>p.life>0);
+  confetti.forEach(p=>{
+    p.x+=p.vx; p.y+=p.vy;
+    p.vy+=0.22; // gravity
+    p.vx*=0.99;
+    p.rot+=p.rv;
+    p.life-=0.012;
+  });
+}
+function tickCelebrations(){
+  celebrations=celebrations.filter(c=>c.life>0);
+  celebrations.forEach(c=>{
+    if(c.phase==='in'){
+      c.scale=Math.min(1, c.scale+0.12);
+      if(c.scale>=1){ c.phase='hold'; c.holdTimer=60; } // hold ~1s at 60fps
+    } else if(c.phase==='hold'){
+      c.holdTimer--;
+      if(c.holdTimer<=0) c.phase='out';
+    } else {
+      c.life-=0.022; // fade out ~1.5s
+      c.y-=0.8;     // drift up while fading
+    }
+  });
+}
+
 // ── PER-FRAME KEY INPUT ────────────────────────────────────────────────
 function processKeys(){
   if(!keysDown.has('ArrowLeft')&&!keysDown.has('ArrowRight')) return;
@@ -431,7 +525,7 @@ function loop(){
   processKeys();
   if(!dead){step();detectMerges();processMerges();}
   updateClaw();
-  tickParts(); tickPopups(); if(!dead) checkDanger(); render();
+  tickParts(); tickPopups(); tickConfetti(); tickCelebrations(); if(!dead) checkDanger(); render();
   requestAnimationFrame(loop);
 }
 
@@ -451,9 +545,96 @@ function predictLanding(x, r){
   return y;
 }
 
+// ── 9-SLICE PANEL ────────────────────────────────────────────────────
+// Build a small 32×32 source sprite once; drawNineSlice stretches it to any size
+// without distorting corners.  Layout (PANEL_C = 8px slices):
+//
+//   TL | top  | TR        ← 8px tall
+//   ───+──────+───
+//   lft|center|rgt        ← stretches vertically
+//   ───+──────+───
+//   BL | bot  | BR        ← 8px tall
+//       ↑ 8px each end
+//
+const PANEL_SZ = 32;   // source sprite size (px)
+const PANEL_C  = 8;    // corner/slice thickness (matches WALL)
+
+const _panelSpr = (() => {
+  const oc = document.createElement('canvas');
+  oc.width = oc.height = PANEL_SZ;
+  const c = oc.getContext('2d');
+  const s = PANEL_SZ, cr = PANEL_C;
+
+  // ── interior (center region of 9-slice) ─────────────────────────────
+  c.fillStyle = '#f5f0e6';
+  c.fillRect(cr, cr, s - cr*2, s - cr*2);
+
+  // ── border fill (all 8 outer strips) ────────────────────────────────
+  c.fillStyle = '#c8a068';
+  c.fillRect(0,    0,    s,  cr);       // top bar
+  c.fillRect(0,    s-cr, s,  cr);       // bottom bar
+  c.fillRect(0,    cr,   cr, s-cr*2);   // left bar
+  c.fillRect(s-cr, cr,   cr, s-cr*2);   // right bar
+
+  // ── wood grain texture on border strips ─────────────────────────────
+  c.strokeStyle = 'rgba(100,58,12,0.28)';
+  c.lineWidth = 1;
+  for(let x = 1; x < cr; x += 2){
+    c.beginPath(); c.moveTo(x,   0); c.lineTo(x,   s); c.stroke();
+    c.beginPath(); c.moveTo(s-x, 0); c.lineTo(s-x, s); c.stroke();
+  }
+  for(let y = 1; y < cr; y += 2){
+    c.beginPath(); c.moveTo(0, y);   c.lineTo(s, y);   c.stroke();
+    c.beginPath(); c.moveTo(0, s-y); c.lineTo(s, s-y); c.stroke();
+  }
+
+  // ── inner bevel highlight ────────────────────────────────────────────
+  c.strokeStyle = 'rgba(255,228,185,0.65)';
+  c.lineWidth = 1;
+  c.strokeRect(cr-1.5, cr-1.5, s-(cr-1.5)*2, s-(cr-1.5)*2);
+
+  // ── outer dark edge ──────────────────────────────────────────────────
+  c.strokeStyle = 'rgba(70,35,8,0.65)';
+  c.lineWidth = 1;
+  c.strokeRect(0.5, 0.5, s-1, s-1);
+
+  return oc;
+})();
+
+// drawNineSlice(ctx, spriteCanvas, cornerSize, destX, destY, destW, destH)
+// Draws a 9-sliced panel at any destination size without distorting corners.
+function drawNineSlice(gctx, img, corner, dx, dy, dw, dh){
+  const s = img.width;          // source sprite side length (assumed square)
+  const c = corner;
+  const mSrc  = s  - c * 2;    // source centre/edge region size
+  const mDstW = dw - c * 2;    // dest horizontal stretch
+  const mDstH = dh - c * 2;    // dest vertical stretch
+
+  // [srcX, srcY, srcW, srcH,  dstX,       dstY,       dstW,   dstH  ]
+  const slices = [
+    // ── 4 corners (no stretching) ───────────────────────────────────────
+    [0,    0,    c,    c,    dx,         dy,         c,      c     ], // TL
+    [s-c,  0,    c,    c,    dx+dw-c,    dy,         c,      c     ], // TR
+    [0,    s-c,  c,    c,    dx,         dy+dh-c,    c,      c     ], // BL
+    [s-c,  s-c,  c,    c,    dx+dw-c,    dy+dh-c,    c,      c     ], // BR
+    // ── 4 edges (stretch along one axis) ────────────────────────────────
+    [c,    0,    mSrc, c,    dx+c,       dy,         mDstW,  c     ], // top
+    [c,    s-c,  mSrc, c,    dx+c,       dy+dh-c,    mDstW,  c     ], // bottom
+    [0,    c,    c,    mSrc, dx,         dy+c,       c,      mDstH ], // left
+    [s-c,  c,    c,    mSrc, dx+dw-c,    dy+c,       c,      mDstH ], // right
+    // ── center (stretch both axes) ──────────────────────────────────────
+    [c,    c,    mSrc, mSrc, dx+c,       dy+c,       mDstW,  mDstH ], // center
+  ];
+
+  for(const [sx,sy,sw,sh,ddx,ddy,ddw,ddh] of slices){
+    gctx.drawImage(img, sx, sy, sw, sh, ddx, ddy, ddw, ddh);
+  }
+}
+
 // ── RENDER ────────────────────────────────────────────────────────────
 function render(){
-  ctx.fillStyle='#f5f0e6'; ctx.fillRect(0,0,W,H);
+  // 9-slice panel: corners stay crisp at any canvas size; center/edges stretch
+  drawNineSlice(ctx, _panelSpr, PANEL_C, 0, 0, W, H);
   // danger line — blinks when any collider enters the warning zone
   const inWarning=!cooling&&plushies.some(p=>(p.y-p.r)<(DY+60)&&p.speed<2);
   const blink=inWarning&&(Date.now()%600)<300;
@@ -529,8 +710,12 @@ function render(){
   for(const p of byLevel){
     ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.angle);
     ctx.shadowColor='rgba(0,0,0,0.28)'; ctx.shadowBlur=10; ctx.shadowOffsetX=2; ctx.shadowOffsetY=5;
-    const rs=rendSprites[p.level];
-    if(rs) ctx.drawImage(rs.c,-rs.lw/2,-rs.lh/2,rs.lw,rs.lh);
+    if(solidMode){
+      drawSolidNgon(ctx,p.level);
+    } else {
+      const rs=rendSprites[p.level];
+      if(rs) ctx.drawImage(rs.c,-rs.lw/2,-rs.lh/2,rs.lw,rs.lh);
+    }
     ctx.restore();
   }
   for(const p of parts){
@@ -549,6 +734,62 @@ function render(){
     ctx.fillStyle=p.color; ctx.fillText(p.text,p.x,p.y);
   });
   ctx.globalAlpha=1; ctx.restore();
+
+  // ── CONFETTI ──────────────────────────────────────────────────────────
+  ctx.save();
+  for(const p of confetti){
+    ctx.globalAlpha=p.life*0.9;
+    ctx.fillStyle=p.color;
+    ctx.save();
+    ctx.translate(p.x,p.y);
+    ctx.rotate(p.rot);
+    if(p.shape==='rect'){
+      ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);
+    } else {
+      ctx.beginPath();ctx.arc(0,0,p.r,0,Math.PI*2);ctx.fill();
+    }
+    ctx.restore();
+  }
+  ctx.globalAlpha=1;
+  ctx.restore();
+
+  // ── FIRST-MERGE CELEBRATION TEXT ──────────────────────────────────────
+  ctx.save();
+  ctx.textAlign='center';
+  for(const c of celebrations){
+    const alpha=c.phase==='out'?c.life*0.95:0.97;
+    ctx.globalAlpha=alpha;
+    ctx.save();
+    ctx.translate(c.x,c.y);
+    ctx.scale(c.scale,c.scale);
+    // shadow glow
+    ctx.shadowColor=c.stroke;
+    ctx.shadowBlur=22;
+    // outer stroke
+    ctx.font=`900 52px 'Segoe UI',system-ui,sans-serif`;
+    ctx.lineWidth=8;
+    ctx.strokeStyle=c.stroke;
+    ctx.strokeText(c.name,0,0);
+    // fill
+    ctx.fillStyle=c.color;
+    ctx.fillText(c.name,0,0);
+    // white inner highlight
+    ctx.shadowBlur=0;
+    ctx.font=`900 52px 'Segoe UI',system-ui,sans-serif`;
+    ctx.fillStyle='rgba(255,255,255,0.38)';
+    ctx.fillText(c.name,0,-2);
+    // sub-label: level + points
+    ctx.shadowBlur=8; ctx.shadowColor='rgba(0,0,0,0.5)';
+    ctx.font=`600 16px 'Segoe UI',system-ui,sans-serif`;
+    ctx.fillStyle='#fff';
+    ctx.strokeStyle='rgba(0,0,0,0.6)'; ctx.lineWidth=3;
+    const sub=`Lv ${c.level}  ·  ${c.pts} pts`;
+    ctx.strokeText(sub,0,34);
+    ctx.fillText(sub,0,34);
+    ctx.restore();
+  }
+  ctx.globalAlpha=1;
+  ctx.restore();
 
   // ── Glass glare (in front of plushies, claw mode only) ───────────────
   if(showClaw){
@@ -576,10 +817,7 @@ function render(){
     ctx.fillStyle=g2; ctx.fillRect(WALL,0,W-WALL*2,H);
     ctx.restore();
   }
-  ctx.fillStyle='#c8a888';
-  ctx.fillRect(0,0,WALL,H); ctx.fillRect(W-WALL,0,WALL,H); ctx.fillRect(0,H-WALL,W,WALL);
-  ctx.fillStyle='rgba(255,235,210,.4)';
-  ctx.fillRect(WALL,0,2,H); ctx.fillRect(W-WALL-2,0,2,H);
+  // walls + inner bevel are now part of the 9-slice panel sprite above
   // ── DEBUG OVERLAY (press D) ──────────────────────────────────────────
   if(dbg){
     ctx.save();
@@ -602,7 +840,7 @@ function render(){
     }
     // legend
     ctx.textAlign='left'; ctx.fillStyle='rgba(0,0,0,.65)'; ctx.font='10px monospace';
-    ctx.fillText('D = debug | red=spinning | av=angular vel | Δ=avg move/frame',WALL+4,H-WALL-4);
+    ctx.fillText('D=debug | H=solid n-gon | red=spinning | av=angular vel | Δ=avg move/frame',WALL+4,H-WALL-4);
     ctx.restore();
   }
   // ── C: polygon collider shapes ─────────────────────────────────────
@@ -665,13 +903,33 @@ function prerenderSprites(){
   }
 }
 
+// drawSolidNgon: draws filled n-gon centered at current ctx origin (already translated+rotated)
+function drawSolidNgon(c,lvl){
+  const n=getSides(lvl), r=PD[lvl].physR??PD[lvl].r;
+  c.beginPath();
+  for(let k=0;k<n;k++){
+    const a=2*Math.PI*k/n;
+    k===0?c.moveTo(r*Math.cos(a),r*Math.sin(a)):c.lineTo(r*Math.cos(a),r*Math.sin(a));
+  }
+  c.closePath();
+  c.fillStyle=PD[lvl].body; c.fill();
+  c.strokeStyle=PD[lvl].stroke; c.lineWidth=2; c.stroke();
+  // name label
+  c.fillStyle='rgba(0,0,0,0.55)'; c.textAlign='center';
+  c.font=`bold ${Math.max(8,Math.round(r*.28))}px sans-serif`;
+  c.fillText(PD[lvl].name,0,4);
+}
+
 // drawAt: centered at (x,y), 1:1 pixel — used in game loop
 function drawAt(c,x,y,lvl,alpha=1,angle=0){
-  const rs=rendSprites[lvl];
-  if(!rs) return;
   c.save(); c.globalAlpha=alpha; c.translate(x,y);
   if(angle) c.rotate(angle);
-  c.drawImage(rs.c,-rs.lw/2,-rs.lh/2,rs.lw,rs.lh);
+  if(solidMode){
+    drawSolidNgon(c,lvl);
+  } else {
+    const rs=rendSprites[lvl];
+    if(rs) c.drawImage(rs.c,-rs.lw/2,-rs.lh/2,rs.lw,rs.lh);
+  }
   c.restore();
 }
 
@@ -855,15 +1113,20 @@ function updateClaw(){
 
 // ── INPUT ─────────────────────────────────────────────────────────────
 function clamp(x,lvl){const r=PD[lvl].r;return Math.max(WALL+r+1,Math.min(W-WALL-r-1,x));}
-let dbg=false, dbgPoly=false;
+let dbg=false, dbgPoly=false, solidMode=false;
 const keysDown=new Set(); // tracks held keys for per-frame input polling
 document.addEventListener('keyup',e=>keysDown.delete(e.key));
+window.addEventListener('blur',()=>keysDown.clear());
 document.addEventListener('keydown',e=>{
   if(e.key==='s'||e.key==='S'){ showSpawnRate=!showSpawnRate; updateEvoLabels(); return; }
   if(e.key==='d'||e.key==='D'){ dbg=!dbg; if(dbg)dbgPoly=false; return; }
-  if(e.key==='c'||e.key==='C'){ dbgPoly=!dbgPoly; if(dbgPoly)dbg=false; return; }
-  if(e.key==='['){ e.preventDefault(); sidesOffset=Math.max(SIDES_MIN,sidesOffset-1); dbg=false; dbgPoly=true; return; }
-  if(e.key===']'){ e.preventDefault(); sidesOffset=Math.min(SIDES_MAX,sidesOffset+1); dbg=false; dbgPoly=true; return; }
+  if(e.key==='c'||e.key==='C'){ dbgPoly=!dbgPoly; if(dbgPoly){dbg=false;solidMode=false;} return; }
+  if(e.key==='h'||e.key==='H'){ solidMode=!solidMode; if(solidMode)dbgPoly=false; return; }
+  if(e.key==='a'||e.key==='A'){ const cb=document.getElementById('ap'); cb.checked=!cb.checked; syncAp(cb.checked); return; }
+  if(e.key==='?'||e.key==='/'){ toggleHelp(); return; }
+  if(e.key==='Escape'){ toggleHelp(false); return; }
+  if(e.key==='['){ e.preventDefault(); sidesOffset=Math.max(SIDES_MIN,sidesOffset-1); if(!solidMode){dbg=false;dbgPoly=true;} return; }
+  if(e.key===']'){ e.preventDefault(); sidesOffset=Math.min(SIDES_MAX,sidesOffset+1); if(!solidMode){dbg=false;dbgPoly=true;} return; }
 
   // ── keyboard gameplay ──────────────────────────────
   // Arrow + Shift: track as held — processed every frame in processKeys()
@@ -971,6 +1234,14 @@ function buildEvo(){
   }
 }
 function syncAp(v){ document.getElementById('ap').checked=v; }
+function toggleHelp(force){
+  const el=document.getElementById('help-popup');
+  const show=force!==undefined?force:!el.classList.contains('show');
+  el.classList.toggle('show',show);
+}
+document.getElementById('help-popup').addEventListener('click',e=>{
+  if(e.target===e.currentTarget) toggleHelp(false);
+});
 
 // ── SPAWN RATE DISPLAY ────────────────────────────────────────────────
 let showSpawnRate=false;
