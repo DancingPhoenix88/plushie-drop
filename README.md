@@ -23,6 +23,7 @@ Open on mobile → Share → **Add to Home Screen** to install as an app (PWA).
 
 | Key | Action |
 |-----|--------|
+| `S` | Toggle spawn-rate view — replaces character names in the evolution strip with live spawn probabilities (updates on each merge) |
 | `D` | Toggle debug overlay — collider circle, angular velocity, 30-frame avg movement |
 | `C` | Toggle polygon collider view — actual N-gon SAT shape with vertex dots |
 | `2`–`9` | Spawn lv2–lv9 at current drop point |
