@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="Sprites/level_11.png">
 <style>
 :root{color-scheme:light}
-*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;}
 html,body{width:100vw;height:100dvh;overflow:hidden;position:relative;font-family:'Segoe UI',system-ui,sans-serif;
   background-color:#e8d4b8;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='52' height='62'%3E%3Cg transform='rotate(20,26,32)'%3E%3Cellipse cx='18' cy='14' rx='7' ry='13' fill='rgba(255,255,255,0.13)'/%3E%3Cellipse cx='34' cy='14' rx='7' ry='13' fill='rgba(255,255,255,0.13)'/%3E%3Ccircle cx='26' cy='38' r='16' fill='rgba(255,255,255,0.13)'/%3E%3C/g%3E%3C/svg%3E");
@@ -904,13 +904,20 @@ cv.addEventListener('touchend',e=>{
 
 // ── UI ────────────────────────────────────────────────────────────────
 function rnd(){
-  // highest level currently on the board
   const top=plushies.reduce((m,p)=>Math.max(m,p.level),0);
-  // bonus: exponential decay anchored at lv10=0.1%
-  // lv5→12%, lv6→4.6%, lv7→1.7%, lv8→0.66%, lv9→0.25%, lv10→0.1%, lv11→0.04%
-  if(top>=5 && Math.random()<0.12*Math.pow(0.38,top-5)) return top-1;
-  // default pool: lv1-3 (unchanged until player unlocks higher tiers)
-  const r=Math.random(); return r<.5?1:r<.82?2:3;
+  // cap: multiplier=1 only when top > candidate level, else 0
+  // use max(top,3) so lv1-2 are always spawnable on an empty tank
+  const cap=Math.max(top,3);
+
+  // bonus high-level spawn — gated by cap (top > candidate required)
+  if(top>=5 && Math.random()<0.12*Math.pow(0.38,top-5)){
+    const hi=top-1; if(hi<cap) return hi;
+  }
+
+  // base pool lv1-3; clamp to cap-1 so nothing >= top ever spawns
+  const r=Math.random();
+  const base=r<.5?1:r<.82?2:3;
+  return Math.min(base,cap-1);
 }
 function updUI(){
   const s=score.toLocaleString();
