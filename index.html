@@ -823,12 +823,6 @@ function render(){
     ctx.fillStyle=g2; ctx.fillRect(WALL,0,W-WALL*2,H);
     ctx.restore();
   }
-  // ── visual tilt (gyro mode) — rotate canvas to match gravity direction ──
-  if(gyroOn){
-    const deg=(tiltAngle*180/Math.PI).toFixed(2);
-    cv.style.transform=`rotate(${deg}deg)`;
-    cv.style.transformOrigin='center center';
-  }
   // walls + inner bevel are now part of the 9-slice panel sprite above
   // ── DEBUG OVERLAY (press D) ──────────────────────────────────────────
   if(dbg){
@@ -1424,8 +1418,6 @@ function disableGyro(){
   gyroOn = false; tiltAngle = 0;
   document.getElementById('gyro-btn').classList.remove('active');
   document.getElementById('gyro-ls').classList.remove('active');
-  // reset canvas visual tilt
-  cv.style.transform = '';
 }
 
 // ── VIEWPORT SCALE ────────────────────────────────────────────────────
