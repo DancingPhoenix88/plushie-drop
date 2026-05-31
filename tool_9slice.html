@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>9-Slice Tester — test_9slice.png</title>
+<title>9-Slice Tool</title>
 <style>
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 
@@ -24,6 +24,22 @@ body {
 }
 
 .sep { width:1px; height:24px; background:#333; margin:0 2px; flex-shrink:0; }
+
+/* open button */
+#btn-open {
+  padding: 3px 10px; font: 12px/1.5 inherit;
+  background: #1a2a3a; color: #7dc8f8;
+  border: 1px solid #2a4a6a; border-radius: 4px; cursor: pointer;
+  transition: all 0.12s; white-space: nowrap;
+}
+#btn-open:hover { background:#243550; }
+
+/* filename chip */
+#filename-chip {
+  font-size: 11px; color: #6a8aaa;
+  max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  flex-shrink: 0;
+}
 
 .mode-btn {
   padding: 3px 10px; font: 12px/1.5 inherit;
@@ -66,7 +82,6 @@ body {
 #info-bar span { color: #7dc8f8; }
 
 /* ── main canvas ──────────────────────────────────────────────────── */
-/* checkerboard background — reveals transparency */
 #main-wrap {
   position: fixed; top:40px; left:0; right:0; bottom:0;
   overflow: hidden;
@@ -79,8 +94,20 @@ body {
   background-size: 16px 16px;
   background-position: 0 0, 0 8px, 8px -8px, -8px 0;
 }
-/* canvas size set entirely via JS — no CSS scaling applied */
 #main { display:block; position:absolute; top:0; left:0; }
+
+/* drop-target highlight */
+#main-wrap.drag-over { outline: 3px dashed #7dc8f8; outline-offset: -3px; }
+
+/* empty state */
+#empty-state {
+  position: absolute; inset:0;
+  display: flex; flex-direction:column; align-items:center; justify-content:center;
+  gap: 10px; pointer-events: none;
+  color: #444;
+}
+#empty-state .big { font-size: 48px; }
+#empty-state p { font-size: 13px; }
 
 /* ── edit overlay ─────────────────────────────────────────────────── */
 #edit-overlay {
@@ -105,10 +132,7 @@ body {
 #edit-meta strong { font-weight:normal; }
 .ev { color:#f7c26e; }
 
-.hint {
-  font-size:11px; color:#444;
-  text-align: center; line-height:1.6;
-}
+.hint { font-size:11px; color:#444; text-align:center; line-height:1.6; }
 
 /* ── legend ──────────────────────────────────────────────────────── */
 #legend {
@@ -122,9 +146,16 @@ body {
 </head>
 <body>
 
+<!-- hidden file input -->
+<input type="file" id="file-input" accept="image/*" style="display:none" onchange="onFileInputChange(event)">
+
 <!-- ── toolbar ──────────────────────────────────────────────────────── -->
 <div id="toolbar">
   <span style="font-size:11px;color:#3a3a5a;letter-spacing:.1em">9-SLICE</span>
+  <div class="sep"></div>
+
+  <button id="btn-open" onclick="document.getElementById('file-input').click()">📂 Open Image</button>
+  <span id="filename-chip">—</span>
   <div class="sep"></div>
 
   <button class="mode-btn active" id="btn-tile" onclick="setMode('TILE')">TILE</button>
@@ -135,14 +166,13 @@ body {
   <button id="btn-save" onclick="saveMeta()">↓ Save .meta</button>
   <div class="sep"></div>
 
-  <!-- scale control -->
   <span style="font-size:11px;color:#556">scale</span>
   <button class="scale-btn" onclick="adjustScale(-0.25)">−</button>
   <span id="scale-val" style="font-size:12px;color:#7dc8f8;min-width:32px;text-align:center">1×</span>
   <button class="scale-btn" onclick="adjustScale(+0.25)">+</button>
 
   <div id="info-bar">
-    mode:<span id="ib-mode">TILE</span>
+    mode:<span id="ib-mode">—</span>
     &nbsp; L:<span id="ib-l">—</span>
     R:<span id="ib-r">—</span>
     T:<span id="ib-t">—</span>
@@ -154,6 +184,10 @@ body {
 <!-- ── main canvas ──────────────────────────────────────────────────── -->
 <div id="main-wrap">
   <canvas id="main"></canvas>
+  <div id="empty-state">
+    <span class="big">🖼</span>
+    <p>Open an image or drag &amp; drop it here</p>
+  </div>
 </div>
 
 <!-- ── edit overlay ─────────────────────────────────────────────────── -->
@@ -180,23 +214,23 @@ body {
   </div>
 </div>
 
-<!-- ── region legend ─────────────────────────────────────────────────── -->
+<!-- ── legend ───────────────────────────────────────────────────────── -->
 <div id="legend">
-  <div class="leg-row"><span class="leg-dot" style="background:#f7c26e"></span><span>L / R (left/right)</span></div>
-  <div class="leg-row"><span class="leg-dot" style="background:#6ef7a7"></span><span>T / B (top/bottom)</span></div>
+  <div class="leg-row"><span class="leg-dot" style="background:#f7c26e"></span><span>L / R</span></div>
+  <div class="leg-row"><span class="leg-dot" style="background:#6ef7a7"></span><span>T / B</span></div>
 </div>
 
 <script>
 'use strict';
 
-// ─── CONFIG ───────────────────────────────────────────────────────────────────
-const IMG_SRC   = 'Designs/test_9slice.png';
-const META_SRC  = 'Designs/test_9slice.png.meta';
-
 // ─── STATE ────────────────────────────────────────────────────────────────────
-let img    = null;
-let editOn = false;
-let meta   = { left:12, right:12, top:12, bottom:12, mode:'TILE', scale:1 };
+let img          = null;
+let editOn       = false;
+let currentFile  = null;   // File object of the active image
+let currentBlobURL = null; // object URL for the current image
+let meta = { left:12, right:12, top:12, bottom:12, mode:'TILE', scale:1 };
+
+const DEFAULT_META = () => ({ left:12, right:12, top:12, bottom:12, mode:'TILE', scale:1 });
 
 // ─── MAIN CANVAS ──────────────────────────────────────────────────────────────
 const mainCanvas = document.getElementById('main');
@@ -205,7 +239,6 @@ const wrap       = document.getElementById('main-wrap');
 
 function resizeMain() {
   const W = wrap.clientWidth, H = wrap.clientHeight;
-  // Set buffer size AND CSS size identically — prevents any browser scaling on the canvas element
   mainCanvas.width        = W;
   mainCanvas.height       = H;
   mainCanvas.style.width  = W + 'px';
@@ -214,28 +247,74 @@ function resizeMain() {
 }
 window.addEventListener('resize', () => { resizeMain(); if (editOn) drawEdit(); });
 
-// ─── LOAD IMAGE + META ────────────────────────────────────────────────────────
-img = new Image();
-img.onload = async () => {
-  try {
-    const r = await fetch(META_SRC);
-    if (r.ok) {
-      const txt = await r.text();
-      Object.assign(meta, JSON.parse(txt));
-    }
-  } catch (_) { /* meta not found — use defaults */ }
-  meta.scale = meta.scale ?? 1;  // default if old meta file has no scale key
-  setMode(meta.mode, false);     // sync buttons without triggering extra render
-  updateScaleUI();
-  updateInfoBar();
-  resizeMain();
-};
-img.onerror = () => {
-  ctx.fillStyle = '#c44';
-  ctx.font = '14px monospace';
-  ctx.fillText('Error loading: ' + IMG_SRC, 12, 40);
-};
-img.src = IMG_SRC;
+// ─── OPEN IMAGE ───────────────────────────────────────────────────────────────
+function onFileInputChange(e) {
+  const file = e.target.files[0];
+  e.target.value = '';   // reset so re-selecting same file triggers change again
+  if (file) loadImageFile(file);
+}
+
+function loadImageFile(file) {
+  // Release previous object URL
+  if (currentBlobURL) { URL.revokeObjectURL(currentBlobURL); currentBlobURL = null; }
+
+  currentFile = file;
+  const lsKey = 'nslice_meta_' + file.name;
+
+  // Load meta: localStorage first, then fall back to server fetch, then defaults
+  const saved = localStorage.getItem(lsKey);
+  if (saved) {
+    try { meta = { ...DEFAULT_META(), ...JSON.parse(saved) }; }
+    catch { meta = DEFAULT_META(); }
+    finishLoad(file);
+  } else {
+    // Try to fetch a sibling .meta file from the server (works when served locally)
+    fetch(file.name + '.meta')
+      .then(r => r.ok ? r.json() : null)
+      .catch(() => null)
+      .then(data => {
+        meta = data ? { ...DEFAULT_META(), ...data } : DEFAULT_META();
+        finishLoad(file);
+      });
+  }
+}
+
+function finishLoad(file) {
+  currentBlobURL = URL.createObjectURL(file);
+  const newImg   = new Image();
+  newImg.onload  = () => {
+    img = newImg;
+    clearPatCache();
+    document.getElementById('empty-state').style.display = 'none';
+    document.getElementById('filename-chip').textContent = file.name;
+    document.title = `9-Slice — ${file.name}`;
+    setMode(meta.mode, false);
+    updateScaleUI();
+    updateInfoBar();
+    resizeMain();
+    if (editOn) drawEdit();
+  };
+  newImg.onerror = () => {
+    alert('Could not load image: ' + file.name);
+  };
+  newImg.src = currentBlobURL;
+}
+
+// ─── DRAG & DROP ──────────────────────────────────────────────────────────────
+wrap.addEventListener('dragover', e => {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'copy';
+  wrap.classList.add('drag-over');
+});
+wrap.addEventListener('dragleave', e => {
+  if (!wrap.contains(e.relatedTarget)) wrap.classList.remove('drag-over');
+});
+wrap.addEventListener('drop', e => {
+  e.preventDefault();
+  wrap.classList.remove('drag-over');
+  const file = [...e.dataTransfer.files].find(f => f.type.startsWith('image/'));
+  if (file) loadImageFile(file);
+});
 
 // ─── RENDER ───────────────────────────────────────────────────────────────────
 function render() {
@@ -248,20 +327,15 @@ function render() {
   }
 }
 
-// ── Mode: NONE ─ scale entire image ──────────────────────────────────────────
 function renderNone(W, H) {
   ctx.drawImage(img, 0, 0, W, H);
 }
 
-// ── Mode: TILE ─ 9-slice tile (repeat) ───────────────────────────────────────
-// Pattern cache — key: "srcX,srcY,srcW,srcH"
-// Invalidated when meta or img changes.
+// ─── TILE MODE ────────────────────────────────────────────────────────────────
 const _patCache = new Map();
-
 function clearPatCache() { _patCache.clear(); }
 
-// getPattern — creates (and caches) a tile stamp at srcW*scale × srcH*scale.
-// The scale bakes into the stamp so the repeating pattern tile is physically larger.
+// Creates (and caches) a tile stamp at srcW*scale × srcH*scale.
 function getPattern(srcX, srcY, srcW, srcH, scale) {
   const key = `${srcX}|${srcY}|${srcW}|${srcH}|${scale}`;
   if (_patCache.has(key)) return _patCache.get(key);
@@ -275,7 +349,7 @@ function getPattern(srcX, srcY, srcW, srcH, scale) {
   return pat;
 }
 
-// tileFill — fills a dest rect by repeating the source region at scale*natural size.
+// Fills dest rect by repeating the source region at scale × natural size.
 function tileFill(ddx, ddy, ddw, ddh, srcX, srcY, srcW, srcH, scale) {
   if (srcW <= 0 || srcH <= 0 || ddw <= 0 || ddh <= 0) return;
   const pat = getPattern(srcX, srcY, srcW, srcH, scale);
@@ -293,24 +367,22 @@ function renderTile(W, H) {
   const { left:L, right:R, top:T, bottom:B, scale:S } = meta;
   const sw = img.naturalWidth, sh = img.naturalHeight;
   const mSW = sw - L - R, mSH = sh - T - B;
+  const sL = L*S, sR = R*S, sT = T*S, sB = B*S;
+  const mDW = W - sL - sR, mDH = H - sT - sB;
 
-  // Scaled corner pixel sizes in destination space
-  const sL = L * S, sR = R * S, sT = T * S, sB = B * S;
-  const mDW = W - sL - sR,  mDH = H - sT - sB;
+  // corners — drawn at S× natural size, no tiling
+  ctx.drawImage(img, 0,    0,    L, T, 0,      0,      sL, sT);
+  ctx.drawImage(img, sw-R, 0,    R, T, W-sR,   0,      sR, sT);
+  ctx.drawImage(img, 0,    sh-B, L, B, 0,      H-sB,   sL, sB);
+  ctx.drawImage(img, sw-R, sh-B, R, B, W-sR,   H-sB,   sR, sB);
 
-  // corners — drawn at S× their natural size (no tiling)
-  ctx.drawImage(img, 0,    0,    L, T, 0,      0,      sL, sT); // TL
-  ctx.drawImage(img, sw-R, 0,    R, T, W-sR,   0,      sR, sT); // TR
-  ctx.drawImage(img, 0,    sh-B, L, B, 0,      H-sB,   sL, sB); // BL
-  ctx.drawImage(img, sw-R, sh-B, R, B, W-sR,   H-sB,   sR, sB); // BR
+  // edges — tile stamp is S× natural size; repeat to fill remaining area
+  tileFill(sL,   0,    mDW, sT,  L,    0,    mSW, T,   S);
+  tileFill(sL,   H-sB, mDW, sB,  L,    sh-B, mSW, B,   S);
+  tileFill(0,    sT,   sL,  mDH, 0,    T,    L,   mSH, S);
+  tileFill(W-sR, sT,   sR,  mDH, sw-R, T,    R,   mSH, S);
 
-  // edges — tile stamp is S× natural size; clip fills the remaining dest area
-  tileFill(sL,   0,    mDW, sT,  L,    0,    mSW, T,   S); // top
-  tileFill(sL,   H-sB, mDW, sB,  L,    sh-B, mSW, B,   S); // bottom
-  tileFill(0,    sT,   sL,  mDH, 0,    T,    L,   mSH, S); // left
-  tileFill(W-sR, sT,   sR,  mDH, sw-R, T,    R,   mSH, S); // right
-
-  // center — tile stamp is S× natural size in both axes
+  // center — tile stamp S× in both axes
   tileFill(sL, sT, mDW, mDH, L, T, mSW, mSH, S);
 }
 
@@ -324,7 +396,6 @@ function adjustScale(delta) {
 
 function updateScaleUI() {
   const s = meta.scale;
-  // show as integer (e.g. "2×") when whole, or decimal (e.g. "1.5×") otherwise
   document.getElementById('scale-val').textContent =
     (s === Math.floor(s) ? s : s.toFixed(2)) + '×';
 }
@@ -357,80 +428,56 @@ const editOverlay = document.getElementById('edit-overlay');
 const editCanvas  = document.getElementById('edit-canvas');
 const ectx        = editCanvas.getContext('2d');
 
-// How large to display the sprite in the editor
-let editScale = 1;
-// Which guide line is being dragged: 'L' | 'R' | 'T' | 'B' | null
+let editScale  = 1;
 let activeDrag = null;
 
 function toggleEdit() {
+  if (!img?.naturalWidth) return;
   editOn = !editOn;
   document.getElementById('btn-edit').classList.toggle('active', editOn);
   editOverlay.classList.toggle('show', editOn);
-  if (editOn) {
-    drawEdit();
-  } else {
-    // Refresh the main canvas with the latest slice values now that the overlay is gone
-    render();
-  }
+  if (editOn) { drawEdit(); } else { render(); }
 }
 
 function onOverlayClick(e) {
-  // close if clicking the dim backdrop (not the canvas or its children)
-  if (e.target === editOverlay) {
-    toggleEdit(); // toggleEdit calls render() on close
-  }
+  if (e.target === editOverlay) toggleEdit();
 }
 
-// ── draw edit canvas ─────────────────────────────────────────────────────────
 function drawEdit() {
   if (!img?.naturalWidth) return;
   const iw = img.naturalWidth, ih = img.naturalHeight;
-
-  // fit sprite to ~80% of the available space
   const maxW = Math.min(window.innerWidth  - 80, 640);
   const maxH = Math.min(window.innerHeight - 160, 640);
-  editScale = Math.min(4, maxW / iw, maxH / ih); // allow up to 4× upscale for tiny sprites
-  const cw = Math.round(iw * editScale);
-  const ch = Math.round(ih * editScale);
+  editScale   = Math.min(4, maxW / iw, maxH / ih);
+  const cw    = Math.round(iw * editScale);
+  const ch    = Math.round(ih * editScale);
 
-  editCanvas.width  = cw;
-  editCanvas.height = ch;
-  editCanvas.style.width  = cw + 'px';
-  editCanvas.style.height = ch + 'px';
+  editCanvas.width  = cw; editCanvas.height  = ch;
+  editCanvas.style.width  = cw + 'px'; editCanvas.style.height = ch + 'px';
 
-  // ── draw the sprite ──────────────────────────────────────────────────────
   ectx.clearRect(0, 0, cw, ch);
-
-  // checkerboard background in edit canvas too
-  const pat = makeChecker(ectx, 8, '#666', '#555');
-  ectx.fillStyle = pat;
-  ectx.fillRect(0, 0, cw, ch);
-
+  const chkPat = makeChecker(ectx, 8, '#666', '#555');
+  ectx.fillStyle = chkPat; ectx.fillRect(0, 0, cw, ch);
   ectx.drawImage(img, 0, 0, cw, ch);
 
   const { left:L, right:R, top:T, bottom:B } = meta;
-  const x1 = L * editScale;
-  const x2 = (iw - R) * editScale;
-  const y1 = T * editScale;
-  const y2 = (ih - B) * editScale;
+  const x1 = L * editScale, x2 = (iw - R) * editScale;
+  const y1 = T * editScale, y2 = (ih - B) * editScale;
 
-  // ── tint the 4 corners to make them visually distinct ────────────────────
+  // tint corners
   ectx.save();
   ectx.fillStyle = 'rgba(0,0,0,0.28)';
-  ectx.fillRect(0,  0,  x1,     y1    ); // TL
-  ectx.fillRect(x2, 0,  cw-x2,  y1    ); // TR
-  ectx.fillRect(0,  y2, x1,     ch-y2 ); // BL
-  ectx.fillRect(x2, y2, cw-x2,  ch-y2 ); // BR
+  ectx.fillRect(0,  0,  x1,     y1    );
+  ectx.fillRect(x2, 0,  cw-x2,  y1    );
+  ectx.fillRect(0,  y2, x1,     ch-y2 );
+  ectx.fillRect(x2, y2, cw-x2,  ch-y2 );
   ectx.restore();
 
-  // ── guide lines ───────────────────────────────────────────────────────────
-  //   L / R lines: amber (#f7c26e)
-  //   T / B lines: mint  (#6ef7a7)
   const guides = [
-    { id:'L', isVert:true,  pos:x1, color:'#f7c26e', label:`L = ${L}px`,  labelX: x1+5, labelY: 14    },
-    { id:'R', isVert:true,  pos:x2, color:'#f7c26e', label:`R = ${R}px`,  labelX: x2+5, labelY: 28    },
-    { id:'T', isVert:false, pos:y1, color:'#6ef7a7', label:`T = ${T}px`,  labelX: 4,    labelY: y1-5  },
-    { id:'B', isVert:false, pos:y2, color:'#6ef7a7', label:`B = ${B}px`,  labelX: 4,    labelY: y2-5  },
+    { id:'L', isVert:true,  pos:x1, color:'#f7c26e', label:`L=${L}px`,  lx:x1+5,  ly:14    },
+    { id:'R', isVert:true,  pos:x2, color:'#f7c26e', label:`R=${R}px`,  lx:x2+5,  ly:28    },
+    { id:'T', isVert:false, pos:y1, color:'#6ef7a7', label:`T=${T}px`,  lx:4,     ly:y1-5  },
+    { id:'B', isVert:false, pos:y2, color:'#6ef7a7', label:`B=${B}px`,  lx:4,     ly:y2-5  },
   ];
 
   for (const g of guides) {
@@ -441,29 +488,18 @@ function drawEdit() {
     ectx.beginPath();
     if (g.isVert) { ectx.moveTo(g.pos, 0); ectx.lineTo(g.pos, ch); }
     else          { ectx.moveTo(0, g.pos); ectx.lineTo(cw, g.pos); }
-    ectx.stroke();
-    ectx.setLineDash([]);
-
-    // label
+    ectx.stroke(); ectx.setLineDash([]);
     ectx.fillStyle = g.color;
     ectx.font = 'bold 11px Consolas, monospace';
-    ectx.fillText(g.label, g.labelX, g.labelY);
-
-    // drag handle (circle at midpoint)
-    const hx = g.isVert  ? g.pos : cw / 2;
-    const hy = g.isVert  ? ch / 2 : g.pos;
-    ectx.beginPath();
-    ectx.arc(hx, hy, activeDrag === g.id ? 7 : 5, 0, Math.PI * 2);
-    ectx.fillStyle = g.color;
-    ectx.fill();
-    ectx.strokeStyle = '#111';
-    ectx.lineWidth = 1;
-    ectx.stroke();
-
+    ectx.fillText(g.label, g.lx, g.ly);
+    const hx = g.isVert ? g.pos : cw/2;
+    const hy = g.isVert ? ch/2  : g.pos;
+    ectx.beginPath(); ectx.arc(hx, hy, activeDrag === g.id ? 7 : 5, 0, Math.PI*2);
+    ectx.fillStyle = g.color; ectx.fill();
+    ectx.strokeStyle = '#111'; ectx.lineWidth = 1; ectx.stroke();
     ectx.restore();
   }
 
-  // ── update value labels ───────────────────────────────────────────────────
   document.getElementById('ev-l').textContent = L;
   document.getElementById('ev-r').textContent = R;
   document.getElementById('ev-t').textContent = T;
@@ -476,20 +512,17 @@ function makeChecker(gctx, size, c1, c2) {
   oc.width = oc.height = size * 2;
   const oc2 = oc.getContext('2d');
   oc2.fillStyle = c1; oc2.fillRect(0, 0, size*2, size*2);
-  oc2.fillStyle = c2;
-  oc2.fillRect(0, 0, size, size);
-  oc2.fillRect(size, size, size, size);
+  oc2.fillStyle = c2; oc2.fillRect(0, 0, size, size); oc2.fillRect(size, size, size, size);
   return gctx.createPattern(oc, 'repeat');
 }
 
-// ── hit detection for guide lines ─────────────────────────────────────────────
-const HIT_PX = 10; // pixel tolerance for grabbing a line
-
+// ── hit / drag ────────────────────────────────────────────────────────────────
+const HIT_PX = 10;
 function hitGuide(cx, cy) {
   const { left:L, right:R, top:T, bottom:B } = meta;
   const iw = img.naturalWidth, ih = img.naturalHeight;
-  const x1 = L * editScale,       x2 = (iw - R) * editScale;
-  const y1 = T * editScale,       y2 = (ih - B) * editScale;
+  const x1 = L * editScale, x2 = (iw - R) * editScale;
+  const y1 = T * editScale, y2 = (ih - B) * editScale;
   if (Math.abs(cx - x1) < HIT_PX) return 'L';
   if (Math.abs(cx - x2) < HIT_PX) return 'R';
   if (Math.abs(cy - y1) < HIT_PX) return 'T';
@@ -499,10 +532,8 @@ function hitGuide(cx, cy) {
 
 function applyDrag(id, cx, cy) {
   const iw = img.naturalWidth, ih = img.naturalHeight;
-  // Clamp cursor to canvas bounds before converting to image space
-  const clampedX = Math.max(0, Math.min(cx, editCanvas.width));
-  const clampedY = Math.max(0, Math.min(cy, editCanvas.height));
-  const px = clampedX / editScale, py = clampedY / editScale;
+  const px = Math.max(0, Math.min(cx, editCanvas.width))  / editScale;
+  const py = Math.max(0, Math.min(cy, editCanvas.height)) / editScale;
   const { left:L, right:R, top:T, bottom:B } = meta;
   const MIN = 1;
   if (id === 'L') meta.left   = Math.max(MIN, Math.min(Math.round(px),    iw - R - MIN));
@@ -512,79 +543,62 @@ function applyDrag(id, cx, cy) {
   clearPatCache();
 }
 
-// ── mouse events ──────────────────────────────────────────────────────────────
+// ── mouse ─────────────────────────────────────────────────────────────────────
 function editXY(e) {
   const r = editCanvas.getBoundingClientRect();
   return [e.clientX - r.left, e.clientY - r.top];
 }
-
 function onEditDown(e) {
   e.preventDefault();
-  const [cx, cy] = editXY(e);
-  activeDrag = hitGuide(cx, cy);
+  activeDrag = hitGuide(...editXY(e));
 }
-
 function onEditHover(e) {
   const [cx, cy] = editXY(e);
-  if (activeDrag) {
-    applyDrag(activeDrag, cx, cy);
-    updateInfoBar(); render(); drawEdit();
-    return;
-  }
+  if (activeDrag) { applyDrag(activeDrag, cx, cy); updateInfoBar(); render(); drawEdit(); return; }
   const hit = hitGuide(cx, cy);
-  editCanvas.style.cursor = (hit === 'L' || hit === 'R') ? 'ew-resize'
-                           : (hit === 'T' || hit === 'B') ? 'ns-resize'
-                           : 'crosshair';
+  editCanvas.style.cursor = hit === 'L' || hit === 'R' ? 'ew-resize'
+                           : hit === 'T' || hit === 'B' ? 'ns-resize' : 'crosshair';
 }
-
 window.addEventListener('mouseup',   () => { activeDrag = null; });
 window.addEventListener('mousemove', e  => {
   if (!editOn || !activeDrag) return;
   const r = editCanvas.getBoundingClientRect();
-  const cx = e.clientX - r.left, cy = e.clientY - r.top;
-  applyDrag(activeDrag, cx, cy);
+  applyDrag(activeDrag, e.clientX - r.left, e.clientY - r.top);
   updateInfoBar(); render(); drawEdit();
 });
 
-// ── touch events ──────────────────────────────────────────────────────────────
+// ── touch ─────────────────────────────────────────────────────────────────────
 function touchXY(e) {
-  const t = e.touches[0];
-  const r = editCanvas.getBoundingClientRect();
+  const t = e.touches[0], r = editCanvas.getBoundingClientRect();
   return [t.clientX - r.left, t.clientY - r.top];
 }
-
-function onEditTouchStart(e) {
-  e.preventDefault();
-  const [cx, cy] = touchXY(e);
-  activeDrag = hitGuide(cx, cy);
-}
-
+function onEditTouchStart(e) { e.preventDefault(); activeDrag = hitGuide(...touchXY(e)); }
 function onEditTouchMove(e) {
-  if (!activeDrag) return;
-  e.preventDefault();
-  const [cx, cy] = touchXY(e);
-  applyDrag(activeDrag, cx, cy);
+  if (!activeDrag) return; e.preventDefault();
+  applyDrag(activeDrag, ...touchXY(e));
   updateInfoBar(); render(); drawEdit();
 }
-
 function onEditTouchEnd() { activeDrag = null; }
 
 // ─── SAVE .meta ───────────────────────────────────────────────────────────────
 async function saveMeta() {
-  const data = JSON.stringify(meta, null, 2);
-  const btn  = document.getElementById('btn-save');
+  if (!currentFile) return;
+  const data    = JSON.stringify(meta, null, 2);
+  const sugName = currentFile.name + '.meta';
+  const btn     = document.getElementById('btn-save');
 
-  // Try the File System Access API (Chrome/Edge) for in-place save
+  // Always persist to localStorage so it's remembered on next open
+  localStorage.setItem('nslice_meta_' + currentFile.name, data);
+
+  // Try File System Access API for a real file save
   if (window.showSaveFilePicker) {
     try {
       const handle = await window.showSaveFilePicker({
-        suggestedName: 'test_9slice.png.meta',
-        startIn: 'documents',
+        suggestedName: sugName,
         types: [{ description: '9-Slice Meta (JSON)', accept: { 'application/json': ['.meta'] } }],
       });
       const writable = await handle.createWritable();
-      await writable.write(data);
-      await writable.close();
+      await writable.write(data); await writable.close();
       flash(btn, '✓ Saved!', 1800);
       return;
     } catch (err) {
@@ -592,10 +606,10 @@ async function saveMeta() {
     }
   }
 
-  // Fallback: download the file
+  // Fallback: browser download
   const a = document.createElement('a');
   a.href     = 'data:application/json;charset=utf-8,' + encodeURIComponent(data);
-  a.download = 'test_9slice.png.meta';
+  a.download = sugName;
   a.click();
   flash(btn, '↓ Downloaded', 1800);
 }
@@ -605,6 +619,9 @@ function flash(el, text, ms) {
   el.textContent = text;
   setTimeout(() => { el.textContent = orig; }, ms);
 }
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+resizeMain();
 </script>
 </body>
 </html>
