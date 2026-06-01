@@ -163,15 +163,16 @@ input.sprite-cb:checked{background-image:url('Sprites/checkbox_tick.png');}
 }
 /* force-hide joystick on very tall screens (taller than 9:19) */
 @media (max-aspect-ratio: 9/19){ #joyctrl{ display:none !important; } }
-/* when wide (≥9:16) AND short (<879px): hide floor/evo, expand canvas */
-@media (min-aspect-ratio: 9/16) and (max-height: 878px){
+/* when landscape/wide (≥4:5) AND short (<879px): hide floor/evo, expand canvas */
+/* threshold raised from 9/16→4/5 to avoid iPhone 13 portrait w/ collapsed Safari chrome (~0.587) */
+@media (min-aspect-ratio: 4/5) and (max-height: 878px){
   #floor-zone{ display:none !important; }
   #ev-s{ display:none !important; }
   #game-frame .cw{ bottom:0 !important; height:auto !important; }
 }
 /* sidebar checkboxes only visible when floor-zone is hidden */
 #ls-cbs{ display:none; }
-@media (min-aspect-ratio: 9/16) and (max-height: 878px){ #ls-cbs{ display:flex;flex-wrap:wrap;justify-content:center;gap:0; } }
+@media (min-aspect-ratio: 4/5) and (max-height: 878px){ #ls-cbs{ display:flex;flex-wrap:wrap;justify-content:center;gap:0; } }
 /* joystick NOT affected by the 878px height rule (handled by JS/other queries only) */
 /* joystick + button (J key) */
 #joyctrl{
@@ -510,6 +511,23 @@ reflectBuf.height = Math.round(H * REFLECT_SCALE * dpr);
 const reflectCtx  = reflectBuf.getContext('2d');
 let _reflectFrame = 0; // frame counter for throttle
 
+// ── ADAPTIVE REFLECTION (mobile only) ────────────────────────────────────────
+// Desktop: always on. Mobile: starts OFF, enables if FPS ≥ 55 for 2s,
+// disables permanently if FPS drops below 55 for 2s after enabling.
+// State resets on page reload.
+//   'probing'       — waiting to see if FPS is stable enough to enable
+//   'on'            — reflection enabled; watching for FPS drop
+//   'off_permanent' — disabled for this session; never retry
+let _reflectState = 'probing'; // mobile starts here; desktop never uses this
+let _reflectWindowStart = 0;   // timestamp (ms) when current window began
+const REFLECT_WINDOW_MS  = 2000; // 2s observation window
+const REFLECT_FPS_ON     = 55;   // min FPS to enable
+const REFLECT_FPS_OFF    = 55;   // FPS threshold to disable
+// Rolling FPS: average over last 60 frame deltas
+const _fpsDeltas = new Float32Array(60);
+let _fpsDeltaIdx = 0, _fpsPrev = 0;
+let _reflectEnabled = false; // actual gate used in render/capture
+
 // Portrait next: img element (no canvas needed)
 const nc=document.getElementById('nc');
 
@@ -807,8 +825,46 @@ function processKeys(){
   mx=((mx+delta-mn)%range+range)%range+mn;
 }
 
+// ── ADAPTIVE REFLECTION TICK ──────────────────────────────────────────
+function tickReflect(now){
+  if(!isMobile){ _reflectEnabled=true; return; }
+  if(_reflectState==='off_permanent'){ _reflectEnabled=false; return; }
+
+  // update rolling FPS average
+  if(_fpsPrev>0){
+    _fpsDeltas[_fpsDeltaIdx%60]= now - _fpsPrev;
+    _fpsDeltaIdx++;
+  }
+  _fpsPrev=now;
+  const samples=Math.min(_fpsDeltaIdx,60);
+  let avgDelta=0;
+  for(let i=0;i<samples;i++) avgDelta+=_fpsDeltas[i];
+  const fps = samples>0 ? 1000/(avgDelta/samples) : 60;
+
+  if(_reflectWindowStart===0) _reflectWindowStart=now;
+  const elapsed=now-_reflectWindowStart;
+
+  if(_reflectState==='probing'){
+    if(fps < REFLECT_FPS_ON){
+      _reflectWindowStart=now; // reset window — not stable yet
+    } else if(elapsed>=REFLECT_WINDOW_MS){
+      _reflectState='on'; _reflectEnabled=true; _reflectWindowStart=now;
+    }
+  } else if(_reflectState==='on'){
+    _reflectEnabled=true;
+    if(fps < REFLECT_FPS_OFF){
+      if(elapsed>=REFLECT_WINDOW_MS){
+        _reflectState='off_permanent'; _reflectEnabled=false;
+      }
+    } else {
+      _reflectWindowStart=now; // stable — keep resetting so drop window is fresh
+    }
+  }
+}
+
 // ── LOOP ──────────────────────────────────────────────────────────────
 function loop(){
+  tickReflect(performance.now());
   processKeys();
   if(!dead){step();detectMerges();processMerges();}
   updateClaw();
@@ -993,7 +1049,7 @@ function render(){
   ctx.textAlign='right';
   ctx.font=`${Math.round(9*FS)}px 'Segoe UI',system-ui,sans-serif`;
   ctx.fillStyle='rgba(90,56,32,0.45)';
-  ctx.fillText('v13',W-dzPad-4,DY-5);
+  ctx.fillText('v14',W-dzPad-4,DY-5);
   ctx.restore();
   // ── CLAW + held plushie ───────────────────────────────────────────────
   if(!dead && !showClaw){
@@ -1073,7 +1129,7 @@ function render(){
     ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill(); ctx.restore();
   }
   // ── REFLECTIONS here: canvas has plushies+claw but NOT popups/confetti ──
-  if(!isMobile){
+  if(_reflectEnabled){
     ctx.globalCompositeOperation='destination-over';
     drawCoverPatches();
     drawReflections();
@@ -1240,7 +1296,7 @@ function render(){
   // ── CAPTURE REFLECTION BUFFER (last-frame strips, throttled to ~20fps) ──
   // Read from cv into reflectBuf at half resolution every 3rd frame.
   // This eliminates the GPU read-back stall in drawReflections (separate texture).
-  if(!isMobile && (++_reflectFrame % 3 === 0)){
+  if(_reflectEnabled && (++_reflectFrame % 3 === 0)){
     const sw=SOURCE_W, rv=REFLECT_VIS;
     const bw=reflectBuf.width, bh=reflectBuf.height;
     const stripW=bw/2;

@@ -2,7 +2,13 @@
 
 ---
 
-## v13 (current)
+## v14 (current)
+- **Adaptive reflection on mobile** — reflection starts OFF; enables after 2s of stable ≥55 FPS; if FPS drops below 55 for 2s after enabling, disables permanently for the session (resets on reload)
+- **Rolling FPS tracker** — 60-frame delta average drives the adaptive logic; desktop always enables reflection immediately
+
+---
+
+## v13
 - **Reflection optimization** — reflections now read from a separate offscreen buffer (`reflectBuf`) instead of the live canvas, eliminating the GPU read-back stall
 - **Half-resolution capture** — source strips stored at 50% resolution, scaled back up on draw (cuts pixel data by 4×)
 - **~20fps throttle** — buffer updated every 3rd frame; one frame behind at 60fps, imperceptible
