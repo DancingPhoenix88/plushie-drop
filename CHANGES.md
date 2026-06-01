@@ -2,7 +2,13 @@
 
 ---
 
-## v15 (current)
+## v16 (current)
+- **Fullscreen prompt on mobile** — on page load, mobile players see an overlay asking them to enter full screen; tapping "Enter Full Screen" calls `requestFullscreen` (webkit fallback included); "Skip" dismisses without entering
+- **Floor-zone always visible** — removed `display:none` on `#floor-zone` from the wide+short media rule so the score is always accessible; also raised the hide-rule threshold from `9/16` → `4/5` to prevent iPhone 13 portrait (collapsed Safari chrome, ~0.587 ratio) from incorrectly triggering the landscape-only rule
+
+---
+
+## v15
 - **AUTO fan-dial** — replaced ON/OFF checkbox with a 0→1→2→3 speed dial; shows one large number at a time (Righteous font, dark red glow for 1/2/3, invisible for 0); cycles on tap or `A` key; speeds: 1200ms / 820ms / 500ms
 - **Touch tween** — on mobile, tapping tweens the claw to the touch point (0.3s easeInOutQuad) then drops; dragging cancels the tween and moves claw directly; touchend while tween is running queues drop for tween completion
 
