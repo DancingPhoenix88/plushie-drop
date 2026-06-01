@@ -2,7 +2,13 @@
 
 ---
 
-## v14 (current)
+## v15 (current)
+- **AUTO fan-dial** — replaced ON/OFF checkbox with a 0→1→2→3 speed dial; shows one large number at a time (Righteous font, dark red glow for 1/2/3, invisible for 0); cycles on tap or `A` key; speeds: 1200ms / 820ms / 500ms
+- **Touch tween** — on mobile, tapping tweens the claw to the touch point (0.3s easeInOutQuad) then drops; dragging cancels the tween and moves claw directly; touchend while tween is running queues drop for tween completion
+
+---
+
+## v14
 - **Adaptive reflection on mobile** — reflection starts OFF; enables after 2s of stable ≥55 FPS; if FPS drops below 55 for 2s after enabling, disables permanently for the session (resets on reload)
 - **Rolling FPS tracker** — 60-frame delta average drives the adaptive logic; desktop always enables reflection immediately
 
