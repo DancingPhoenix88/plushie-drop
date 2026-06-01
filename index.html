@@ -125,7 +125,7 @@ html,body{width:100vw;height:100dvh;overflow:hidden;position:relative;font-famil
   white-space:nowrap;overflow:hidden;
   width:100%;text-align:center;
   display:flex;align-items:center;justify-content:center;
-  font-size:clamp(14px,42%,30px);flex:1;
+  font-size:30px;flex:1; /* initial value; overridden by fitScoreFont() */
 }
 
 /* CENTER: joystick — sized as % of floor-zone height (ref: 52px joy / 112px floor ≈ 46%, 25px btn ≈ 22%) */
@@ -1970,24 +1970,29 @@ function rnd(){
   }
   return 1;
 }
-// score font size based on digit/char count
-function fitScoreFont(){
-  const el=document.getElementById('sc-p');
-  if(!el) return;
-  const len=el.textContent.length;
-  const fs = len<=4?30 : len===5?25 : len===6?20 : 19;
-  el.style.fontSize=fs+'px';
+// score font size: monospace-like font — scale by char count vs container width
+const SCORE_CHAR_RATIO=0.8; // estimated char width / font-size for Righteous
+function fitScoreFontEl(el, maxPx){
+  if(!el||!el.textContent) return;
+  const len=el.textContent.length; if(!len) return;
+  const containerW=el.getBoundingClientRect().width; if(!containerW) return;
+  el.style.fontSize=Math.min(maxPx, Math.floor(containerW/(len*SCORE_CHAR_RATIO)))+'px';
 }
+function fitScoreFont(){
+  fitScoreFontEl(document.getElementById('sc-p'), 30); // portrait floor zone
+  fitScoreFontEl(document.getElementById('sc'),   21); // landscape sidebar
+}
+let _lastScoreLen=0;
 function updUI(){
   const s=score.toLocaleString();
   document.getElementById('sc').textContent=s;
   const elp=document.getElementById('sc-p');
   elp.textContent=s;
-  fitScoreFont();
+  if(s.length!==_lastScoreLen){ _lastScoreLen=s.length; fitScoreFont(); }
   const ll=document.getElementById('level-label');
   if(ll) ll.textContent='· LV '+gameLevel;
 }
-window.addEventListener('resize',fitScoreFont);
+window.addEventListener('resize',()=>{ _lastScoreLen=0; fitScoreFont(); }); // force recheck on resize
 // drawAtFit: scale sprite to fill cW×cH preview, centered, no crop
 function drawAtFit(c,cW,cH,lvl,alpha=1){
   const rs=rendSprites[lvl]; if(!rs) return;
