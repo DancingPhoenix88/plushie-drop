@@ -307,11 +307,11 @@ img.evo-locked{filter:brightness(0);opacity:0.45;}
           </div>
           <div id="fz-ctrl">
             <label class="cb-item">
-              <input type="checkbox" class="sprite-cb" id="gyro-cb" onchange="toggleGyro()">
+              <input type="checkbox" class="sprite-cb" id="gyro-cb" onchange="toggleGyro();saveCbPrefs()">
               <span class="fz-label">GYRO</span>
             </label>
             <label class="cb-item">
-              <input type="checkbox" class="sprite-cb" id="bgm-cb" onchange="toggleBGM(this.checked)">
+              <input type="checkbox" class="sprite-cb" id="bgm-cb" onchange="toggleBGM(this.checked);saveCbPrefs()">
               <span class="fz-label">BGM</span>
             </label>
             <label class="cb-item">
@@ -417,6 +417,7 @@ const PTS=[0,10,30,60,100,150,210,280,360,450,550,1000];
 
 // ── CONSTANTS ─────────────────────────────────────────────────────────
 const W=632,H=1049,WALL=11,DY=178,DROPY=94;
+const PAD=Math.round(W*0.05); // 5% W left/right padding for claw + play area
 const SOURCE_W  =Math.round(W*0.10); // source zone width (orange, 10% W)
 const REFLECT_W =Math.round(W*0.10); // reflection zone total width (cyan, 10% W)
 const REFLECT_VIS=Math.round(W*0.05);// visible half of reflection zone (5% W on-screen)
@@ -549,8 +550,8 @@ function step(){
     }
     // 2. walls — bounce only, NO angular contribution
     for(const p of plushies){
-      if(p.x-p.r<WALL){p.x=WALL+p.r; if(p.vx<0)p.vx=-p.vx*REST;}
-      if(p.x+p.r>W-WALL){p.x=W-WALL-p.r; if(p.vx>0)p.vx=-p.vx*REST;}
+      if(p.x-p.r<PAD){p.x=PAD+p.r; if(p.vx<0)p.vx=-p.vx*REST;}
+      if(p.x+p.r>W-PAD){p.x=W-PAD-p.r; if(p.vx>0)p.vx=-p.vx*REST;}
       if(p.y+p.r>H-WALL){p.y=H-WALL-p.r;p.vy=-Math.abs(p.vy)*REST;p.vx*=FRIC;}
       if(p.y-p.r<0&&p.vy<0)p.vy=0;
     }
@@ -643,12 +644,13 @@ function processMerges(){
 // ── GAME OVER ─────────────────────────────────────────────────────────
 function checkDanger(){
   const now=Date.now();
+  let dangerCount=0;
   for(const p of plushies){
-    // use display radius (PD[].r) not physR so visual top matches the line
     const vr=PD[p.level].r;
     if((p.y-vr)<DY&&p.speed<1.4&&now-p.born>1000){
       danger[p.born]=danger[p.born]??now;
-      if(now-danger[p.born]>2200){gameOver();return;}
+      dangerCount++;
+      if(now-danger[p.born]>2200&&dangerCount>=3){gameOver();return;}
     } else delete danger[p.born];
   }
 }
@@ -865,20 +867,24 @@ function drawReflections(){
   // source zone starts at rv from edge so it doesn't overlap the cyan zone
   const srcX_L=rv, srcX_R=W-rv-sw;  // left/right source x offsets
 
-  // LEFT — source [rv, rv+sw], flip horizontally, draw into x∈[0,rv]
+  // source coords must be in PHYSICAL pixels (cv is W*dpr × H*dpr)
+  const srcL_px=srcX_L*dpr, srcR_px=(W-srcX_L-sw)*dpr;
+  const sw_px=sw*dpr, H_px=H*dpr;
+
+  // LEFT — sample physical [srcL_px, srcL_px+sw_px], flip into x∈[0,rv]
   ctx.save();
   ctx.beginPath(); ctx.rect(0,0,rv,H); ctx.clip();
   ctx.globalAlpha=0.22;
-  ctx.translate(rv,0); ctx.scale(-rw/sw,1);  // flip + compress
-  ctx.drawImage(cv, srcX_L,0,sw,H, 0,0,sw,H);
+  ctx.translate(rv,0); ctx.scale(-rw/sw,1);
+  ctx.drawImage(cv, srcL_px,0,sw_px,H_px, 0,0,sw,H);
   ctx.restore();
 
-  // RIGHT — source [W-rv-sw, W-rv], flip horizontally, draw into x∈[W-rv,W]
+  // RIGHT — rightmost orange pixel (W-rv) → left edge of cyan (W-rv), excess cut off right
   ctx.save();
   ctx.beginPath(); ctx.rect(W-rv,0,rv,H); ctx.clip();
   ctx.globalAlpha=0.22;
-  ctx.translate(W+rv,0); ctx.scale(-rw/sw,1);  // flip + compress
-  ctx.drawImage(cv, W-srcX_L-sw,0,sw,H, 0,0,sw,H);
+  ctx.translate(2*(W-rv),0); ctx.scale(-1,1);
+  ctx.drawImage(cv, srcR_px,0,sw_px,H_px, W-rv-sw,0,sw,H);
   ctx.restore();
 
 }
@@ -1024,6 +1030,13 @@ function render(){
   for(const p of parts){
     ctx.save(); ctx.globalAlpha=p.life*.85; ctx.fillStyle=p.color;
     ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill(); ctx.restore();
+  }
+  // ── REFLECTIONS here: canvas has plushies+claw but NOT popups/confetti ──
+  if(!isMobile){
+    ctx.globalCompositeOperation='destination-over';
+    drawCoverPatches();
+    drawReflections();
+    ctx.globalCompositeOperation='source-over';
   }
   // score popups
   ctx.save(); ctx.textAlign='center';
@@ -1432,7 +1445,7 @@ function updateClaw(){
 }
 
 // ── INPUT ─────────────────────────────────────────────────────────────
-function clamp(x,lvl){const r=PD[lvl].r;return Math.max(WALL+r+1,Math.min(W-WALL-r-1,x));}
+function clamp(x,lvl){const r=PD[lvl].r;return Math.max(PAD+r+1,Math.min(W-PAD-r-1,x));}
 let dbg=false, dbgPoly=false, solidMode=false;
 // joystick on by default on PC (non-touch), off on touch devices
 let showJoy=!window.matchMedia('(pointer:coarse)').matches;
@@ -1526,7 +1539,7 @@ function drop(){
   clawDropX=clamp(mx,cur); clawLvl=cur;
   clawState='opening'; clawOpenTimer=CLAW_OPEN_FRAMES; cooling=true;
 }
-function setMx(raw){mx=Math.max(WALL,Math.min(W-WALL,raw));}
+function setMx(raw){mx=Math.max(PAD,Math.min(W-PAD,raw));}
 cv.addEventListener('mousemove',e=>{
   const r=cv.getBoundingClientRect();
   setMx((e.clientX-r.left)*(W/r.width));
@@ -1537,6 +1550,7 @@ cv.addEventListener('touchend',e=>{
   e.preventDefault();
   const r=cv.getBoundingClientRect();
   setMx((e.changedTouches[0].clientX-r.left)*(W/r.width));
+  clawX=clamp(mx,cur); // snap claw visually to tap before drop
   drop();
 });
 
@@ -1623,6 +1637,23 @@ function updateEvoUnlocks(){
     const lvl=+img.dataset.unlockLvl;
     img.classList.toggle('evo-locked', lvl>3 && !firstMerged.has(lvl));
   });
+}
+// ── CHECKBOX PERSISTENCE (per device via localStorage) ───────────────────
+const CB_KEY='plushie_cb_prefs';
+function saveCbPrefs(){
+  try{
+    localStorage.setItem(CB_KEY, JSON.stringify({
+      bgm: document.getElementById('bgm-cb')?.checked??false,
+      gyro: document.getElementById('gyro-cb')?.checked??false,
+    }));
+  }catch(e){}
+}
+function loadCbPrefs(){
+  try{
+    const p=JSON.parse(localStorage.getItem(CB_KEY)||'{}');
+    if(p.bgm!=null){ toggleBGM(p.bgm); ['bgm-cb','bgm-ls'].forEach(id=>{ const el=document.getElementById(id); if(el) el.checked=p.bgm; }); }
+    if(p.gyro&&p.gyro===true){ toggleGyro(); }
+  }catch(e){}
 }
 function syncAp(v){
   ['ap','ap-ls'].forEach(id=>{ const el=document.getElementById(id); if(el) el.checked=v; });
@@ -1839,7 +1870,7 @@ document.addEventListener('touchmove',e=>{if(e.touches.length>1)e.preventDefault
 // Re-fit on orientation change
 window.addEventListener('orientationchange',()=>setTimeout(fitToViewport,200));
 
-cur=rnd();nxt=rnd();clawLvl=cur;updUI();buildEvo();
+cur=rnd();nxt=rnd();clawLvl=cur;updUI();buildEvo();loadCbPrefs();
 if(showJoy){ const el=joyEl(); if(el) el.style.display='flex'; }
 // force-download Righteous (just declaring the @font-face doesn't download it)
 // then start the game once all fonts are ready
