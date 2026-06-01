@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <title>Plushie Drop</title>
 <link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <meta name="theme-color" content="#c87830">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -27,7 +29,7 @@ html,body{width:100vw;height:100dvh;overflow:hidden;position:relative;font-famil
 .cw{position:relative;}
 #gc{display:block;cursor:crosshair;touch-action:none;}
 /* ── GAME OVER OVERLAY ── */
-#ov{display:none;position:absolute;inset:0;background:rgba(253,246,240,.93);flex-direction:column;align-items:center;justify-content:center;gap:8px;}
+#ov{display:none;position:fixed;inset:0;z-index:9999;background:rgba(253,246,240,.93);flex-direction:column;align-items:center;justify-content:center;gap:8px;}
 #ov.show{display:flex;}
 #ov h2{font-size:20px;font-weight:500;color:#5a3820;}
 #ov .sub{font-size:12px;color:#a09078;}
@@ -66,24 +68,24 @@ html,body{width:100vw;height:100dvh;overflow:hidden;position:relative;font-famil
   width:100%;height:100%;
   position:relative;
   border-style:solid;border-color:transparent;border-width:0;
-  border-image:url('Sprites/claw_machine_middle_tile.png') 70 116 240 116 fill / 9.08% 16.11% 22.57% 16.11% round;
+  border-image:url('Sprites/claw_machine_middle_tile.png') 70 116 240 116 fill / 6.08% 16.11% 22.57% 16.11% round;
 }
 
-/* .cw: canvas area — 626×1034 at 720×1280 reference */
+/* .cw: canvas area — 632×1049 at 720×1280 reference */
 #game-frame .cw{
   position:absolute;
-  top:18px;
-  left:calc(36/720*100%);
-  width:calc(646/720*100%);
-  height:calc(1034/1280*100%);
+  top:11px;
+  left:calc(45/720*100%);
+  width:calc(632/720*100%);
+  height:calc(1049/1280*100%);
   overflow:hidden;
 }
-#game-frame canvas{display:block;width:100%;height:auto;aspect-ratio:646/1034;}
+#game-frame canvas{display:block;width:100%;height:auto;aspect-ratio:632/1049;}
 
-/* floor-zone */
+/* floor-zone — left/right aligned with canvas (45/720 and 43/720) */
 #floor-zone{
   position:absolute;
-  left:20px;right:20px;
+  left:calc(45/720*100%);right:calc(43/720*100%);
   bottom:calc(82/1280*100%);
   height:calc(112/1280*100%);
   border-style:solid;border-color:transparent;border-width:0;
@@ -93,26 +95,72 @@ html,body{width:100vw;height:100dvh;overflow:hidden;position:relative;font-famil
   position:absolute;inset:0;
   display:flex;align-items:center;gap:8px;overflow:hidden;padding:0 4px;
 }
-#fz-score{display:flex;flex-direction:column;align-items:center;flex-shrink:0;}
-#fz-score .sl{font-size:9px;color:#b09878;text-transform:uppercase;letter-spacing:.05em;}
-#fz-score .sv{font-size:20px;font-weight:500;color:#5a3820;line-height:1;}
-#fz-next{display:flex;flex-direction:column;align-items:center;gap:1px;flex-shrink:0;}
-#fz-next .sl{font-size:9px;color:#b09878;text-transform:uppercase;letter-spacing:.05em;}
-#fz-next .sn{font-size:8px;color:#b09878;}
+/* score + next bg sprite wrapper */
+#fz-scorenext{
+  display:flex;
+  align-self:stretch;
+  background:url('Sprites/claw_machine_score_next_bg.png') no-repeat left/174px 60px;
+  gap:24px;height:60px;width:190px;
+  margin-top:7px;padding:10px;
+}
+#fz-score,#fz-next{
+  display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+  flex:1;min-width:0;
+}
+#fz-next{padding-right:8px;}
+.fz-label{
+  font-size:8px;color:#8a6848;text-transform:uppercase;
+  letter-spacing:.1em;text-align:center;margin-bottom:2px;
+  font-family:'Segoe UI',system-ui,sans-serif;
+}
+/* next sprite image */
+#nc{display:block;width:48px;height:auto;aspect-ratio:1;margin-top:-9px;}
+/* score value: digital font, size based on digit count */
+#sc-p{
+  font-family:'Share Tech Mono','Courier New',monospace;
+  font-weight:400;color:#3a2010;
+  white-space:nowrap;overflow:hidden;
+  width:100%;text-align:center;
+  display:flex;align-items:center;justify-content:center;
+  height:30px;
+  font-size:30px;
+}
 #fz-ctrl{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-left:auto;}
 #fz-ctrl button{background:none;border:.5px solid #dfc8b0;border-radius:8px;font-size:20px;padding:2px 6px;cursor:pointer;line-height:1;}
 #fz-ctrl button.active,#gyro-ls.active{background:#fde8d8;border-color:#c05020;}
 #fz-ctrl label{display:flex;align-items:center;gap:3px;font-size:10px;color:#b09878;cursor:pointer;text-transform:uppercase;}
 #fz-ctrl input[type=checkbox]{width:16px;height:16px;accent-color:#c05020;}
+/* force-hide joystick on very tall screens (taller than 9:18) */
+@media (max-aspect-ratio: 9/19){ #joyctrl{ display:none !important; } }
+/* joystick + button (J key) */
+#joyctrl{
+  display:none;
+  position:absolute;
+  left:50%;bottom:30px;
+  transform:translateX(-50%);
+  align-items:flex-end;gap:12px;
+  pointer-events:none;
+  z-index:5;
+}
+#joy-img{height:52px;width:auto;display:block;}
+#drop-btn{height:25px;width:auto;display:block;margin-left:-16px;}
+#joy-img.flip{transform:scaleX(-1);}
 
-/* ev-s */
+/* ev-s — same alignment as canvas/floor-zone */
 #ev-s{
   position:absolute;
-  left:20px;right:20px;
+  left:calc(45/720*100%);right:calc(43/720*100%);
   bottom:0;
   height:calc(81/1280*100%);
   display:grid;grid-template-columns:repeat(11,1fr);gap:2px;
-  padding:4px 6px;box-sizing:border-box;
+  box-sizing:border-box;padding-top:8px;
+}
+#ev-s .en{
+  font-size:6px;color:#8a7060;text-align:center;
+  background-color:#fcf1e0;
+  border:1px solid #5b231d;
+  display:block;width:39px;padding:2px 0;
+  border-radius:8px;margin-top:-5px;
 }
 #ev-s .ec{display:flex;flex-direction:column;align-items:center;}
 #ev-s img{width:100%;aspect-ratio:1;object-fit:contain;}
@@ -123,10 +171,13 @@ html,body{width:100vw;height:100dvh;overflow:hidden;position:relative;font-famil
 #bottom-tile{position:relative;overflow:hidden;width:100%;}
 #bottom-tile::before{
   content:'';position:absolute;top:0;left:0;right:0;
-  height:max(100%,57px);
-  border-width:33px 27px 24px 27px;border-style:solid;border-color:transparent;
+  /* meta: top=4, bottom=50, sides=54 */
+  /* top border-image-width: linear formula from 2 viewport measurements
+     top = 431px - 64.3vw  (derived from W=495→113px, W=523→95px) */
+  height:max(100%,54px);
+  border-width:4px 54px 50px 54px;border-style:solid;border-color:transparent;
   border-image:url('Sprites/claw_machine_bottom_tile.png')
-    66 54 48 54 fill / 33px 27px 24px 27px round;
+    4 54 50 54 fill / clamp(0px, calc(431px - 64.3vw), 200px) 54px 50px 54px round;
 }
 
 /* ── LANDSCAPE SIDEBAR ── */
@@ -151,6 +202,8 @@ html,body{width:100vw;height:100dvh;overflow:hidden;position:relative;font-famil
     display:flex;flex-direction:column;align-items:center;
   }
   /* top-tile: fixed to text height only — no growing */
+  /* hide name plates on tall screens — they exceed cell width and force overflow */
+  #ev-s .en{display:none;}
   #top-tile{flex:0 0 auto;width:100%;}
   /* main-content: 9:16, sits right below top-tile */
   #main-content{width:100%;aspect-ratio:9/16;flex-shrink:0;}
@@ -194,35 +247,34 @@ html,body{width:100vw;height:100dvh;overflow:hidden;position:relative;font-famil
   <div id="main-content">
     <div id="game-frame">
 
-      <!-- Canvas — fills .cw area (top:2% left:6% right:6% bottom:23%) -->
+      <!-- Canvas — fills .cw area -->
       <div class="cw">
         <canvas id="gc" width="870" height="1046"></canvas>
-        <div id="ov">
-          <h2>Game Over!</h2>
-          <div class="sub">final score</div>
-          <div class="fs" id="fs">0</div>
-          <button onclick="restart()">Play Again ↺</button>
-        </div>
       </div>
 
       <!-- Floor zone: score/next/controls — inside game-frame bottom area -->
       <div id="floor-zone">
+        <!-- joystick + drop button (PC visual, toggle with J key) -->
+        <div id="joyctrl">
+          <img id="joy-img"  src="Sprites/joystick_released.png" alt="">
+          <img id="drop-btn" src="Sprites/button_released.png"   alt="">
+        </div>
         <div id="fz-inner">
-          <div id="fz-score">
-            <span class="sl">Score</span>
-            <span class="sv" id="sc-p">0</span>
-          </div>
-          <div id="fz-next">
-            <span class="sl">Next</span>
-            <canvas id="nc" width="52" height="52"></canvas>
-            <span class="sn" id="nl">—</span>
+          <!-- score + next share the bg sprite -->
+          <div id="fz-scorenext">
+            <div id="fz-score">
+              <span class="fz-label">SCORE</span>
+              <span id="sc-p">0</span>
+            </div>
+            <div id="fz-next">
+              <span class="fz-label">NEXT</span>
+              <img id="nc" src="" alt="next">
+            </div>
           </div>
           <div id="fz-ctrl">
-            <button id="mute-btn" onclick="toggleMute()">🔊</button>
             <button id="gyro-btn" onclick="toggleGyro()" title="Tilt control">🌀</button>
             <label><input type="checkbox" id="bgm-cb" onchange="toggleBGM(this.checked)"><span>BGM</span></label>
             <label><input type="checkbox" id="ap" checked><span>Auto</span></label>
-            <label><input type="checkbox" id="claw-cb" onchange="toggleClaw(this.checked)" checked><span>Claw</span></label>
           </div>
         </div>
       </div>
@@ -246,8 +298,6 @@ html,body{width:100vw;height:100dvh;overflow:hidden;position:relative;font-famil
     <hr class="sep">
     <label class="ar"><input type="checkbox" id="ap-ls" onchange="syncAp(this.checked)"><span>Autoplay</span></label>
     <label class="ar"><input type="checkbox" id="bgm-ls" onchange="toggleBGM(this.checked)"><span>BGM</span></label>
-    <label class="ar"><input type="checkbox" id="claw-ls" onchange="toggleClaw(this.checked)"><span>Claw</span></label>
-    <button id="mute-ls" onclick="toggleMute()" style="margin-top:4px;width:100%;padding:5px 0;background:#fdf2ea;border:.5px solid #dfc8b0;border-radius:8px;font-size:16px;cursor:pointer;">🔊</button>
     <button id="gyro-ls" onclick="toggleGyro()" style="margin-top:4px;width:100%;padding:5px 0;background:#fdf2ea;border:.5px solid #dfc8b0;border-radius:8px;font-size:16px;cursor:pointer;" title="Tilt control">🌀</button>
   </div>
 
@@ -255,6 +305,14 @@ html,body{width:100vw;height:100dvh;overflow:hidden;position:relative;font-famil
   <div id="bottom-tile"></div>
 
 </div><!-- #game-root -->
+
+<!-- GAME OVER: fullscreen overlay -->
+<div id="ov">
+  <h2>Game Over!</h2>
+  <div class="sub">final score</div>
+  <div class="fs" id="fs">0</div>
+  <button onclick="restart()">Play Again ↺</button>
+</div>
 
 <div id="help-popup">
   <div id="help-box">
@@ -265,6 +323,7 @@ html,body{width:100vw;height:100dvh;overflow:hidden;position:relative;font-famil
       <tr><td>A</td><td>Toggle auto-drop</td></tr>
       <tr><td>Space</td><td>Drop plushie</td></tr>
       <tr><td>? or /</td><td>Show this help</td></tr>
+      <tr><td>J</td><td>Toggle joystick + button display</td></tr>
       <tr><td colspan="2" style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#b09878;padding:10px 6px 2px;font-weight:600;">Debug</td></tr>
       <tr><td>[ / ]</td><td>Decrease / increase polygon sides</td></tr>
       <tr><td>C</td><td>Show polygon colliders</td></tr>
@@ -301,7 +360,7 @@ const PD=[null,
 const PTS=[0,10,30,60,100,150,210,280,360,450,550,1000];
 
 // ── CONSTANTS ─────────────────────────────────────────────────────────
-const W=646,H=1034,WALL=11,DY=175,DROPY=92;
+const W=632,H=1049,WALL=11,DY=178,DROPY=94;
 const FS=W/460; // font/size scale factor (~1.36) — multiply all px sizes by this
 const GRAV=0.38, DAMP=0.994, REST=0.35, FRIC=0.84;
 const SUBSTEPS=6, ITERS=4;
@@ -318,8 +377,6 @@ let firstMerged=new Set(); // tracks levels merged for the first time this game
 let showClaw=true;
 function toggleClaw(v){
   showClaw=v;
-  document.getElementById('claw-cb').checked=v;
-  document.getElementById('claw-ls').checked=v;
 }
 
 // ── CLAW STATE ────────────────────────────────────────────────────────────
@@ -343,12 +400,8 @@ cv.width=W*dpr; cv.height=H*dpr;
 ctx.scale(dpr,dpr);
 ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
 
-// Portrait next canvas (52×52)
-const nc=document.getElementById('nc'), nctx=nc.getContext('2d');
-nc.width=52*dpr; nc.height=52*dpr;
-nc.style.width='52px'; nc.style.height='52px';
-nctx.scale(dpr,dpr);
-nctx.imageSmoothingEnabled=true; nctx.imageSmoothingQuality='high';
+// Portrait next: img element (no canvas needed)
+const nc=document.getElementById('nc');
 
 // Landscape next canvas (98×80)
 const ncls=document.getElementById('nc-ls'), nctxls=ncls.getContext('2d');
@@ -525,7 +578,9 @@ function processMerges(){
 function checkDanger(){
   const now=Date.now();
   for(const p of plushies){
-    if((p.y-p.r)<DY&&p.speed<1.4&&now-p.born>1000){
+    // use display radius (PD[].r) not physR so visual top matches the line
+    const vr=PD[p.level].r;
+    if((p.y-vr)<DY&&p.speed<1.4&&now-p.born>1000){
       danger[p.born]=danger[p.born]??now;
       if(now-danger[p.born]>2200){gameOver();return;}
     } else delete danger[p.born];
@@ -627,11 +682,12 @@ function tickCelebrations(){
 
 // ── PER-FRAME KEY INPUT ────────────────────────────────────────────────
 function processKeys(){
-  if(!keysDown.has('ArrowLeft')&&!keysDown.has('ArrowRight')) return;
-  const speed=keysDown.has('Shift')?5:2; // px/frame — ~120 or ~300 px/s at 60fps
+  const hasL=keysDown.has('ArrowLeft'), hasR=keysDown.has('ArrowRight');
+  if(!hasL&&!hasR) return;
+  const speed=keysDown.has('Shift')?5:2;
   const mn=WALL+PD[cur].r+1, mx2=W-WALL-PD[cur].r-1, range=mx2-mn;
   if(range<=0) return;
-  const delta=keysDown.has('ArrowLeft')?-speed:speed;
+  const delta=hasL?-speed:speed;
   mx=((mx+delta-mn)%range+range)%range+mn;
 }
 
@@ -640,6 +696,13 @@ function loop(){
   processKeys();
   if(!dead){step();detectMerges();processMerges();}
   updateClaw();
+  // update joystick direction from current mx + held keys
+  if(showJoy){
+    const hasL=keysDown.has('ArrowLeft'), hasR=keysDown.has('ArrowRight');
+    if(hasL) updateJoyDir('left');
+    else if(hasR) updateJoyDir('right');
+    else updateJoyDir(mx<W/2-20?'left':mx>W/2+20?'right':'none');
+  }
   tickParts(); tickPopups(); tickConfetti(); tickCelebrations(); if(!dead) checkDanger(); render();
   requestAnimationFrame(loop);
 }
@@ -750,16 +813,17 @@ function drawNineSlice(gctx, img, corner, dx, dy, dw, dh){
 function render(){
   ctx.clearRect(0, 0, W, H); // transparent canvas — background comes from CSS tile
   // danger line — blinks when any collider enters the warning zone
-  const inWarning=!cooling&&plushies.some(p=>(p.y-p.r)<(DY+60)&&p.speed<2);
+  // warning blink uses display radius; buffer scaled to new H (60→112px)
+  const inWarning=!cooling&&plushies.some(p=>(p.y-PD[p.level].r)<(DY+112)&&p.speed<2);
   const blink=inWarning&&(Date.now()%600)<300;
   ctx.save(); ctx.setLineDash([7,5]);
   ctx.strokeStyle=blink?'rgba(220,30,30,.95)':'rgba(210,55,55,.55)';
   ctx.lineWidth=blink?2.5:1.5;
   const dzPad=W*0.1;
   ctx.beginPath(); ctx.moveTo(dzPad,DY); ctx.lineTo(W-dzPad,DY); ctx.stroke();
-  ctx.setLineDash([]); ctx.font=blink?`bold ${Math.round(16*FS)}px sans-serif`:`${Math.round(16*FS)}px sans-serif`;
+  ctx.setLineDash([]); ctx.font=blink?`bold ${Math.round(11*FS)}px 'Segoe UI',system-ui,sans-serif`:`${Math.round(11*FS)}px 'Segoe UI',system-ui,sans-serif`;
   ctx.fillStyle=blink?'rgba(220,30,30,.95)':'rgba(210,55,55,.65)'; ctx.textAlign='left';
-  ctx.fillText('▲ danger zone',dzPad+5,DY-4); ctx.restore();
+  ctx.fillText('DANGER',dzPad+5,DY-5); ctx.restore();
   // ── CLAW + held plushie ───────────────────────────────────────────────
   if(!dead && !showClaw){
     // claw off — show classic ghost preview
@@ -850,6 +914,30 @@ function render(){
   });
   ctx.globalAlpha=1; ctx.restore();
 
+  // ── Glass glare (behind text/confetti, in front of plushies) ────────────
+  if(showClaw){
+    ctx.save();
+    const g1=ctx.createLinearGradient(WALL+20,H*0.18,W*0.60,H*0.80);
+    g1.addColorStop(0,  'rgba(255,255,255,0)');
+    g1.addColorStop(0.42,'rgba(255,255,255,0)');
+    g1.addColorStop(0.47,'rgba(255,255,255,0.55)');
+    g1.addColorStop(0.50,'rgba(255,255,255,0.70)');
+    g1.addColorStop(0.53,'rgba(255,255,255,0.55)');
+    g1.addColorStop(0.58,'rgba(255,255,255,0)');
+    g1.addColorStop(1,  'rgba(255,255,255,0)');
+    ctx.fillStyle=g1; ctx.fillRect(0,0,W,H);
+    const g2=ctx.createLinearGradient(W*0.50,H*0.22,W*0.90,H*0.72);
+    g2.addColorStop(0,  'rgba(255,255,255,0)');
+    g2.addColorStop(0.44,'rgba(255,255,255,0)');
+    g2.addColorStop(0.48,'rgba(255,255,255,0.40)');
+    g2.addColorStop(0.50,'rgba(255,255,255,0.55)');
+    g2.addColorStop(0.52,'rgba(255,255,255,0.40)');
+    g2.addColorStop(0.56,'rgba(255,255,255,0)');
+    g2.addColorStop(1,  'rgba(255,255,255,0)');
+    ctx.fillStyle=g2; ctx.fillRect(0,0,W,H);
+    ctx.restore();
+  }
+
   // ── CONFETTI ──────────────────────────────────────────────────────────
   ctx.save();
   for(const p of confetti){
@@ -906,32 +994,6 @@ function render(){
   ctx.globalAlpha=1;
   ctx.restore();
 
-  // ── Glass glare (in front of plushies, claw mode only) ───────────────
-  if(showClaw){
-    ctx.save();
-    // main diagonal streak — top-left to centre
-    // streak 1 — starts below drop zone
-    const g1=ctx.createLinearGradient(WALL+20,H*0.18,W*0.60,H*0.80);
-    g1.addColorStop(0,  'rgba(255,255,255,0)');
-    g1.addColorStop(0.42,'rgba(255,255,255,0)');
-    g1.addColorStop(0.47,'rgba(255,255,255,0.55)');
-    g1.addColorStop(0.50,'rgba(255,255,255,0.70)');
-    g1.addColorStop(0.53,'rgba(255,255,255,0.55)');
-    g1.addColorStop(0.58,'rgba(255,255,255,0)');
-    g1.addColorStop(1,  'rgba(255,255,255,0)');
-    ctx.fillStyle=g1; ctx.fillRect(WALL,0,W-WALL*2,H);
-    // streak 2 — offset right
-    const g2=ctx.createLinearGradient(W*0.50,H*0.22,W*0.90,H*0.72);
-    g2.addColorStop(0,  'rgba(255,255,255,0)');
-    g2.addColorStop(0.44,'rgba(255,255,255,0)');
-    g2.addColorStop(0.48,'rgba(255,255,255,0.40)');
-    g2.addColorStop(0.50,'rgba(255,255,255,0.55)');
-    g2.addColorStop(0.52,'rgba(255,255,255,0.40)');
-    g2.addColorStop(0.56,'rgba(255,255,255,0)');
-    g2.addColorStop(1,  'rgba(255,255,255,0)');
-    ctx.fillStyle=g2; ctx.fillRect(WALL,0,W-WALL*2,H);
-    ctx.restore();
-  }
   // walls + inner bevel are now part of the 9-slice panel sprite above
   // ── DEBUG OVERLAY (press D) ──────────────────────────────────────────
   if(dbg){
@@ -1229,10 +1291,36 @@ function updateClaw(){
 // ── INPUT ─────────────────────────────────────────────────────────────
 function clamp(x,lvl){const r=PD[lvl].r;return Math.max(WALL+r+1,Math.min(W-WALL-r-1,x));}
 let dbg=false, dbgPoly=false, solidMode=false;
+// joystick on by default on PC (non-touch), off on touch devices
+let showJoy=!window.matchMedia('(pointer:coarse)').matches;
+
+// ── JOYSTICK / BUTTON VISUALS ─────────────────────────────────────────
+const joyEl=()=>document.getElementById('joyctrl');
+const joyImg=()=>document.getElementById('joy-img');
+const dropBtn=()=>document.getElementById('drop-btn');
+let btnPressTO=null;
+
+function updateJoyDir(dir){ // dir: 'left'|'right'|'none'
+  const img=joyImg(); if(!img) return;
+  if(dir==='none'){ img.src='Sprites/joystick_released.png'; img.classList.remove('flip'); }
+  else { img.src='Sprites/joystick_tilted.png'; img.classList.toggle('flip', dir==='right'); }
+}
+function flashDropBtn(){
+  const btn=dropBtn(); if(!btn) return;
+  btn.src='Sprites/button_pressed.png';
+  clearTimeout(btnPressTO);
+  btnPressTO=setTimeout(()=>{ btn.src='Sprites/button_released.png'; }, 300);
+}
+function toggleJoy(){
+  showJoy=!showJoy;
+  const el=joyEl(); if(!el) return;
+  el.style.display=showJoy?'flex':'none';
+}
 const keysDown=new Set(); // tracks held keys for per-frame input polling
 document.addEventListener('keyup',e=>keysDown.delete(e.key));
 window.addEventListener('blur',()=>keysDown.clear());
 document.addEventListener('keydown',e=>{
+  if(e.key==='j'||e.key==='J'){ toggleJoy(); return; }
   if(e.key==='s'||e.key==='S'){ showSpawnRate=!showSpawnRate; updateEvoLabels(); return; }
   if(e.key==='d'||e.key==='D'){ dbg=!dbg; if(dbg)dbgPoly=false; return; }
   if(e.key==='c'||e.key==='C'){ dbgPoly=!dbgPoly; if(dbgPoly){dbg=false;solidMode=false;} return; }
@@ -1268,11 +1356,15 @@ setInterval(()=>{
 
 function drop(){
   if(cooling||dead) return;
+  if(showJoy) flashDropBtn();
   clawDropX=clamp(mx,cur); clawLvl=cur;
   clawState='opening'; clawOpenTimer=CLAW_OPEN_FRAMES; cooling=true;
 }
 function setMx(raw){mx=Math.max(WALL,Math.min(W-WALL,raw));}
-cv.addEventListener('mousemove',e=>{const r=cv.getBoundingClientRect();setMx((e.clientX-r.left)*(W/r.width));});
+cv.addEventListener('mousemove',e=>{
+  const r=cv.getBoundingClientRect();
+  setMx((e.clientX-r.left)*(W/r.width));
+});
 cv.addEventListener('click',drop);
 cv.addEventListener('touchmove',e=>{e.preventDefault();const r=cv.getBoundingClientRect();setMx((e.touches[0].clientX-r.left)*(W/r.width));},{passive:false});
 cv.addEventListener('touchend',e=>{
@@ -1306,11 +1398,22 @@ function rnd(){
   }
   return 1;
 }
+// score font size based on digit/char count
+function fitScoreFont(){
+  const el=document.getElementById('sc-p');
+  if(!el) return;
+  const len=el.textContent.length;
+  const fs = len<=4?30 : len===5?25 : len===6?20 : 19;
+  el.style.fontSize=fs+'px';
+}
 function updUI(){
   const s=score.toLocaleString();
   document.getElementById('sc').textContent=s;
-  document.getElementById('sc-p').textContent=s;
+  const elp=document.getElementById('sc-p');
+  elp.textContent=s;
+  fitScoreFont();
 }
+window.addEventListener('resize',fitScoreFont);
 // drawAtFit: scale sprite to fill cW×cH preview, centered, no crop
 function drawAtFit(c,cW,cH,lvl,alpha=1){
   const rs=rendSprites[lvl]; if(!rs) return;
@@ -1322,10 +1425,9 @@ function drawAtFit(c,cW,cH,lvl,alpha=1){
 }
 function updNext(){
   const name=PD[nxt].name;
-  // portrait (52×52) — fit sprite so it's never cropped
-  nctx.clearRect(0,0,52,52); drawAtFit(nctx,52,52,nxt);
-  document.getElementById('nl').textContent=name;
-  // landscape (98×80)
+  // portrait: img tag — just set src
+  nc.src=`Sprites/level_${nxt}.png`;
+  // landscape (98×80) canvas
   nctxls.clearRect(0,0,98,80); drawAtFit(nctxls,98,80,nxt);
   document.getElementById('nl-ls').textContent=name+' · Lv'+nxt;
 }
@@ -1478,8 +1580,8 @@ function toggleBGM(on){
 function toggleMute(){
   muted=!muted;
   const icon=muted?'🔇':'🔊';
-  document.getElementById('mute-btn').textContent=icon;
-  document.getElementById('mute-ls').textContent=icon;
+  const muteLs=document.getElementById('mute-ls');
+  if(muteLs) muteLs.textContent=icon;
   if(muted) stopBGM();
   else if(bgmOn){bgmRunning=false;startBGM();}
 }
@@ -1550,6 +1652,7 @@ document.addEventListener('touchmove',e=>{if(e.touches.length>1)e.preventDefault
 window.addEventListener('orientationchange',()=>setTimeout(fitToViewport,200));
 
 cur=rnd();nxt=rnd();clawLvl=cur;updUI();buildEvo();
+if(showJoy){ const el=joyEl(); if(el) el.style.display='flex'; }
 loadSprites(()=>{ updNext(); fitToViewport(); requestAnimationFrame(loop); });
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 </script>
