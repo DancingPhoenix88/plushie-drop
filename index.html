@@ -1128,8 +1128,7 @@ function render(){
 
   // ── ORDER: reflections → cover patches → main objects (all via destination-over) ──
   ctx.globalCompositeOperation='destination-over';
-  drawCoverPatches();   // covers sit between reflections and main objects
-  drawReflections();    // reflections go furthest back
+  if(!isMobile){ drawCoverPatches(); drawReflections(); } // reflections off on mobile
   ctx.globalCompositeOperation='source-over';
 
   // ── DEBUG OVERLAY (press D) ──────────────────────────────────────────
@@ -1430,6 +1429,7 @@ function clamp(x,lvl){const r=PD[lvl].r;return Math.max(WALL+r+1,Math.min(W-WALL
 let dbg=false, dbgPoly=false, solidMode=false;
 // joystick on by default on PC (non-touch), off on touch devices
 let showJoy=!window.matchMedia('(pointer:coarse)').matches;
+const isMobile=window.matchMedia('(pointer:coarse)').matches;
 let _joyLastMx=null, _joyNoMovFrames=0; // joystick movement tracking
 
 // ── GLASS GLARE FLASH ─────────────────────────────────────────────────
