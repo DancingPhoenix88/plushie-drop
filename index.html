@@ -16,7 +16,7 @@
 :root{color-scheme:light}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;}
 html,body{width:100vw;height:100dvh;overflow:hidden;position:relative;font-family:'Segoe UI',system-ui,sans-serif;
-  background-color:#A27766;}
+  background-color:#A47966;}
 /* ── REFERENCE: 720×1280 group, zones: game=720×771, floor=720×315, evo=720×194 ──
    Border-image-width uses % of element dimensions (height for top/bottom, width for sides).
    Absolute % insets on .cw and #fz-inner reference their containing block's width/height. ── */
@@ -130,8 +130,18 @@ html,body{width:100vw;height:100dvh;overflow:hidden;position:relative;font-famil
 #fz-ctrl button.active,#gyro-ls.active{background:#fde8d8;border-color:#c05020;}
 #fz-ctrl label{display:flex;align-items:center;gap:3px;font-size:10px;color:#b09878;cursor:pointer;text-transform:uppercase;}
 #fz-ctrl input[type=checkbox]{width:16px;height:16px;accent-color:#c05020;}
-/* force-hide joystick on very tall screens (taller than 9:18) */
+/* force-hide joystick on very tall screens (taller than 9:19) */
 @media (max-aspect-ratio: 9/19){ #joyctrl{ display:none !important; } }
+/* when height < 879px: hide floor/evo zones and expand canvas to fill their space */
+@media (max-height: 878px){
+  #floor-zone{ display:none !important; }
+  #ev-s{ display:none !important; }
+  /* .cw stretches to bottom of game-frame — crops the freed space into the play area */
+  #game-frame .cw{
+    bottom:0 !important;
+    height:auto !important;
+  }
+}
 /* joystick + button (J key) */
 #joyctrl{
   display:none;
@@ -227,7 +237,7 @@ html,body{width:100vw;height:100dvh;overflow:hidden;position:relative;font-famil
     position:relative !important;top:auto !important;left:auto !important;
     transform:none !important;
     width:100vw;height:100dvh;overflow:hidden;
-    display:flex;flex-direction:row;align-items:center;gap:10px;
+    display:flex;flex-direction:row;align-items:center;justify-content:center;gap:10px;
     padding:0 10px;box-sizing:border-box;
   }
   #top-tile,#bottom-tile{display:none;}
@@ -1501,14 +1511,25 @@ function updateEvoLabels(){
 let ac=null, muted=false, bgmRunning=false, bgmTO=null, bgmOn=false;
 
 function getAC(){
-  if(!ac) ac=new(window.AudioContext||window.webkitAudioContext)();
+  if(!ac){
+    ac=new(window.AudioContext||window.webkitAudioContext)();
+    // master limiter: clamps total SFX output so overlapping sounds don't spike the volume
+    const comp=ac.createDynamicsCompressor();
+    comp.threshold.value=-6;   // dBFS ceiling
+    comp.knee.value=3;
+    comp.ratio.value=20;       // near-hard limit
+    comp.attack.value=0.001;
+    comp.release.value=0.1;
+    comp.connect(ac.destination);
+    ac._sfxBus=comp;           // all SFX connect here instead of ac.destination
+  }
   if(ac.state==='suspended') ac.resume();
   return ac;
 }
 function tone(freq,start,type,vol,dur){
   const a=getAC(),t=a.currentTime+start;
   const o=a.createOscillator(),g=a.createGain();
-  o.connect(g);g.connect(a.destination);
+  o.connect(g);g.connect(a._sfxBus||a.destination);
   o.type=type;o.frequency.value=freq;
   g.gain.setValueAtTime(0,t);
   g.gain.linearRampToValueAtTime(vol,t+0.02);
@@ -1521,7 +1542,7 @@ function sfxDrop(){
   if(muted)return;
   const a=getAC(),t=a.currentTime;
   const o=a.createOscillator(),g=a.createGain();
-  o.connect(g);g.connect(a.destination);
+  o.connect(g);g.connect(a._sfxBus||a.destination);
   o.type='sine';
   o.frequency.setValueAtTime(200,t);
   o.frequency.exponentialRampToValueAtTime(70,t+0.1);
@@ -1570,7 +1591,7 @@ function scheduleBGM(){
   const a=getAC(); let t=a.currentTime;
   for(const[freq,beats]of BGM){
     const o=a.createOscillator(),g=a.createGain();
-    o.connect(g);g.connect(a.destination);
+    o.connect(g);g.connect(a._sfxBus||a.destination);
     o.type='triangle';o.frequency.value=freq;
     g.gain.setValueAtTime(0,t);
     g.gain.linearRampToValueAtTime(0.07,t+0.03);
