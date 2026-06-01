@@ -416,6 +416,11 @@ const PTS=[0,10,30,60,100,150,210,280,360,450,550,1000];
 
 // ── CONSTANTS ─────────────────────────────────────────────────────────
 const W=632,H=1049,WALL=11,DY=178,DROPY=94;
+const SOURCE_W  =Math.round(W*0.10); // source zone width (orange, 10% W)
+const REFLECT_W =Math.round(W*0.10); // reflection zone total width (cyan, 10% W)
+const REFLECT_VIS=Math.round(W*0.05);// visible half of reflection zone (5% W on-screen)
+const REFLECT_PAD=0;                 // no top/bottom padding
+// orange zone starts at REFLECT_VIS from edge so it doesn't overlap cyan
 const FS=W/460; // font/size scale factor (~1.36) — multiply all px sizes by this
 const GRAV=0.38, DAMP=0.994, REST=0.35, FRIC=0.84;
 const SUBSTEPS=6, ITERS=4;
@@ -444,7 +449,12 @@ const clawImg={
 };
 clawImg.back.src ='Sprites/claw_back.png';
 clawImg.front.src='Sprites/claw_front.png';
-clawImg.open.src ='Sprites/claw_open.png'; // user-supplied open-claw variant
+clawImg.open.src ='Sprites/claw_open.png';
+
+// Reflection corner covers (left variants; right = horizontal flip)
+const coverImg={ top:new Image(), bot:new Image() };
+coverImg.top.src='Sprites/claw_machine_top_left_reflection_cover.png';
+coverImg.bot.src='Sprites/claw_machine_bottom_left_reflection_cover.png';
 
 const dpr=window.devicePixelRatio||1;
 
@@ -845,6 +855,48 @@ const _panelSpr = (() => {
 })();
 
 // drawNineSlice(ctx, spriteCanvas, cornerSize, destX, destY, destW, destH)
+// ── WALL REFLECTIONS ──────────────────────────────────────────────────────
+// Two zones:
+//   SOURCE_W (orange) — objects here get sampled for reflection
+//   REFLECT_W (cyan)  — where the reflection is drawn (scaled+flipped from source)
+function drawReflections(){
+  const sw=SOURCE_W, rv=REFLECT_VIS, rw=REFLECT_W;
+  // source zone starts at rv from edge so it doesn't overlap the cyan zone
+  const srcX_L=rv, srcX_R=W-rv-sw;  // left/right source x offsets
+
+  // LEFT — source [rv, rv+sw], flip horizontally, draw into x∈[0,rv]
+  ctx.save();
+  ctx.beginPath(); ctx.rect(0,0,rv,H); ctx.clip();
+  ctx.globalAlpha=0.22;
+  ctx.translate(rv,0); ctx.scale(-rw/sw,1);  // flip + compress
+  ctx.drawImage(cv, srcX_L,0,sw,H, 0,0,sw,H);
+  ctx.restore();
+
+  // RIGHT — source [W-rv-sw, W-rv], flip horizontally, draw into x∈[W-rv,W]
+  ctx.save();
+  ctx.beginPath(); ctx.rect(W-rv,0,rv,H); ctx.clip();
+  ctx.globalAlpha=0.22;
+  ctx.translate(W+rv,0); ctx.scale(-rw/sw,1);  // flip + compress
+  ctx.drawImage(cv, W-srcX_L-sw,0,sw,H, 0,0,sw,H);
+  ctx.restore();
+
+}
+
+function drawCoverPatches(){
+  const t=coverImg.top, b=coverImg.bot;
+  if(!t.naturalWidth||!b.naturalWidth) return;
+  const tw=t.naturalWidth, th=t.naturalHeight;
+  const bw=b.naturalWidth, bh=b.naturalHeight;
+  // top-left
+  ctx.drawImage(t, 0,0,tw,th);
+  // top-right (flip horizontal)
+  ctx.save(); ctx.scale(-1,1); ctx.drawImage(t,-W,0,tw,th); ctx.restore();
+  // bottom-left
+  ctx.drawImage(b, 0,H-bh,bw,bh);
+  // bottom-right (flip horizontal)
+  ctx.save(); ctx.scale(-1,1); ctx.drawImage(b,-W,H-bh,bw,bh); ctx.restore();
+}
+
 // Draws a 9-sliced panel at any destination size without distorting corners.
 function drawNineSlice(gctx, img, corner, dx, dy, dw, dh){
   const s = img.width;          // source sprite side length (assumed square)
@@ -1074,7 +1126,12 @@ function render(){
   ctx.globalAlpha=1;
   ctx.restore();
 
-  // walls + inner bevel are now part of the 9-slice panel sprite above
+  // ── ORDER: reflections → cover patches → main objects (all via destination-over) ──
+  ctx.globalCompositeOperation='destination-over';
+  drawCoverPatches();   // covers sit between reflections and main objects
+  drawReflections();    // reflections go furthest back
+  ctx.globalCompositeOperation='source-over';
+
   // ── DEBUG OVERLAY (press D) ──────────────────────────────────────────
   if(dbg){
     ctx.save();
