@@ -1449,17 +1449,6 @@ function render(){
     ctx.fillText('D=debug | H=solid n-gon | red=spinning | av=angular vel | Δ=avg move/frame',WALL+4,H-WALL-4);
     ctx.restore();
   }
-  // ── viewport / aspect ratio overlay (always on) ───────────────────
-  {
-    const vw=window.innerWidth,vh=window.innerHeight;
-    const ar=(vw/vh).toFixed(3);
-    ctx.save();
-    ctx.font='bold 11px monospace';
-    ctx.textAlign='left';
-    ctx.fillStyle='rgba(0,0,0,0.55)';
-    ctx.fillText(`${vw}×${vh}  ar:${ar}`,WALL+4,WALL+14);
-    ctx.restore();
-  }
   // ── C: polygon collider shapes ─────────────────────────────────────
   if(dbgPoly){
     ctx.save();
