@@ -2,7 +2,24 @@
 
 ---
 
-## v18 (current)
+## v19 (current)
+- **Floor zone redesign** — 3 independently absolute-positioned panels (score+next left, joystick center, checkboxes right); all scale with floor-zone height via `aspect-ratio` + `%` sizing; no flex interference between panels
+- **Portrait layout locked to viewport** — `height:100dvh; overflow:hidden` in portrait mode; `justify-content:flex-end` sticks game to bottom; no page scroll
+- **Mid-range ar [0.6–0.667] offset** — top-bar and main-content shift down by evo zone height (11.25vw) to hide evo strip when screen is borderline portrait/wide
+- **TAP TO DROP hint** — on load and restart (auto off): claw starts far-left; large slowly-pulsing text at tank center until first drop
+- **Portrait/wide threshold raised to 2/3** — fixes iPhone 13 portrait with collapsed Safari chrome (ar ≈ 0.587) incorrectly entering wide layout
+- **Arrow Down drops** — `↓` key now drops same as Space
+- **Rank label** — sidebar Next label shows name only (no rank number)
+- **Level in sidebar** — Level shown above Next in landscape sidebar
+- **Fullscreen prompt** — iOS shows "Share → Add to Home Screen" guidance; Android shows Enter Full Screen button; skipped if already standalone
+- **Auto-drop cooldown** — self-scheduling timeout ensures no drop is skipped; minimum 300ms gap always respected
+- **Mouse/touch ignore cooldown** — clicks and taps queue and fire as soon as cooling clears; keyboard Space/↓ still blocks during cooldown
+- **WIPE OUT timing** — sparkles start at 2nd glare (t=300ms), level announcement at t=620ms + 500ms delay; sparkles emitted at 10/s for 2s, white only, pulse in place
+- **Bo** — renamed from Bơ
+
+---
+
+## v18
 > ── session break ──
 - **Rebalanced character sizes** — lv1 (Mây) radius reduced to 30; lv1–9 linearly interpolated to Bunny (r=116), step≈10.75; lv10–11 unchanged; physR overrides for Baby Bunny/Poko/Doraemi/Racoon keep original collision-to-visual ratios
 - **Physics pre-calculation** — MASS (physR²), INV_MASS, MERGE_DIST, MERGE_DIST_SQ, and DAMP_DT all computed once at load; hot collision loop uses lookup tables instead of runtime r² and Math.pow

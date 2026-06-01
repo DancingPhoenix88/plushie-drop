@@ -90,62 +90,79 @@ html,body{width:100vw;height:100dvh;overflow:hidden;position:relative;font-famil
 /* floor-zone — left/right aligned with canvas (45/720 and 43/720) */
 #floor-zone{
   position:absolute;
-  left:calc(45/720*100%);right:calc(43/720*100%);
+  left:calc(20/720*100%);right:calc(20/720*100%);
   bottom:calc(82/1280*100%);
   height:calc(112/1280*100%);
   border-style:solid;border-color:transparent;border-width:0;
-  /* border-image: url(Sprites/claw_machine_floor_tile.png) 2 120 173 120 fill / 0.63% 16.67% 54.92% 16.67% round; */
 }
-#fz-inner{
-  position:absolute;inset:0;
-  display:flex;align-items:center;gap:8px;overflow:hidden;padding:0 4px;
-}
-/* score + next bg sprite wrapper */
+/* ── FLOOR ZONE: 3 independent absolute panels ── */
+#fz-inner{position:absolute;inset:0;overflow:hidden;margin:0 10px;}
+
+/* LEFT: score + next */
 #fz-scorenext{
-  display:flex;
-  align-self:stretch;
-  background:url('Sprites/claw_machine_score_next_bg.png') no-repeat left/174px 60px;
-  gap:24px;height:60px;width:190px;
-  margin-top:7px;padding:10px;
+  position:absolute;left:0;top:10%;bottom:0;
+  height:70%;
+  aspect-ratio:174/60;
+  background:url('Sprites/claw_machine_score_next_bg.png') no-repeat center/100% 100%;
+  display:flex;gap:0;padding:0;
+  box-sizing:border-box;
 }
 #fz-score,#fz-next{
   display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
-  flex:1;min-width:0;
+  flex:1;min-width:0;height:90%;
 }
-#fz-next{padding-right:8px;}
+#fz-next{padding-right:4%;}
 .fz-label{
-  font-size:8px;color:#8a6848;text-transform:uppercase;
-  letter-spacing:.1em;text-align:center;margin-bottom:2px;
+  font-size:clamp(6px,12%,9px);color:#8a6848;text-transform:uppercase;
+  letter-spacing:.08em;text-align:center;line-height:1.2;
   font-family:'Segoe UI',system-ui,sans-serif;
+  margin:12% 0 0 11%;
 }
-/* next sprite image */
-#nc{display:block;width:48px;height:auto;aspect-ratio:1;margin-top:-9px;}
-/* score value: digital font, size based on digit count */
+#nc{display:block;width:60%;height:auto;aspect-ratio:1;margin-top:-8%;margin-left:30%;}
 #sc-p{
   font-family:'Righteous','Share Tech Mono','Courier New',monospace;
   font-weight:400;color:#3a2010;
   white-space:nowrap;overflow:hidden;
   width:100%;text-align:center;
   display:flex;align-items:center;justify-content:center;
-  height:30px;
-  font-size:30px;
+  font-size:clamp(14px,42%,30px);flex:1;
 }
-#fz-inner{position:absolute;inset:0;display:flex;align-items:flex-start;gap:8px;overflow:hidden;padding:0 4px;}
-#fz-ctrl{display:flex;flex-wrap:wrap;align-items:flex-start;gap:0;margin-left:auto;}
+
+/* CENTER: joystick — sized as % of floor-zone height (ref: 52px joy / 112px floor ≈ 46%, 25px btn ≈ 22%) */
+#joyctrl{
+  position:absolute;left:50%;top:0;bottom:0;
+  transform:translateX(-50%);
+  height:100%;width:auto;
+  display:none; /* shown via JS */
+  align-items:flex-end;justify-content:center;gap:8%;
+  pointer-events:none;
+  padding-bottom:5%;box-sizing:border-box;
+}
+#joy-img{height:92%;width:auto;display:block;}
+#drop-btn{height:44%;width:auto;display:block;margin-left:-14%;}
+#joy-img.flip{transform:scaleX(-1);}
+
+/* RIGHT: checkboxes — anchored right, height=100% */
+#fz-ctrl{
+  position:absolute;right:0;top:5%;height:80%;
+  display:flex;align-items:stretch; /* stretch so cb-items fill height */
+  justify-content:flex-end;
+  gap:4px;padding:0;box-sizing:border-box;
+}
 #fz-ctrl button{background:none;border:.5px solid #dfc8b0;border-radius:8px;font-size:20px;padding:2px 6px;cursor:pointer;line-height:1;}
 #fz-ctrl button.active,#gyro-ls.active{background:#fde8d8;border-color:#c05020;}
-/* sprite checkboxes */
-.cb-item{display:flex;flex-direction:column;align-items:center;gap:0;cursor:pointer;margin-top:2px;}
-.cb-item .fz-label{margin-top:-4px;position:relative;z-index:1;}
+/* cb-item fills #fz-ctrl height; input is a square at 72% of that height */
+.cb-item{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:0;cursor:pointer;height:100%;}
+.cb-item .fz-label{font-size:clamp(5px,1.8vw,8px);margin-top:1px;position:relative;z-index:1;}
 input.sprite-cb{
   -webkit-appearance:none;appearance:none;
-  width:56px;height:56px;margin:0;cursor:pointer;
+  height:72%;width:auto;aspect-ratio:1;flex-shrink:0;margin:0;cursor:pointer;
   background:url('Sprites/checkbox_bg.png') no-repeat center/contain;
 }
 input.sprite-cb:checked{background-image:url('Sprites/checkbox_tick.png');}
 /* AUTO fan-dial */
 .ap-dial{
-  width:56px;height:56px;margin:0;cursor:pointer;
+  height:72%;width:auto;aspect-ratio:1;flex-shrink:0;margin:0;cursor:pointer;
   background:url('Sprites/checkbox_bg.png') no-repeat center/contain;
   display:flex;align-items:center;justify-content:center;
   user-select:none;
@@ -166,8 +183,7 @@ input.sprite-cb:checked{background-image:url('Sprites/checkbox_tick.png');}
   color:transparent;
   text-shadow:none;
 }
-/* force-hide joystick when ar < 0.532 (≈ 532/1000) */
-@media (max-aspect-ratio: 532/1000){ #joyctrl{ display:none !important; } }
+/* joystick visibility controlled by JS (showJoy) only — no CSS breakpoint */
 /* landscape/wide (≥4:5) AND short (<879px): expand canvas; floor-zone stays visible so score is always accessible */
 /* threshold raised from 9/16→4/5 to avoid iPhone 13 portrait w/ collapsed Safari chrome (~0.587) */
 @media (min-aspect-ratio: 4/5) and (max-height: 878px){
@@ -177,20 +193,7 @@ input.sprite-cb:checked{background-image:url('Sprites/checkbox_tick.png');}
 /* sidebar checkboxes only visible when floor-zone would otherwise be hidden — keep for compat */
 #ls-cbs{ display:none; }
 @media (min-aspect-ratio: 4/5) and (max-height: 878px){ #ls-cbs{ display:flex;flex-wrap:wrap;justify-content:center;gap:0;padding-left:18px; } }
-/* joystick NOT affected by the 878px height rule (handled by JS/other queries only) */
-/* joystick + button (J key) */
-#joyctrl{
-  display:none;
-  position:absolute;
-  left:50%;bottom:30px;
-  transform:translateX(-50%);
-  align-items:flex-end;gap:12px;
-  pointer-events:none;
-  z-index:5;
-}
-#joy-img{height:52px;width:auto;display:block;}
-#drop-btn{height:25px;width:auto;display:block;margin-left:-16px;}
-#joy-img.flip{transform:scaleX(-1);}
+/* (old standalone joyctrl removed — now lives inside #fz-inner) */
 
 /* ev-s — same alignment as canvas/floor-zone */
 #ev-s{
@@ -247,34 +250,32 @@ img.evo-locked{filter:brightness(0);opacity:0.45;}
 .ar span{font-size:10px;color:#b09878;text-transform:uppercase;letter-spacing:.05em;}
 
 
-/* ── PORTRAIT: viewport taller than 9:16 ── */
+/* ── PORTRAIT: viewport narrower than 2:3 ── */
 @media (max-aspect-ratio: 2/3){
-  /* min-height = top-tile (~48px) + 9:16 main-content; body scrolls if viewport is too short */
-  html{height:auto;}
-  body{
-    display:flex;flex-direction:column;align-items:center;
-    min-height:calc(100vw * 16/9 + 48px);
-    overflow-y:auto;
-  }
+  /* lock to viewport — no scroll; content anchors to bottom, clips at top if too tall */
+  html,body{height:100dvh;overflow:hidden;}
+  body{display:flex;flex-direction:column;align-items:center;}
   #game-root{
     position:relative !important;top:auto !important;left:auto !important;
     transform:none !important;
-    width:100%;flex:1;
+    width:100%;height:100dvh;
     display:flex;flex-direction:column;align-items:center;
+    justify-content:flex-end; /* stick to bottom */
+    overflow:hidden;
   }
-  /* top-tile: fixed to text height only — no growing */
-  /* hide name plates on tall screens — they exceed cell width and force overflow */
   #ev-s .en{display:none;}
   #top-tile{flex:0 0 auto;width:100%;}
-  /* main-content: 9:16, sits right below top-tile */
   #main-content{width:100%;aspect-ratio:9/16;flex-shrink:0;}
-  /* bottom-tile: fills remaining space; if viewport is short, collapses to 0 */
   #bottom-tile{flex:1 1 0;width:100%;min-height:0;}
-  /* justify-content:flex-end ensures content anchors to viewport bottom
-     when top+content exceed viewport height (bottom-tile = 0, overflow hidden) */
-  #game-root{overflow:hidden;justify-content:flex-end;}
   #evo-panel{display:none;}
   #ev-s{display:grid;}
+}
+
+/* ── PORTRAIT MID-RANGE [0.527, 0.667]: shift top-bar + main-content down by evo zone height ──
+   evo height = 81/1280 × 16/9 × 100vw = 11.25vw (vw keeps the amount consistent for both elements) */
+@media (min-aspect-ratio: 6/10) and (max-aspect-ratio: 2/3){
+  #top-tile   { transform:translateY(11.25vw); }
+  #main-content{ transform:translateY(11.25vw); }
 }
 
 /* ── WIDE: viewport fatter than 9:16 — row layout, no evo zone, sidebar shows ── */
@@ -316,13 +317,8 @@ img.evo-locked{filter:brightness(0);opacity:0.45;}
 
       <!-- Floor zone: score/next/controls — inside game-frame bottom area -->
       <div id="floor-zone">
-        <!-- joystick + drop button (PC visual, toggle with J key) -->
-        <div id="joyctrl">
-          <img id="joy-img"  src="Sprites/joystick_released.png" alt="">
-          <img id="drop-btn" src="Sprites/button_released.png"   alt="">
-        </div>
         <div id="fz-inner">
-          <!-- score + next share the bg sprite -->
+          <!-- LEFT: score + next -->
           <div id="fz-scorenext">
             <div id="fz-score">
               <span class="fz-label">SCORE</span>
@@ -333,6 +329,12 @@ img.evo-locked{filter:brightness(0);opacity:0.45;}
               <img id="nc" src="" alt="next">
             </div>
           </div>
+          <!-- CENTER: joystick + drop button -->
+          <div id="joyctrl">
+            <img id="joy-img"  src="Sprites/joystick_released.png" alt="">
+            <img id="drop-btn" src="Sprites/button_released.png"   alt="">
+          </div>
+          <!-- RIGHT: checkboxes -->
           <div id="fz-ctrl">
             <label class="cb-item">
               <input type="checkbox" class="sprite-cb" id="gyro-cb" onchange="toggleGyro();saveCbPrefs()">
@@ -440,6 +442,7 @@ img.evo-locked{filter:brightness(0);opacity:0.45;}
       <tr><td>S</td><td>Toggle spawn rate display</td></tr>
       <tr><td>2–9, 0, 1</td><td>Spawn rank 2–11</td></tr>
     </table>
+    <div id="help-meta" style="font-size:10px;color:#b09878;text-align:center;margin-top:10px;"></div>
     <button class="close-btn" onclick="toggleHelp(false)">Close</button>
   </div>
 </div>
@@ -455,7 +458,7 @@ img.evo-locked{filter:brightness(0);opacity:0.45;}
 // lv5/6/7/11 physR keeps original ratio: 0.907 / 0.951 / 0.956 / 0.949
 const PD=[null,
   {name:'Mây',       r:30,  body:'#8ee8ff', stroke:'#38a8d0'},
-  {name:'Bơ',        r:41,  body:'#4a8c40', stroke:'#245820'},
+  {name:'Bo',        r:41,  body:'#4a8c40', stroke:'#245820'},
   {name:'Vincam',    r:52,  body:'#f5f5f5', stroke:'#b8b8b8'},
   {name:'Mini Dora', r:62,  body:'#e83030', stroke:'#980808'},
   {name:'Baby Bunny',r:73,  physR:66, body:'#fff0f8', stroke:'#d89ab8'},
@@ -486,6 +489,7 @@ const AV_MAX=0.12;  // max angular velocity (rad/frame)
 let plushies=[], parts=[], mergeQ=[], popups=[], confetti=[], celebrations=[], sparkles=[];
 let score=0,best=0,cur=1,nxt=1;
 let mx=W/2, cooling=false, dead=false;
+let tapHint=false; // show "TAP TO DROP" until first drop when auto is off
 let danger={};
 let firstMerged=new Set(); // tracks levels merged for the first time this game
 let gameLevel=1, wipeOutActive=false, scoreMultiplier=1;
@@ -877,6 +881,7 @@ function restart(){
   document.getElementById('ov').classList.remove('show');
   cur=rnd(); nxt=rnd(); updNext();
   clawState='idle'; clawY=DROPY; clawLvl=cur;
+  resetClawForNewRound();
   resumeLoop(); // restart the paused animation loop
 }
 
@@ -1211,7 +1216,18 @@ function render(){
   ctx.textAlign='right';
   ctx.font=`${Math.round(9*FS)}px 'Segoe UI',system-ui,sans-serif`;
   ctx.fillStyle='rgba(90,56,32,0.45)';
-  ctx.fillText('v18',W-dzPad-4,DY-5);
+  ctx.fillText('v19',W-dzPad-4,DY-5);
+  // TAP TO DROP hint — big, slowly blinking at tank center
+  if(tapHint && !dead && !wipeOutActive){
+    const pulse=0.4+0.6*Math.abs(Math.sin(Date.now()/700)); // 0.4–1.0, ~1.4s period
+    ctx.save();
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.font=`400 ${Math.round(36*FS)}px 'Righteous','Segoe UI',system-ui,sans-serif`;
+    ctx.shadowColor='rgba(90,56,32,0.3)';ctx.shadowBlur=12;
+    ctx.fillStyle=`rgba(90,56,32,${(pulse*0.75).toFixed(2)})`;
+    ctx.fillText('TAP TO DROP',W/2,H/2);
+    ctx.restore();
+  }
   ctx.restore();
   // ── CLAW + held plushie ───────────────────────────────────────────────
   if(!dead && !showClaw){
@@ -1848,8 +1864,13 @@ function setApSpeed(spd){
 function cycleAp(){ setApSpeed((apSpeed+1)%4); }
 function syncAp(v){ setApSpeed(v?1:0); } // legacy compat (keyboard 'A')
 
+function resetClawForNewRound(){
+  if(apSpeed===0){ mx=PAD+PD[cur].r+1; tapHint=true; } // far left + hint
+  else { tapHint=false; }
+}
 function drop(){
   if(cooling||dead||wipeOutActive) return;
+  tapHint=false;
   if(showJoy) flashDropBtn();
   clawDropX=clamp(mx,cur); clawLvl=cur;
   clawState='opening'; clawOpenTimer=CLAW_OPEN_FRAMES; cooling=true;
@@ -2028,11 +2049,19 @@ function loadCbPrefs(){
     if(p.gyro&&p.gyro===true){ toggleGyro(); }
   }catch(e){}
 }
+function updateHelpMeta(){
+  const meta=document.getElementById('help-meta');
+  if(!meta) return;
+  const vw=window.innerWidth,vh=window.innerHeight;
+  meta.textContent=`v19  ·  ${vw}×${vh}  ar:${(vw/vh).toFixed(3)}`;
+}
 function toggleHelp(force){
   const el=document.getElementById('help-popup');
   const show=force!==undefined?force:!el.classList.contains('show');
   el.classList.toggle('show',show);
+  if(show) updateHelpMeta();
 }
+window.addEventListener('resize',()=>{ if(document.getElementById('help-popup').classList.contains('show')) updateHelpMeta(); });
 document.getElementById('help-popup').addEventListener('click',e=>{
   if(e.target===e.currentTarget) toggleHelp(false);
 });
@@ -2248,7 +2277,7 @@ Promise.all([
   document.fonts.load('400 16px Righteous'),
   document.fonts.ready
 ]).then(()=>{
-  loadSprites(()=>{ updNext(); fitToViewport(); requestAnimationFrame(loop); });
+  loadSprites(()=>{ updNext(); fitToViewport(); resetClawForNewRound(); requestAnimationFrame(loop); });
 });
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 

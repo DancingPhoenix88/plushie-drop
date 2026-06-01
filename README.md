@@ -44,7 +44,7 @@ Open on mobile → Share → **Add to Home Screen** to install as an app (PWA).
 | Rank | Character | Merge score (base) |
 |------|-----------|--------------------|
 | 1 | Mây | +1 |
-| 2 | Bơ | +3 |
+| 2 | Bo | +3 |
 | 3 | Vincam | +6 |
 | 4 | Mini Dora | +10 |
 | 5 | Baby Bunny | +15 |
