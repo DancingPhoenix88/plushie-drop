@@ -163,14 +163,13 @@ input.sprite-cb:checked{background-image:url('Sprites/checkbox_tick.png');}
 }
 /* force-hide joystick on very tall screens (taller than 9:19) */
 @media (max-aspect-ratio: 9/19){ #joyctrl{ display:none !important; } }
-/* when landscape/wide (≥4:5) AND short (<879px): hide floor/evo, expand canvas */
+/* landscape/wide (≥4:5) AND short (<879px): expand canvas; floor-zone stays visible so score is always accessible */
 /* threshold raised from 9/16→4/5 to avoid iPhone 13 portrait w/ collapsed Safari chrome (~0.587) */
 @media (min-aspect-ratio: 4/5) and (max-height: 878px){
-  #floor-zone{ display:none !important; }
   #ev-s{ display:none !important; }
   #game-frame .cw{ bottom:0 !important; height:auto !important; }
 }
-/* sidebar checkboxes only visible when floor-zone is hidden */
+/* sidebar checkboxes only visible when floor-zone would otherwise be hidden — keep for compat */
 #ls-cbs{ display:none; }
 @media (min-aspect-ratio: 4/5) and (max-height: 878px){ #ls-cbs{ display:flex;flex-wrap:wrap;justify-content:center;gap:0; } }
 /* joystick NOT affected by the 878px height rule (handled by JS/other queries only) */
@@ -1670,13 +1669,61 @@ cv.addEventListener('mousemove',e=>{
   setMx((e.clientX-r.left)*(W/r.width));
 });
 cv.addEventListener('click',drop);
-cv.addEventListener('touchmove',e=>{e.preventDefault();const r=cv.getBoundingClientRect();setMx((e.touches[0].clientX-r.left)*(W/r.width));},{passive:false});
+// ── TOUCH: tween claw on tap, drop on tween completion ──────────────────
+let _touchTween=null; // {raf, cancelled, dropOnDone}
+
+function cancelTween(){
+  if(!_touchTween) return;
+  cancelAnimationFrame(_touchTween.raf);
+  _touchTween.cancelled=true;
+  _touchTween=null;
+}
+
+function tweenClawTo(targetX, duration){
+  cancelTween();
+  const startX=clawX, startTime=performance.now();
+  _touchTween={raf:null, cancelled:false, dropOnDone:false};
+  const tween=_touchTween;
+  function tick(now){
+    if(tween.cancelled) return;
+    const t=Math.min(1,(now-startTime)/duration);
+    const ease=t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2; // easeInOutQuad
+    clawX=startX+(targetX-startX)*ease;
+    mx=clawX;
+    if(t<1){ tween.raf=requestAnimationFrame(tick); }
+    else{
+      _touchTween=null;
+      if(tween.dropOnDone) drop();
+    }
+  }
+  tween.raf=requestAnimationFrame(tick);
+}
+
+cv.addEventListener('touchstart',e=>{
+  e.preventDefault();
+  if(cooling||dead) return;
+  const r=cv.getBoundingClientRect();
+  const tx=(e.touches[0].clientX-r.left)*(W/r.width);
+  tweenClawTo(Math.max(PAD,Math.min(W-PAD,tx)), 300);
+},{passive:false});
+
+cv.addEventListener('touchmove',e=>{
+  e.preventDefault();
+  if(cooling||dead) return;
+  const r=cv.getBoundingClientRect();
+  const tx=(e.touches[0].clientX-r.left)*(W/r.width);
+  cancelTween(); // drag: cancel tween, follow finger directly
+  setMx(tx);
+},{passive:false});
+
 cv.addEventListener('touchend',e=>{
   e.preventDefault();
-  const r=cv.getBoundingClientRect();
-  setMx((e.changedTouches[0].clientX-r.left)*(W/r.width));
-  clawX=clamp(mx,cur); // snap claw visually to tap before drop
-  drop();
+  if(cooling||dead) return;
+  if(_touchTween){
+    _touchTween.dropOnDone=true; // drop when tween finishes
+  } else {
+    drop();
+  }
 });
 
 // ── UI ────────────────────────────────────────────────────────────────
