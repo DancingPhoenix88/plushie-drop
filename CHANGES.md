@@ -2,7 +2,17 @@
 
 ---
 
-## v16 (current)
+## v17 (current)
+- **WIPE OUT event** — merging two rank-11 Racoons triggers WIPE OUT: all remaining plushies pop simultaneously, bonus points awarded for each pop, a single large total-bonus popup replaces individual overlays, tank empties, evo zone resets to ranks 1–3 locked
+- **Game levels** — each WIPE OUT increments the game level; merge scores multiply by 2^(level−1) (Level 2 = ×2, Level 3 = ×4 …); multiplier cached in `scoreMultiplier` and a pre-computed `PTS_M[rank]` table rebuilt once per level-up
+- **LEVEL X celebration** — after WIPE OUT a "LEVEL X" card appears with the new multiplier shown in the sub-label; first-appearance tracking resets so celebration cards fire again for each rank
+- **WIPE OUT VFX** — 160-particle confetti burst, 80 staggered 4-point sparkle stars across the full tank (white/gold/ice-blue with glow), triple glass-glare sweep (0 / 300 / 620 ms), dramatic rising-sweep + chord SFX
+- **Rank system** — celebration sub-label now reads "Rank X · +Y pts" (was "Lv X · Y pts"); points shown post-multiplier
+- **`W` debug shortcut** — force a WIPE OUT instantly; also unlocks all 11 ranks before triggering so the evo zone briefly shows the full strip
+
+---
+
+## v16
 - **Fullscreen prompt on mobile** — on page load, mobile players see an overlay asking them to enter full screen; tapping "Enter Full Screen" calls `requestFullscreen` (webkit fallback included); "Skip" dismisses without entering
 - **Floor-zone always visible** — removed `display:none` on `#floor-zone` from the wide+short media rule so the score is always accessible; also raised the hide-rule threshold from `9/16` → `4/5` to prevent iPhone 13 portrait (collapsed Safari chrome, ~0.587 ratio) from incorrectly triggering the landscape-only rule
 
@@ -67,7 +77,7 @@
 - **Sprite checkboxes** — BGM, AUTO, GYRO use `checkbox_bg.png` / `checkbox_tick.png`; labels below; overlap trick for tighter spacing
 - **Gyro as checkbox** — replaces old button; iOS permission still requested on first ON toggle; syncs with sidebar
 - **Sidebar sync** — `#ls-cbs` mirrors floor-zone checkboxes; hidden unless floor-zone is hidden (`max-height: 878px`)
-- **Evo zone locking** — icons silhouetted black until first merge; levels 1–3 always unlocked; unlocks on merge, re-locks on restart
+- **Evo zone locking** — icons silhouetted black until first merge; ranks 1–3 always unlocked; unlocks on merge, re-locks on restart or WIPE OUT
 - **Glass glare animation** — slanted double-line sweeping left→right, random 5–10 s interval; triggered on first-merge celebration
 - **Righteous font** — loaded via Google Fonts for score (`#sc-p`) and celebration canvas text; `document.fonts.load()` ensures canvas uses it before first draw
 - **Blob shadow** in evo zone — oval shadow under each character sprite

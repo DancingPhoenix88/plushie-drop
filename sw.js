@@ -1,4 +1,4 @@
-const CACHE = 'plushie-v16';
+const CACHE = 'plushie-v17';
 const FILES = [
   './index.html',
   './manifest.json',
@@ -13,6 +13,7 @@ const FILES = [
   './Sprites/level_9.png',
   './Sprites/level_10.png',
   './Sprites/level_11.png',
+  './Sprites/app_icon.png',
 ];
 
 self.addEventListener('install', e => {

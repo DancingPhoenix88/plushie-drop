@@ -12,86 +12,121 @@ Open on mobile → Share → **Add to Home Screen** to install as an app (PWA).
 
 ## Keyboard Controls
 
+### Gameplay
+
 | Key | Action |
 |-----|--------|
 | `←` / `→` | Move drop point (2 px/frame) |
 | `Shift` + `←` / `→` | Move drop point fast (5 px/frame) |
-| `Space` | Drop |
-| `←` at far left | Wraps to far right (and vice versa) |
+| `Space` / `↓` | Drop plushie |
+| `A` | Cycle auto-drop speed (off → slow → medium → fast) |
+| `J` | Toggle joystick overlay |
+| `?` or `/` | Show keyboard shortcuts |
 
 ### Debug & Dev
 
 | Key | Action |
 |-----|--------|
-| `S` | Toggle spawn-rate view — replaces character names in the evolution strip with live spawn probabilities (updates on each merge) |
-| `D` | Toggle debug overlay — collider circle, angular velocity, 30-frame avg movement |
-| `C` | Toggle polygon collider view — actual N-gon SAT shape with vertex dots |
-| `2`–`9` | Spawn lv2–lv9 at current drop point |
-| `0` | Spawn lv10 (Mimi) |
-| `1` | Spawn lv11 (Racoon) |
+| `W` | Force **WIPE OUT** — unlocks all ranks, triggers full wipe-out sequence |
+| `S` | Toggle spawn-rate view — replaces names in the evo strip with live probabilities |
+| `D` | Toggle debug overlay (collider circle, angular velocity, avg movement) |
+| `C` | Toggle polygon collider view — N-gon SAT shapes with vertex dots |
+| `H` | Toggle solid N-gon rendering (replaces sprites) |
+| `[` / `]` | Decrease / increase polygon sides |
+| `2`–`9` | Spawn rank 2–9 at current drop point |
+| `0` | Spawn rank 10 (Mimi) |
+| `1` | Spawn rank 11 (Racoon) |
 
 ---
 
-## Characters & Merge Points
+## Characters & Ranks
 
-| Level | Character | Collider radius | Merge score |
-|-------|-----------|-----------------|-------------|
-| 1 | Vincam | 18 px | +3 |
-| 2 | Mây | 23 px | +6 |
-| 3 | Bơ | 29 px | +10 |
-| 4 | Baby Bunny | 34 px | +15 |
-| 5 | Mini Dora | 40 px | +21 |
-| 6 | Poko | 45 px | +28 |
-| 7 | Doraemi | 50 px | +36 |
-| 8 | Doraemon | 56 px | +45 |
-| 9 | Bunny | 85 px | +55 |
-| 10 | Mimi | 92 px | +100 |
-| 11 | Racoon | 100 px | ★ Final |
+| Rank | Character | Merge score (base) |
+|------|-----------|--------------------|
+| 1 | Mây | +10 |
+| 2 | Bơ | +30 |
+| 3 | Vincam | +60 |
+| 4 | Mini Dora | +100 |
+| 5 | Baby Bunny | +150 |
+| 6 | Poko | +210 |
+| 7 | Doraemi | +280 |
+| 8 | Doraemon | +360 |
+| 9 | Bunny | +450 |
+| 10 | Mimi | +550 |
+| 11 | Racoon ★ | — (triggers WIPE OUT) |
 
-lv11 Racoon diameter = ~56% of the tank width. Two of any same level touching → merge → next level up.
+Merging two of the same rank produces the next rank up. Two rank-11 Racoons trigger **WIPE OUT**.
 
 ---
 
-## Nice-to-have Features
+## WIPE OUT & Game Levels
+
+When two Racoons (rank 11) merge, a **WIPE OUT** occurs:
+
+1. Every plushie remaining in the tank pops simultaneously with a burst VFX, sparkles, and a triple glass-glare sweep.
+2. Bonus points are awarded for every popped plushie (at the current multiplier).
+3. A single large **total bonus** popup appears instead of individual score overlays.
+4. The tank empties and the evolution zone resets — only ranks 1–3 are visible until each higher rank appears for the first time.
+5. The **game level** increments and a "LEVEL X" celebration appears.
+6. All future merge scores are multiplied by **2^(level−1)**:
+   - Level 1 → ×1 (default)
+   - Level 2 → ×2
+   - Level 3 → ×4
+   - Level 4 → ×8 … and so on.
+7. First-appearance tracking resets, so celebration cards will fire again for each rank as you rediscover them.
+
+---
+
+## Evolution Zone
+
+The strip at the bottom shows all 11 ranks. Ranks 4–11 start **locked** (silhouetted) and unlock permanently the first time you merge to that rank. On WIPE OUT the zone resets to locked, giving you the satisfaction of unlocking each character again at the new multiplier.
+
+A **celebration card** pops up the first time each rank appears, showing:
+- Character name
+- Rank number
+- Points earned (after the current multiplier)
+
+---
+
+## Features
 
 ### Physics
-- **Custom physics engine** — no external library; accurate collision and stacking
-- **Polygon colliders** — each character has a shape that matches its visual body
-- **Mass-based collision** — a tiny Vincam barely nudges a Racoon
-- **Stable stacking** — settled plushies don't spin or jitter
+- Custom physics engine — no external library; accurate collision and stacking
+- Polygon (N-gon) SAT colliders — shape matches the character's visual body
+- Mass-based collision — a tiny Mây barely nudges a Racoon
+- Stable stacking — settled plushies don't spin or jitter
 
 ### Rendering
-- **Pre-rendered sprites** — each sprite is drawn once to an offscreen canvas at `scale × DPR` physical pixels, then blitted 1:1 in the game loop — zero upscaling blur even on Retina screens
-- **Draw order by level** — higher-level (larger) plushies render first; smaller ones paint on top
-- **Drop prediction circle** — dashed ring at the predicted landing position, in the character's stroke colour; hidden during drop cooldown
-- **Score popup on merge** — `+N` floats up from the merge point in the character's body colour, fades over ~1.5 s
-- **Particle burst** — colour-matched burst spawns at every merge
+- Pre-rendered sprites at `scale × DPR` physical pixels — zero upscaling blur on Retina screens
+- Draw order by rank — larger plushies render behind smaller ones
+- Drop prediction circle — dashed ring at predicted landing spot in the character's stroke colour
+- Score popup on merge — `+N` floats up from the merge point, fades over ~1.5 s
 
-### Gameplay feel
-- **Guide line always visible** — vertical drop guide and ghost sprite stay on screen during the post-drop cooldown so you can aim ahead
-- **Danger zone blink** — the red danger line pulses when any plushie's top enters the 60 px warning zone above it; the earlier the warning the brighter the pulse
-- **60 fps input polling** — arrow key movement is processed every frame (not OS key-repeat rate), giving smooth, lag-free cursor movement
-- **Modulo cursor wrap** — pressing left at the leftmost position wraps to the rightmost, and vice versa, for quick traversal
-- **Autoplay** — drops at the current cursor position on a fixed interval; player can freely move the cursor between drops to aim
+### Gameplay Feel
+- Danger zone blink — red dashed line pulses when plushies enter the warning zone
+- 60 fps arrow-key polling — smooth cursor movement regardless of OS key-repeat rate
+- Modulo cursor wrap — left at far-left wraps to far-right and vice versa
+- Autoplay — fixed-interval drops at the current cursor position; aim freely between drops
+
+### Visual Effects
+- Particle burst on every merge
+- Confetti shower on first-appearance celebration
+- Glass glare sweep across the canvas (random idle + triple burst on WIPE OUT)
+- 4-point sparkle stars scattered across the tank on WIPE OUT
+- Big "WIPE OUT!" + "LEVEL X" celebration cards with animated scale-in
 
 ### Audio
-- **BGM** — cheerful looping melody via Web Audio API (triangle oscillators); off by default, toggled with the BGM checkbox
-- **Drop SFX** — soft thud on every drop
-- **Per-level merge SFX** — 11 unique ascending arpeggios; higher levels get grander fanfares
-- **Character name TTS** — `speechSynthesis` pronounces the character's name 200 ms after each merge
+- BGM — cheerful looping melody via Web Audio API (triangle oscillators)
+- Drop SFX — soft thud on every drop
+- Per-rank merge SFX — 11 unique ascending arpeggios
+- WIPE OUT SFX — rising sawtooth sweep + chord fanfare
+- Character name TTS — `speechSynthesis` pronounces the name after each merge
 
 ### Responsive UI
-- **Portrait layout** (phone) — compact top bar (score + next preview + controls) + full-width canvas + 1-row evolution strip pinned to the bottom
-- **Landscape layout** (desktop) — canvas left, side panel right; switches automatically via `@media (orientation)`
-- **Viewport scaling** — `fitToViewport()` scales the entire game root to fit any screen size while maintaining aspect ratio; re-runs on orientation change
-- **Safe-area padding** — header and footer backgrounds extend into the notch / home-indicator zone on iPhone
-- **PWA** — `manifest.json` + service worker for offline caching and Add-to-Home-Screen install
-
-### Visual polish
-- **Device pixel ratio** — canvas rendered at `W × DPR` physical pixels; context pre-scaled so all drawing coordinates stay in logical units
-- **Tiled bunny background** — SVG silhouette of a bunny (no detail) tiled across the page at 20° rotation, 13% opacity
-- **Beige canvas background** — warm `#f5e6c8` inside the tank
-- **Darker same-hue stroke** — every character's body circle has a border in the same hue at ~30–40% darker
+- Portrait (phone) — score/next/controls bar + canvas + evolution strip
+- Landscape (desktop) — canvas + right sidebar with score, level, next preview, and evolution list
+- Viewport scaling — entire game root scales to fit any screen while preserving aspect ratio
+- PWA — `manifest.json` + service worker for offline caching and Add-to-Home-Screen install
 
 ---
 

@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Plushie Drop">
-<link rel="apple-touch-icon" href="Sprites/level_11.png">
+<link rel="apple-touch-icon" href="Sprites/app_icon.png">
 <style>
 :root{color-scheme:light}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;}
@@ -166,8 +166,8 @@ input.sprite-cb:checked{background-image:url('Sprites/checkbox_tick.png');}
   color:transparent;
   text-shadow:none;
 }
-/* force-hide joystick on very tall screens (taller than 9:19) */
-@media (max-aspect-ratio: 9/19){ #joyctrl{ display:none !important; } }
+/* force-hide joystick when ar < 0.532 (≈ 532/1000) */
+@media (max-aspect-ratio: 532/1000){ #joyctrl{ display:none !important; } }
 /* landscape/wide (≥4:5) AND short (<879px): expand canvas; floor-zone stays visible so score is always accessible */
 /* threshold raised from 9/16→4/5 to avoid iPhone 13 portrait w/ collapsed Safari chrome (~0.587) */
 @media (min-aspect-ratio: 4/5) and (max-height: 878px){
@@ -176,7 +176,7 @@ input.sprite-cb:checked{background-image:url('Sprites/checkbox_tick.png');}
 }
 /* sidebar checkboxes only visible when floor-zone would otherwise be hidden — keep for compat */
 #ls-cbs{ display:none; }
-@media (min-aspect-ratio: 4/5) and (max-height: 878px){ #ls-cbs{ display:flex;flex-wrap:wrap;justify-content:center;gap:0; } }
+@media (min-aspect-ratio: 4/5) and (max-height: 878px){ #ls-cbs{ display:flex;flex-wrap:wrap;justify-content:center;gap:0;padding-left:18px; } }
 /* joystick NOT affected by the 878px height rule (handled by JS/other queries only) */
 /* joystick + button (J key) */
 #joyctrl{
@@ -303,7 +303,7 @@ img.evo-locked{filter:brightness(0);opacity:0.45;}
 <div id="game-root">
 
   <!-- BLUE: "BB Tower" header (portrait only) -->
-  <div id="top-tile"><h1>BB Tower</h1></div>
+  <div id="top-tile"><h1>BB Tower <span id="level-label" style="font-size:11px;opacity:0.7;letter-spacing:.06em;">· LV 1</span></h1></div>
 
   <!-- MAIN CONTENT: 9:16 block — all zones inside game-frame -->
   <div id="main-content">
@@ -366,6 +366,8 @@ img.evo-locked{filter:brightness(0);opacity:0.45;}
   <div id="evo-panel">
     <div class="lbl">Score</div><div class="val" id="sc">0</div>
     <hr class="sep">
+    <div class="lbl">Level</div><div class="val" id="gl-ls">1</div>
+    <hr class="sep">
     <div class="lbl">Next</div>
     <canvas id="nc-ls" width="98" height="80" style="display:block;margin:4px auto 0;"></canvas>
     <div style="font-size:10px;color:#b09878;text-align:center;margin-top:3px;" id="nl-ls">—</div>
@@ -405,8 +407,8 @@ img.evo-locked{filter:brightness(0);opacity:0.45;}
   <div id="fs-prompt-box">
     <div style="font-size:28px;margin-bottom:4px">⛶</div>
     <div style="font-size:14px;font-weight:500;color:#5a3820;margin-bottom:6px">Full Screen</div>
-    <div style="font-size:11px;color:#a09078;margin-bottom:16px">Tap to enter full screen<br>for the best experience</div>
-    <button onclick="enterFullscreen()">Enter Full Screen</button>
+    <div id="fs-prompt-body"></div>
+    <div id="fs-prompt-action"></div>
     <div style="margin-top:10px"><a onclick="dismissFsPrompt()" style="font-size:11px;color:#a09078;cursor:pointer;text-decoration:underline">Skip</a></div>
   </div>
 </div>
@@ -425,17 +427,18 @@ img.evo-locked{filter:brightness(0);opacity:0.45;}
     <table>
       <tr><td colspan="2" style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#b09878;padding:6px 6px 2px;font-weight:600;">Gameplay</td></tr>
       <tr><td>← / →</td><td>Move aim (hold Shift for fast)</td></tr>
-      <tr><td>A</td><td>Toggle auto-drop</td></tr>
-      <tr><td>Space</td><td>Drop plushie</td></tr>
+      <tr><td>Space / ↓</td><td>Drop plushie</td></tr>
+      <tr><td>A</td><td>Cycle auto-drop speed (0→1→2→3)</td></tr>
       <tr><td>? or /</td><td>Show this help</td></tr>
-      <tr><td>J</td><td>Toggle joystick + button display</td></tr>
+      <tr><td>J</td><td>Toggle joystick display</td></tr>
       <tr><td colspan="2" style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#b09878;padding:10px 6px 2px;font-weight:600;">Debug</td></tr>
+      <tr><td>W</td><td>Force WIPE OUT</td></tr>
       <tr><td>[ / ]</td><td>Decrease / increase polygon sides</td></tr>
       <tr><td>C</td><td>Show polygon colliders</td></tr>
       <tr><td>D</td><td>Debug overlay (velocity / spin)</td></tr>
       <tr><td>H</td><td>Toggle solid n-gon shapes</td></tr>
       <tr><td>S</td><td>Toggle spawn rate display</td></tr>
-      <tr><td>2–9, 0, 1</td><td>Spawn lv2–lv11</td></tr>
+      <tr><td>2–9, 0, 1</td><td>Spawn rank 2–11</td></tr>
     </table>
     <button class="close-btn" onclick="toggleHelp(false)">Close</button>
   </div>
@@ -448,16 +451,16 @@ img.evo-locked{filter:brightness(0);opacity:0.45;}
 // stroke = same hue but darker
 // r values: linear 18→89 so lv11 diameter = 40% of tank width (444px)
 // scale: linear 0.277 → 1.108 (lv1→lv11 = 400% size). r = imgR × scale
-// r values scaled ×(626/460≈1.36) to match new W=626 canvas
+// lv1-9 radii interpolated linearly from 40 (Mây) to 116 (Bunny), step=9.5; lv10-11 unchanged
 const PD=[null,
-  {name:'Mây',       r:24,  body:'#8ee8ff', stroke:'#38a8d0'},
-  {name:'Bơ',        r:31,  body:'#4a8c40', stroke:'#245820'},
-  {name:'Vincam',    r:39,  body:'#f5f5f5', stroke:'#b8b8b8'},
-  {name:'Mini Dora', r:46,  body:'#e83030', stroke:'#980808'},
-  {name:'Baby Bunny',r:54,  physR:49, body:'#fff0f8', stroke:'#d89ab8'},
-  {name:'Poko',      r:61,  physR:58, body:'#c87830', stroke:'#884808'},
-  {name:'Doraemi',   r:68,  physR:65, body:'#f0c820', stroke:'#b08800'},
-  {name:'Doraemon',  r:76,  body:'#1090e8', stroke:'#0055b0'},
+  {name:'Mây',       r:40,  body:'#8ee8ff', stroke:'#38a8d0'},
+  {name:'Bơ',        r:50,  body:'#4a8c40', stroke:'#245820'},
+  {name:'Vincam',    r:59,  body:'#f5f5f5', stroke:'#b8b8b8'},
+  {name:'Mini Dora', r:65,  body:'#e83030', stroke:'#980808'},
+  {name:'Baby Bunny',r:78,  physR:71, body:'#fff0f8', stroke:'#d89ab8'},
+  {name:'Poko',      r:88,  physR:84, body:'#c87830', stroke:'#884808'},
+  {name:'Doraemi',   r:97,  physR:93, body:'#f0c820', stroke:'#b08800'},
+  {name:'Doraemon',  r:107, body:'#1090e8', stroke:'#0055b0'},
   {name:'Bunny',     r:116, body:'#f060a0', stroke:'#a81858'},
   {name:'Mimi',      r:125, body:'#9848d4', stroke:'#601898'},
   {name:'Racoon',    r:136, physR:129, body:'#282838', stroke:'#080818'},
@@ -479,11 +482,15 @@ const V_EPS=0.08;   // velocity epsilon — zero out micro-motion
 const AV_MAX=0.12;  // max angular velocity (rad/frame)
 
 // ── STATE ─────────────────────────────────────────────────────────────
-let plushies=[], parts=[], mergeQ=[], popups=[], confetti=[], celebrations=[];
+let plushies=[], parts=[], mergeQ=[], popups=[], confetti=[], celebrations=[], sparkles=[];
 let score=0,best=0,cur=1,nxt=1;
 let mx=W/2, cooling=false, dead=false;
 let danger={};
 let firstMerged=new Set(); // tracks levels merged for the first time this game
+let gameLevel=1, wipeOutActive=false, scoreMultiplier=1;
+// Pre-computed points table per rank — rebuilt once on WIPE OUT via rebuildPtsTable()
+const PTS_M=new Array(12); // PTS_M[rank] = PTS[rank] * scoreMultiplier
+function rebuildPtsTable(){ for(let i=1;i<=11;i++) PTS_M[i]=PTS[i]*scoreMultiplier; }
 
 let showClaw=true;
 function toggleClaw(v){
@@ -553,6 +560,19 @@ ncls.style.width='98px'; ncls.style.height='80px';
 nctxls.scale(dpr,dpr);
 nctxls.imageSmoothingEnabled=true; nctxls.imageSmoothingQuality='high';
 
+// ── PRE-CALCULATED PHYSICS TABLES ─────────────────────────────────────
+// physR per level: [40,50,59,65,71,84,93,107,116,125,129]
+// MASS = physR²  (used for impulse/position correction in collision)
+const MASS=[0,1600,2500,3481,4225,5041,7056,8649,11449,13456,15625,16641];
+// INV_MASS = 1/MASS  (avoids division per collision)
+const INV_MASS=[0,...MASS.slice(1).map(m=>1/m)];
+// max merge distance (center-to-center) = 2*physR + 8
+const MERGE_DIST=[0,88,108,126,138,150,176,194,222,240,258,266];
+// MERGE_DIST² — used directly in distance check to avoid sqrt
+const MERGE_DIST_SQ=MERGE_DIST.map(d=>d*d);
+// DAMP_DT = DAMP^(1/SUBSTEPS) — constant per-substep damping factor, no Math.pow at runtime
+const DAMP_DT=Math.pow(0.994,1/6); // updated if DAMP or SUBSTEPS change
+
 // ── POLYGON COLLIDERS ─────────────────────────────────────────────────
 // default: lv1=6-gon … lv11=12-gon | [ = -1 side, ] = +1 side | range offset -1…+18
 const NSIDES=[0,8,8,9,10,10,11,11,12,12,13,14];
@@ -600,7 +620,7 @@ class Ball {
   constructor(x,y,lvl){
     this.x=x; this.y=y; this.r=PD[lvl].physR??PD[lvl].r;
     this.vx=0; this.vy=0; this.angle=0; this.av=0;
-    this.level=lvl; this.born=Date.now();
+    this.level=lvl; this.mass=MASS[lvl]; this.invMass=INV_MASS[lvl]; this.born=Date.now();
     this.px=x; this.py=y;
     // 30-frame rolling movement average for rotation-kill
     this.movH=new Float32Array(30); this.movI=0; this.movS=0;
@@ -615,11 +635,11 @@ function step(){
     for(const p of plushies){
       p.vx+=GRAV*Math.sin(tiltAngle)*dt;
       p.vy+=GRAV*Math.cos(tiltAngle)*dt;
-      p.vx*=Math.pow(DAMP,dt);
-      p.vy*=Math.pow(DAMP,dt);
+      p.vx*=DAMP_DT;
+      p.vy*=DAMP_DT;
       // anti-tunneling: cap per-substep movement to < smallest plushie radius
-      const spd=Math.hypot(p.vx,p.vy);
-      if(spd>14){const f=14/spd;p.vx*=f;p.vy*=f;}
+      const spd2=p.vx*p.vx+p.vy*p.vy;
+      if(spd2>196){const f=14/Math.sqrt(spd2);p.vx*=f;p.vy*=f;}
       p.x+=p.vx; p.y+=p.vy;
       p.av=Math.max(-AV_MAX,Math.min(AV_MAX,p.av))*0.93;
       p.angle+=p.av;
@@ -642,20 +662,19 @@ function step(){
           const col=satTest(getVerts(a),getVerts(b));
           if(!col)continue;
           const{ov,nx,ny}=col;
-          const ma=a.r*a.r,mb=b.r*b.r,mT=ma+mb;
-          a.x-=nx*ov*(mb/mT); a.y-=ny*ov*(mb/mT);
-          b.x+=nx*ov*(ma/mT); b.y+=ny*ov*(ma/mT);
+          const ma=a.mass,mb=b.mass,mT=ma+mb,invMT=1/mT;
+          a.x-=nx*ov*(mb*invMT); a.y-=ny*ov*(mb*invMT);
+          b.x+=nx*ov*(ma*invMT); b.y+=ny*ov*(ma*invMT);
           if(it===0){
             const dvx=b.vx-a.vx,dvy=b.vy-a.vy,rel=dvx*nx+dvy*ny;
             if(rel<0){
-              const imp=-(1+REST)*rel*(ma*mb/mT);
-              a.vx-=(imp/ma)*nx; a.vy-=(imp/ma)*ny;
-              b.vx+=(imp/mb)*nx; b.vy+=(imp/mb)*ny;
-              // only spin from real impacts — gravity micro-contacts (rel≈-0.06) are ignored
+              const imp=-(1+REST)*rel*(ma*mb*invMT);
+              a.vx-=imp*a.invMass*nx; a.vy-=imp*a.invMass*ny;
+              b.vx+=imp*b.invMass*nx; b.vy+=imp*b.invMass*ny;
               if(rel<-1.2){
                 const tv=dvx-rel*nx;
-                a.av=Math.max(-AV_MAX,Math.min(AV_MAX,a.av+tv*0.006*(mb/mT)));
-                b.av=Math.max(-AV_MAX,Math.min(AV_MAX,b.av-tv*0.006*(ma/mT)));
+                a.av=Math.max(-AV_MAX,Math.min(AV_MAX,a.av+tv*0.006*(mb*invMT)));
+                b.av=Math.max(-AV_MAX,Math.min(AV_MAX,b.av-tv*0.006*(ma*invMT)));
               }
             }
           }
@@ -667,10 +686,10 @@ function step(){
   for(const p of plushies){
     if(Math.abs(p.vx)<V_EPS) p.vx=0;
     if(Math.abs(p.vy)<V_EPS) p.vy=0;
-    const moved=Math.hypot(p.x-p.px,p.y-p.py);
+    const dx2=p.x-p.px,dy2=p.y-p.py,moved=dx2*dx2+dy2*dy2; // squared dist, no sqrt
     p.movS-=p.movH[p.movI]; p.movH[p.movI]=moved; p.movS+=moved;
     p.movI=(p.movI+1)%30;
-    if(p.movS/30<0.25&&Math.abs(p.av)>0.002) p.av=0; // avg <0.25px/frame → stop spin
+    if(p.movS/30<0.0625&&Math.abs(p.av)>0.002) p.av=0; // avg sq dist <0.0625 (=0.25²) → stop spin
     if(Math.abs(p.av)<0.002) p.av=0;
     p.px=p.x; p.py=p.y;
   }
@@ -683,10 +702,9 @@ function detectMerges(){
     for(let j=i+1;j<plushies.length;j++){
       if(used.has(i)||used.has(j)) continue;
       const a=plushies[i],b=plushies[j];
-      if(a.level!==b.level||a.level>=11) continue;
+      if(a.level!==b.level) continue;
       const dx=b.x-a.x,dy=b.y-a.y;
-      const mr=(a.r+b.r)*1.2; // merge circle 120% of physics r — polygon stays unchanged
-      if(dx*dx+dy*dy<mr*mr){
+      if(dx*dx+dy*dy<MERGE_DIST_SQ[a.level]){
         mergeQ.push([i,j]); used.add(i); used.add(j);
       }
     }
@@ -697,24 +715,137 @@ function processMerges(){
   if(!mergeQ.length) return;
   const pairs=mergeQ.splice(0).sort((a,b)=>Math.max(b[0],b[1])-Math.max(a[0],a[1]));
   const toRemove=new Set(), toAdd=[];
+  let wipeOutPos=null;
   for(const [i,j] of pairs){
     if(toRemove.has(i)||toRemove.has(j)) continue;
     const a=plushies[i],b=plushies[j];
     const px=(a.x+b.x)/2,py=(a.y+b.y)/2,nl=a.level+1;
     toRemove.add(i); toRemove.add(j);
+    if(nl>11){
+      // WIPE OUT — two Racoons merged
+      wipeOutPos={x:px,y:py};
+      continue; // don't add level-12 ball
+    }
     toAdd.push({x:px,y:py,lvl:nl});
-    score+=PTS[nl]; if(score>best) best=score;
+    const pts=PTS_M[nl];
+    score+=pts; if(score>best) best=score;
     burst(px,py,PD[nl].body); updUI(); sfxMerge(nl);
     if(showSpawnRate) updateEvoLabels();
-    popups.push({x:px,y:py,text:'+'+PTS[nl],color:PD[nl].body,life:1});
-    if(!firstMerged.has(nl)){ firstMerged.add(nl); spawnCelebration(px,py,nl); updateEvoUnlocks(); }
+    popups.push({x:px,y:py,text:'+'+pts.toLocaleString(),color:PD[nl].body,life:1});
+    if(!firstMerged.has(nl)){ firstMerged.add(nl); spawnCelebration(px,py,nl,pts); updateEvoUnlocks(); }
   }
   plushies=plushies.filter((_,i)=>!toRemove.has(i));
   for(const {x,y,lvl} of toAdd){
     const b=new Ball(x,y,lvl); b.vx=(Math.random()-.5)*2; b.vy=-3;
-    b.av=(Math.random()-.5)*AV_MAX*0.4; // small initial tumble on merge pop
+    b.av=(Math.random()-.5)*AV_MAX*0.4;
     plushies.push(b);
   }
+  if(wipeOutPos) triggerWipeOut(wipeOutPos.x,wipeOutPos.y);
+}
+
+// ── WIPE OUT ──────────────────────────────────────────────────────────
+function triggerWipeOut(x,y){
+  wipeOutActive=true;
+  // Pop all remaining plushies and tally bonus points
+  let totalPts=0;
+  for(const p of plushies){
+    const pts=PTS_M[p.level];
+    totalPts+=pts;
+    burst(p.x,p.y,PD[p.level].body);
+    // extra big burst at each pop
+    for(let k=0;k<8;k++){
+      const a=Math.PI*2*k/8+Math.random()*.5,spd=3+Math.random()*5;
+      parts.push({x:p.x,y:p.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,r:4+Math.random()*6,color:PD[p.level].body,life:1});
+    }
+  }
+  plushies=[]; danger={}; mergeQ=[];
+  score+=totalPts; if(score>best) best=score;
+  updUI();
+  // Massive confetti burst
+  for(let i=0;i<160;i++){
+    const fromTop=i<50;
+    const cx=fromTop?Math.random()*W:x, cy=fromTop?-10:y;
+    const a=fromTop?(Math.PI/2+Math.random()*.8-.4):(Math.random()*Math.PI*2);
+    const spd=fromTop?(4+Math.random()*7):(5+Math.random()*10);
+    confetti.push({x:cx,y:cy,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,r:4+Math.random()*5,
+      rot:Math.random()*Math.PI*2,rv:(Math.random()-.5)*0.3,
+      w:5+Math.random()*6,h:7+Math.random()*9,
+      color:CONFETTI_COLORS[Math.floor(Math.random()*CONFETTI_COLORS.length)],
+      life:1.2,shape:Math.random()<0.6?'rect':'circle'});
+  }
+  // WIPE OUT text
+  celebrations.push({x:W/2,y:H/2-80,name:'WIPE OUT!',level:0,pts:totalPts,
+    color:'#ff3030',stroke:'#800000',life:1,scale:0.1,phase:'in',isWipeOut:true});
+  // Big total points popup
+  if(totalPts>0)
+    popups.push({x:W/2,y:H/2+60,text:'+'+totalPts.toLocaleString(),color:'#f0c500',life:1.8,big:true});
+  // Triple glare sweep: t=0, t=300, t=620
+  if(showClaw){
+    triggerGlare();
+    setTimeout(triggerGlare,300);
+    setTimeout(triggerGlare,620);
+  }
+  sfxWipeOut();
+  // Sparkle emitter: starts at 2nd glare (t=300), 10 particles/s for 2s = 20 particles
+  const SPARKLE_EMITTER_LIFETIME=2000; // ms
+  const SPARKLE_INTERVAL=100;          // 10/s
+  setTimeout(()=>{
+    const emitterEnd=Date.now()+SPARKLE_EMITTER_LIFETIME;
+    const emitOne=()=>{
+      if(Date.now()>=emitterEnd) return;
+      const baseR=10+Math.random()*18;
+      sparkles.push({
+        x:PAD+Math.random()*(W-PAD*2),
+        y:Math.random()*H,
+        r:baseR, baseR,
+        rot:0,          // no rotation
+        color:'#ffffff',
+        life:1.2+Math.random()*0.8, // longer lifetime
+        delay:0,
+        phase:Math.random()*Math.PI*2
+      });
+      setTimeout(emitOne, SPARKLE_INTERVAL);
+    };
+    emitOne();
+  },300);
+  // Level state updates at last glare (t=620), announcement delayed 500ms more (t=1120)
+  setTimeout(()=>{
+    gameLevel++;
+    scoreMultiplier=Math.pow(2,gameLevel-1);
+    rebuildPtsTable();
+    const glEl=document.getElementById('gl-ls'); if(glEl) glEl.textContent=gameLevel;
+    firstMerged=new Set();
+    updateEvoUnlocks();
+    wipeOutActive=false;
+    setTimeout(()=>{
+      celebrations.push({x:W/2,y:H/2-60,name:'LEVEL '+gameLevel,level:0,pts:0,
+        color:'#f0c500',stroke:'#8a6000',life:1,scale:0.1,phase:'in',isLevelUp:true});
+    },500);
+  },620);
+}
+
+function sfxWipeOut(){
+  if(muted)return;
+  const a=getAC(),t=a.currentTime;
+  // Rising sweep
+  const o=a.createOscillator(),g=a.createGain();
+  o.connect(g);g.connect(a._sfxBus||a.destination);
+  o.type='sawtooth';
+  o.frequency.setValueAtTime(110,t);
+  o.frequency.exponentialRampToValueAtTime(880,t+0.8);
+  g.gain.setValueAtTime(0.4,t);
+  g.gain.exponentialRampToValueAtTime(0.001,t+1.0);
+  o.start(t);o.stop(t+1.1);
+  // Big chord
+  [523,659,784,1047].forEach((f,k)=>{
+    const o2=a.createOscillator(),g2=a.createGain();
+    o2.connect(g2);g2.connect(a._sfxBus||a.destination);
+    o2.type='triangle';o2.frequency.value=f;
+    g2.gain.setValueAtTime(0,t+0.3+k*0.06);
+    g2.gain.linearRampToValueAtTime(0.2,t+0.35+k*0.06);
+    g2.gain.exponentialRampToValueAtTime(0.001,t+1.4);
+    o2.start(t+0.3+k*0.06);o2.stop(t+1.5);
+  });
 }
 
 // ── GAME OVER ─────────────────────────────────────────────────────────
@@ -738,8 +869,9 @@ function gameOver(){
 }
 
 function restart(){
-  dead=false; cooling=false;
-  plushies=[]; parts=[]; mergeQ=[]; popups=[]; confetti=[]; celebrations=[]; danger={}; firstMerged=new Set(); score=0; updUI();
+  dead=false; cooling=false; wipeOutActive=false; gameLevel=1; scoreMultiplier=1; rebuildPtsTable();
+  const glEl=document.getElementById('gl-ls'); if(glEl) glEl.textContent=1;
+  plushies=[]; parts=[]; mergeQ=[]; popups=[]; confetti=[]; celebrations=[]; sparkles=[]; danger={}; firstMerged=new Set(); score=0; updUI();
   document.getElementById('ov').classList.remove('show');
   cur=rnd(); nxt=rnd(); updNext();
   clawState='idle'; clawY=DROPY; clawLvl=cur;
@@ -759,46 +891,59 @@ function tickParts(){
 }
 function tickPopups(){
   popups=popups.filter(p=>p.life>0);
-  popups.forEach(p=>{p.y-=1.2;p.life-=0.022;}); // float up, fade ~1.5s
+  popups.forEach(p=>{p.y-=(p.big?0.4:1.2);p.life-=0.022;}); // float up, fade ~1.5s (big popups slower)
 }
 
 // ── FIRST-MERGE CELEBRATION ────────────────────────────────────────────
 const CONFETTI_COLORS=['#ff5a5a','#ffb830','#ffe234','#4ddc7a','#38c5f5','#c84dff','#ff6eb4','#ffffff'];
-function spawnCelebration(x,y,lvl){
-  if(showClaw) triggerGlare(); // flash glare on first-merge celebration
-  // confetti burst: 60 particles from the merge point + along top
-  for(let i=0;i<60;i++){
-    const fromTop=i<20; // first 20 rain from above
-    const cx=fromTop?Math.random()*W:x;
-    const cy=fromTop?-10:y;
-    const a=fromTop?(Math.PI/2+Math.random()*.8-.4):(Math.random()*Math.PI*2);
-    const spd=fromTop?(3+Math.random()*5):(4+Math.random()*7);
-    confetti.push({
-      x:cx, y:cy,
-      vx:Math.cos(a)*spd*(fromTop?1:1),
-      vy:Math.sin(a)*spd,
-      r:3+Math.random()*4,
-      rot:Math.random()*Math.PI*2,
-      rv:(Math.random()-.5)*0.25,
-      w:4+Math.random()*5, // width for rect confetti
-      h:6+Math.random()*8, // height for rect confetti
-      color:CONFETTI_COLORS[Math.floor(Math.random()*CONFETTI_COLORS.length)],
-      life:1,
-      shape:Math.random()<0.6?'rect':'circle'
-    });
-  }
-  // big name celebration text
+function spawnCelebration(x,y,lvl,actualPts){
+  // celebration fires immediately after glare so text appears right away
+  if(showClaw) triggerGlare();
   celebrations.push({
-    x:W/2, y:H/2-30,
+    x:W/2,y:H/2-30,
     name:PD[lvl].name,
     level:lvl,
-    pts:PTS[lvl],
+    pts:actualPts??PTS[lvl],
     color:PD[lvl].body,
     stroke:PD[lvl].stroke,
-    life:1,      // 1→0 over ~3s
-    scale:0.1,   // starts tiny, pops to 1
-    phase:'in'   // 'in' | 'hold' | 'out'
+    life:1,scale:0.1,phase:'in'
   });
+  // confetti after a tiny delay so text is already visible
+  setTimeout(()=>{
+    for(let i=0;i<60;i++){
+      const fromTop=i<20;
+      const cx=fromTop?Math.random()*W:x, cy=fromTop?-10:y;
+      const a=fromTop?(Math.PI/2+Math.random()*.8-.4):(Math.random()*Math.PI*2);
+      const spd=fromTop?(3+Math.random()*5):(4+Math.random()*7);
+      confetti.push({
+        x:cx,y:cy,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,
+        r:3+Math.random()*4,rot:Math.random()*Math.PI*2,rv:(Math.random()-.5)*0.25,
+        w:4+Math.random()*5,h:6+Math.random()*8,
+        color:CONFETTI_COLORS[Math.floor(Math.random()*CONFETTI_COLORS.length)],
+        life:1,shape:Math.random()<0.6?'rect':'circle'
+      });
+    }
+  }, 80);
+}
+function tickSparkles(){
+  sparkles=sparkles.filter(s=>s.life>0);
+  sparkles.forEach(s=>{
+    if(s.delay>0){s.delay-=16;return;}
+    s.phase+=0.12; // pulse speed
+    s.r=s.baseR*(0.7+0.3*Math.sin(s.phase)); // scale up/down in place
+    s.life-=0.018;
+  });
+}
+// draw a 4-point star centered at (0,0) with arm radius r
+function drawStar4(c,r){
+  const ir=r*0.3; // inner radius
+  c.beginPath();
+  for(let k=0;k<8;k++){
+    const a=Math.PI/4*k;
+    const cr2=k%2===0?r:ir;
+    k===0?c.moveTo(cr2*Math.cos(a),cr2*Math.sin(a)):c.lineTo(cr2*Math.cos(a),cr2*Math.sin(a));
+  }
+  c.closePath();
 }
 function tickConfetti(){
   confetti=confetti.filter(p=>p.life>0);
@@ -830,7 +975,7 @@ function tickCelebrations(){
 
 // ── PER-FRAME KEY INPUT ────────────────────────────────────────────────
 function processKeys(){
-  if(cooling) return; // freeze claw during cooldown
+  if(dead) return;
   const hasL=keysDown.has('ArrowLeft'), hasR=keysDown.has('ArrowRight');
   if(!hasL&&!hasR) return;
   const speed=keysDown.has('Shift')?5:2;
@@ -895,7 +1040,7 @@ function loop(){
     }
     _joyLastMx=mx;
   }
-  tickParts(); tickPopups(); tickConfetti(); tickCelebrations(); if(!dead) checkDanger(); if(showClaw) tickGlare(); render();
+  tickParts(); tickPopups(); tickConfetti(); tickSparkles(); tickCelebrations(); if(!dead) checkDanger(); if(showClaw) tickGlare(); render();
   if(!dead) requestAnimationFrame(loop); // pause loop on game-over to save battery
 }
 function resumeLoop(){ requestAnimationFrame(loop); }
@@ -1064,7 +1209,7 @@ function render(){
   ctx.textAlign='right';
   ctx.font=`${Math.round(9*FS)}px 'Segoe UI',system-ui,sans-serif`;
   ctx.fillStyle='rgba(90,56,32,0.45)';
-  ctx.fillText('v16',W-dzPad-4,DY-5);
+  ctx.fillText('v17',W-dzPad-4,DY-5);
   ctx.restore();
   // ── CLAW + held plushie ───────────────────────────────────────────────
   if(!dead && !showClaw){
@@ -1153,9 +1298,9 @@ function render(){
   // score popups
   ctx.save(); ctx.textAlign='center';
   popups.forEach(p=>{
-    const sz=Math.round((22+p.life*14)*FS); // shrinks as it fades
-    ctx.font=`700 ${sz}px 'Segoe UI',system-ui,sans-serif`;
-    ctx.globalAlpha=p.life*0.92;
+    const sz=p.big?Math.round((48+p.life*20)*FS):Math.round((22+p.life*14)*FS);
+    ctx.font=`700 ${sz}px 'Righteous','Segoe UI',system-ui,sans-serif`;
+    ctx.globalAlpha=Math.min(p.life,1)*0.92;
     // dark stroke for readability over any background
     ctx.strokeStyle='rgba(0,0,0,0.45)'; ctx.lineWidth=3;
     ctx.strokeText(p.text,p.x,p.y);
@@ -1220,6 +1365,23 @@ function render(){
   ctx.globalAlpha=1;
   ctx.restore();
 
+  // ── SPARKLES ──────────────────────────────────────────────────────────
+  ctx.save();
+  for(const s of sparkles){
+    if(s.delay>0) continue;
+    ctx.globalAlpha=Math.min(s.life,1)*0.92;
+    ctx.fillStyle=s.color;
+    ctx.shadowColor=s.color; ctx.shadowBlur=s.r*1.5;
+    ctx.save();
+    ctx.translate(s.x,s.y);
+    ctx.rotate(s.rot);
+    drawStar4(ctx,s.r);
+    ctx.fill();
+    ctx.restore();
+  }
+  ctx.shadowBlur=0; ctx.globalAlpha=1;
+  ctx.restore();
+
   // ── FIRST-MERGE CELEBRATION TEXT ──────────────────────────────────────
   ctx.save();
   ctx.textAlign='center';
@@ -1245,14 +1407,16 @@ function render(){
     ctx.font=`400 ${Math.round(52*FS)}px 'Righteous','Segoe UI',system-ui,sans-serif`;
     ctx.fillStyle='rgba(255,255,255,0.38)';
     ctx.fillText(c.name,0,-2);
-    // sub-label: level + points
+    // sub-label
     ctx.shadowBlur=8; ctx.shadowColor='rgba(0,0,0,0.5)';
     ctx.font=`400 ${Math.round(16*FS)}px 'Righteous','Segoe UI',system-ui,sans-serif`;
     ctx.fillStyle='#fff';
     ctx.strokeStyle='rgba(0,0,0,0.6)'; ctx.lineWidth=3;
-    const sub=`Lv ${c.level}  ·  ${c.pts} pts`;
-    ctx.strokeText(sub,0,34);
-    ctx.fillText(sub,0,34);
+    let sub='';
+    if(c.isWipeOut){ sub=c.pts>0?'+'+c.pts.toLocaleString()+' bonus pts':''; }
+    else if(c.isLevelUp){ const mult=Math.pow(2,gameLevel-1); sub='×'+mult+' points multiplier'; }
+    else { sub=`Rank ${c.level}  ·  +${c.pts.toLocaleString()} pts`; }
+    if(sub){ ctx.strokeText(sub,0,34); ctx.fillText(sub,0,34); }
     ctx.restore();
   }
   ctx.globalAlpha=1;
@@ -1283,6 +1447,17 @@ function render(){
     // legend
     ctx.textAlign='left'; ctx.fillStyle='rgba(0,0,0,.65)'; ctx.font='10px monospace';
     ctx.fillText('D=debug | H=solid n-gon | red=spinning | av=angular vel | Δ=avg move/frame',WALL+4,H-WALL-4);
+    ctx.restore();
+  }
+  // ── viewport / aspect ratio overlay (always on) ───────────────────
+  {
+    const vw=window.innerWidth,vh=window.innerHeight;
+    const ar=(vw/vh).toFixed(3);
+    ctx.save();
+    ctx.font='bold 11px monospace';
+    ctx.textAlign='left';
+    ctx.fillStyle='rgba(0,0,0,0.55)';
+    ctx.fillText(`${vw}×${vh}  ar:${ar}`,WALL+4,WALL+14);
     ctx.restore();
   }
   // ── C: polygon collider shapes ─────────────────────────────────────
@@ -1630,6 +1805,7 @@ document.addEventListener('keydown',e=>{
   if(e.key==='c'||e.key==='C'){ dbgPoly=!dbgPoly; if(dbgPoly){dbg=false;solidMode=false;} return; }
   if(e.key==='h'||e.key==='H'){ solidMode=!solidMode; if(solidMode)dbgPoly=false; return; }
   if(e.key==='a'||e.key==='A'){ cycleAp(); return; }
+  if(e.key==='w'||e.key==='W'){ if(!dead&&!wipeOutActive){ for(let i=1;i<=11;i++) firstMerged.add(i); updateEvoUnlocks(); triggerWipeOut(W/2,H/2); } return; }
   if(e.key==='?'||e.key==='/'){ toggleHelp(); return; }
   if(e.key==='Escape'){ toggleHelp(false); return; }
   if(e.key==='['){ e.preventDefault(); sidesOffset=Math.max(SIDES_MIN,sidesOffset-1); if(!solidMode){dbg=false;dbgPoly=true;} return; }
@@ -1640,7 +1816,7 @@ document.addEventListener('keydown',e=>{
   if(e.key==='ArrowLeft'||e.key==='ArrowRight'||e.key==='Shift'){
     e.preventDefault(); keysDown.add(e.key); return;
   }
-  if(e.key===' '         ){e.preventDefault();drop();return;}
+  if(e.key===' '||e.key==='ArrowDown'){e.preventDefault();drop();return;}
 
   // debug spawn: 2-9 → lv2-9, 0 → lv10, 1 → lv11
   const lvMap={'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'0':10,'1':11};
@@ -1666,25 +1842,37 @@ function setApSpeed(spd){
       seg.classList.toggle('active', +seg.dataset.spd===spd);
     });
   });
-  // restart timer
-  if(_apTimer){ clearInterval(_apTimer); _apTimer=null; }
-  if(spd>0) _apTimer=setInterval(()=>{ if(!dead) drop(); }, AP_DELAYS[spd]);
+  // restart timer — self-scheduling timeout so drops are never skipped when cooling
+  if(_apTimer){ clearTimeout(_apTimer); _apTimer=null; }
+  if(spd>0){
+    const schedule=()=>{
+      _apTimer=setTimeout(()=>{
+        if(!apSpeed){ _apTimer=null; return; } // turned off
+        (function waitCool(){ if(cooling){ requestAnimationFrame(waitCool); } else { if(!dead) drop(); schedule(); } })();
+      }, AP_DELAYS[apSpeed]);
+    };
+    schedule();
+  }
 }
 function cycleAp(){ setApSpeed((apSpeed+1)%4); }
 function syncAp(v){ setApSpeed(v?1:0); } // legacy compat (keyboard 'A')
 
 function drop(){
-  if(cooling||dead) return;
+  if(cooling||dead||wipeOutActive) return;
   if(showJoy) flashDropBtn();
   clawDropX=clamp(mx,cur); clawLvl=cur;
   clawState='opening'; clawOpenTimer=CLAW_OPEN_FRAMES; cooling=true;
 }
-function setMx(raw){ if(cooling) return; mx=Math.max(PAD,Math.min(W-PAD,raw)); }
+function setMx(raw){ mx=Math.max(PAD,Math.min(W-PAD,raw)); }
 cv.addEventListener('mousemove',e=>{
   const r=cv.getBoundingClientRect();
   setMx((e.clientX-r.left)*(W/r.width));
 });
-cv.addEventListener('click',drop);
+cv.addEventListener('click',e=>{
+  if(dead) return;
+  // retry each frame until cooling clears, same as touch
+  (function tryDrop(){if(cooling) requestAnimationFrame(tryDrop); else drop();})();
+});
 // ── TOUCH: tween claw on tap, drop on tween completion ──────────────────
 let _touchTween=null; // {raf, cancelled, dropOnDone}
 
@@ -1709,7 +1897,10 @@ function tweenClawTo(targetX, duration){
     if(t<1){ tween.raf=requestAnimationFrame(tick); }
     else{
       _touchTween=null;
-      if(tween.dropOnDone) drop();
+      if(tween.dropOnDone){
+        // retry until cooling clears (handles rare case tween finishes just before cooldown ends)
+        (function tryDrop(){if(cooling) requestAnimationFrame(tryDrop); else drop();})();
+      }
     }
   }
   tween.raf=requestAnimationFrame(tick);
@@ -1717,26 +1908,27 @@ function tweenClawTo(targetX, duration){
 
 cv.addEventListener('touchstart',e=>{
   e.preventDefault();
-  if(cooling||dead) return;
+  if(dead) return;
   const r=cv.getBoundingClientRect();
   const tx=(e.touches[0].clientX-r.left)*(W/r.width);
+  // allow tween to start during cooldown — it takes ~300ms, same as cooldown
   tweenClawTo(Math.max(PAD,Math.min(W-PAD,tx)), 300);
 },{passive:false});
 
 cv.addEventListener('touchmove',e=>{
   e.preventDefault();
-  if(cooling||dead) return;
+  if(dead) return;
   const r=cv.getBoundingClientRect();
   const tx=(e.touches[0].clientX-r.left)*(W/r.width);
   cancelTween(); // drag: cancel tween, follow finger directly
-  setMx(tx);
+  mx=Math.max(PAD,Math.min(W-PAD,tx)); // bypass setMx cooling guard for touch
 },{passive:false});
 
 cv.addEventListener('touchend',e=>{
   e.preventDefault();
-  if(cooling||dead) return;
+  if(dead) return;
   if(_touchTween){
-    _touchTween.dropOnDone=true; // drop when tween finishes
+    _touchTween.dropOnDone=true; // drop when tween finishes (cooling will have cleared)
   } else {
     drop();
   }
@@ -1780,6 +1972,8 @@ function updUI(){
   const elp=document.getElementById('sc-p');
   elp.textContent=s;
   fitScoreFont();
+  const ll=document.getElementById('level-label');
+  if(ll) ll.textContent='· LV '+gameLevel;
 }
 window.addEventListener('resize',fitScoreFont);
 // drawAtFit: scale sprite to fill cW×cH preview, centered, no crop
@@ -1797,7 +1991,7 @@ function updNext(){
   nc.src=`Sprites/level_${nxt}.png`;
   // landscape (98×80) canvas
   nctxls.clearRect(0,0,98,80); drawAtFit(nctxls,98,80,nxt);
-  document.getElementById('nl-ls').textContent=name+' · Lv'+nxt;
+  document.getElementById('nl-ls').textContent=name;
 }
 function buildEvo(){
   const el=document.getElementById('ev'); el.innerHTML='';
@@ -2055,7 +2249,7 @@ document.addEventListener('touchmove',e=>{if(e.touches.length>1)e.preventDefault
 // Re-fit on orientation change
 window.addEventListener('orientationchange',()=>setTimeout(fitToViewport,200));
 
-cur=rnd();nxt=rnd();clawLvl=cur;updUI();buildEvo();loadCbPrefs();setApSpeed(0);
+cur=rnd();nxt=rnd();clawLvl=cur;updUI();buildEvo();loadCbPrefs();setApSpeed(0);rebuildPtsTable();
 if(showJoy){ const el=joyEl(); if(el) el.style.display='flex'; }
 // force-download Righteous (just declaring the @font-face doesn't download it)
 // then start the game once all fonts are ready
@@ -2068,6 +2262,9 @@ Promise.all([
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 
 // ── FULLSCREEN PROMPT (mobile) ────────────────────────────────────────
+const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+const isStandalone=navigator.standalone===true; // PWA launched from home screen
+
 function enterFullscreen(){
   const el=document.documentElement;
   const req=el.requestFullscreen||el.webkitRequestFullscreen||el.mozRequestFullScreen;
@@ -2078,8 +2275,22 @@ function dismissFsPrompt(){
   document.getElementById('fs-prompt').classList.remove('show');
 }
 (function(){
-  if(!isMobile) return;                          // desktop: skip
-  if(document.fullscreenElement||document.webkitFullscreenElement) return; // already full
+  if(!isMobile) return;
+  if(isStandalone) return; // already fullscreen via home screen
+  if(!isIOS && (document.fullscreenElement||document.webkitFullscreenElement)) return;
+
+  const body=document.getElementById('fs-prompt-body');
+  const action=document.getElementById('fs-prompt-action');
+
+  if(isIOS){
+    // iOS doesn't support requestFullscreen — guide to Add to Home Screen
+    body.innerHTML='<div style="font-size:11px;color:#a09078;margin-bottom:16px">For full screen, add this page<br>to your Home Screen:<br><br><span style="color:#5a3820">Share → Add to Home Screen</span></div>';
+    action.innerHTML='<button onclick="dismissFsPrompt()">Got it</button>';
+  } else {
+    body.innerHTML='<div style="font-size:11px;color:#a09078;margin-bottom:16px">Tap for the best experience</div>';
+    action.innerHTML='<button onclick="enterFullscreen()">Enter Full Screen</button>';
+  }
+
   document.getElementById('fs-prompt').classList.add('show');
 })();
 </script>
