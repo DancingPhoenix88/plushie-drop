@@ -754,6 +754,7 @@ function tickCelebrations(){
 
 // ── PER-FRAME KEY INPUT ────────────────────────────────────────────────
 function processKeys(){
+  if(cooling) return; // freeze claw during cooldown
   const hasL=keysDown.has('ArrowLeft'), hasR=keysDown.has('ArrowRight');
   if(!hasL&&!hasR) return;
   const speed=keysDown.has('Shift')?5:2;
@@ -1539,7 +1540,7 @@ function drop(){
   clawDropX=clamp(mx,cur); clawLvl=cur;
   clawState='opening'; clawOpenTimer=CLAW_OPEN_FRAMES; cooling=true;
 }
-function setMx(raw){mx=Math.max(PAD,Math.min(W-PAD,raw));}
+function setMx(raw){ if(cooling) return; mx=Math.max(PAD,Math.min(W-PAD,raw)); }
 cv.addEventListener('mousemove',e=>{
   const r=cv.getBoundingClientRect();
   setMx((e.clientX-r.left)*(W/r.width));
