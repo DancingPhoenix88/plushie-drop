@@ -4,10 +4,6 @@
 
 ## v12 (current)
 - **Claw frozen during cooldown** — mouse, touch, and arrow keys ignored while `cooling=true`; claw stays at drop position until ready
-
----
-
-## v12
 - **5% left/right play-area padding** — claw and plushies can no longer touch the side walls (`PAD = 5% W` constant, separate from `WALL`)
 - **Reflection fixes** — right wall transform corrected (`translate(2*(W-rv))`), source coordinates now multiplied by `dpr` (fixes size mismatch and wrong zone sampling), reflections now drawn *before* popups/confetti so text/effects are not included in reflection
 - **Right wall reflection** geometry aligned: rightmost orange pixel appears at cyan left edge, overflow cut off at canvas right
