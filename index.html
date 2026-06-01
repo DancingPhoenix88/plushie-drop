@@ -140,15 +140,15 @@ input.sprite-cb{
 input.sprite-cb:checked{background-image:url('Sprites/checkbox_tick.png');}
 /* force-hide joystick on very tall screens (taller than 9:19) */
 @media (max-aspect-ratio: 9/19){ #joyctrl{ display:none !important; } }
-/* when height < 879px: hide floor/evo zones and expand canvas to fill their space */
-@media (max-height: 878px){
+/* when wide (≥9:16) AND short (<879px): hide floor/evo, expand canvas */
+@media (min-aspect-ratio: 9/16) and (max-height: 878px){
   #floor-zone{ display:none !important; }
   #ev-s{ display:none !important; }
   #game-frame .cw{ bottom:0 !important; height:auto !important; }
 }
 /* sidebar checkboxes only visible when floor-zone is hidden */
 #ls-cbs{ display:none; }
-@media (max-height: 878px){ #ls-cbs{ display:flex;flex-wrap:wrap;justify-content:center;gap:0; } }
+@media (min-aspect-ratio: 9/16) and (max-height: 878px){ #ls-cbs{ display:flex;flex-wrap:wrap;justify-content:center;gap:0; } }
 /* joystick NOT affected by the 878px height rule (handled by JS/other queries only) */
 /* joystick + button (J key) */
 #joyctrl{
