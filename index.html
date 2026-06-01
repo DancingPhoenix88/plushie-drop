@@ -325,6 +325,7 @@ img.evo-locked{filter:brightness(0);opacity:0.45;}
       <!-- Evolution chart — inside game-frame bottom area -->
       <div id="ev-s"></div>
 
+
     </div><!-- #game-frame -->
   </div><!-- #main-content -->
 
@@ -940,7 +941,13 @@ function render(){
   ctx.beginPath(); ctx.moveTo(dzPad,DY); ctx.lineTo(W-dzPad,DY); ctx.stroke();
   ctx.setLineDash([]); ctx.font=blink?`bold ${Math.round(11*FS)}px 'Segoe UI',system-ui,sans-serif`:`${Math.round(11*FS)}px 'Segoe UI',system-ui,sans-serif`;
   ctx.fillStyle=blink?'rgba(220,30,30,.95)':'rgba(210,55,55,.65)'; ctx.textAlign='left';
-  ctx.fillText('DANGER',dzPad+5,DY-5); ctx.restore();
+  ctx.fillText('DANGER',dzPad+5,DY-5);
+  // version — right-aligned, same y as DANGER
+  ctx.textAlign='right';
+  ctx.font=`${Math.round(9*FS)}px 'Segoe UI',system-ui,sans-serif`;
+  ctx.fillStyle='rgba(90,56,32,0.45)';
+  ctx.fillText('v10',W-dzPad-4,DY-5);
+  ctx.restore();
   // ── CLAW + held plushie ───────────────────────────────────────────────
   if(!dead && !showClaw){
     // claw off — show classic ghost preview
