@@ -6,7 +6,7 @@
 <title>Plushie Drop</title>
 <link rel="manifest" href="manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Righteous&display=swap" rel="stylesheet">
 <meta name="theme-color" content="#c87830">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -117,7 +117,7 @@ html,body{width:100vw;height:100dvh;overflow:hidden;position:relative;font-famil
 #nc{display:block;width:48px;height:auto;aspect-ratio:1;margin-top:-9px;}
 /* score value: digital font, size based on digit count */
 #sc-p{
-  font-family:'Share Tech Mono','Courier New',monospace;
+  font-family:'Righteous','Share Tech Mono','Courier New',monospace;
   font-weight:400;color:#3a2010;
   white-space:nowrap;overflow:hidden;
   width:100%;text-align:center;
@@ -125,23 +125,31 @@ html,body{width:100vw;height:100dvh;overflow:hidden;position:relative;font-famil
   height:30px;
   font-size:30px;
 }
-#fz-ctrl{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-left:auto;}
+#fz-inner{position:absolute;inset:0;display:flex;align-items:flex-start;gap:8px;overflow:hidden;padding:0 4px;}
+#fz-ctrl{display:flex;flex-wrap:wrap;align-items:flex-start;gap:0;margin-left:auto;}
 #fz-ctrl button{background:none;border:.5px solid #dfc8b0;border-radius:8px;font-size:20px;padding:2px 6px;cursor:pointer;line-height:1;}
 #fz-ctrl button.active,#gyro-ls.active{background:#fde8d8;border-color:#c05020;}
-#fz-ctrl label{display:flex;align-items:center;gap:3px;font-size:10px;color:#b09878;cursor:pointer;text-transform:uppercase;}
-#fz-ctrl input[type=checkbox]{width:16px;height:16px;accent-color:#c05020;}
+/* sprite checkboxes */
+.cb-item{display:flex;flex-direction:column;align-items:center;gap:0;cursor:pointer;margin-top:2px;}
+.cb-item .fz-label{margin-top:-4px;position:relative;z-index:1;}
+input.sprite-cb{
+  -webkit-appearance:none;appearance:none;
+  width:56px;height:56px;margin:0;cursor:pointer;
+  background:url('Sprites/checkbox_bg.png') no-repeat center/contain;
+}
+input.sprite-cb:checked{background-image:url('Sprites/checkbox_tick.png');}
 /* force-hide joystick on very tall screens (taller than 9:19) */
 @media (max-aspect-ratio: 9/19){ #joyctrl{ display:none !important; } }
 /* when height < 879px: hide floor/evo zones and expand canvas to fill their space */
 @media (max-height: 878px){
   #floor-zone{ display:none !important; }
   #ev-s{ display:none !important; }
-  /* .cw stretches to bottom of game-frame — crops the freed space into the play area */
-  #game-frame .cw{
-    bottom:0 !important;
-    height:auto !important;
-  }
+  #game-frame .cw{ bottom:0 !important; height:auto !important; }
 }
+/* sidebar checkboxes only visible when floor-zone is hidden */
+#ls-cbs{ display:none; }
+@media (max-height: 878px){ #ls-cbs{ display:flex;flex-wrap:wrap;justify-content:center;gap:0; } }
+/* joystick NOT affected by the 878px height rule (handled by JS/other queries only) */
 /* joystick + button (J key) */
 #joyctrl{
   display:none;
@@ -172,9 +180,20 @@ html,body{width:100vw;height:100dvh;overflow:hidden;position:relative;font-famil
   display:block;width:39px;padding:2px 0;
   border-radius:8px;margin-top:-5px;
 }
-#ev-s .ec{display:flex;flex-direction:column;align-items:center;}
+#ev-s .ec{display:flex;flex-direction:column;align-items:center;position:relative;}
+/* blob shadow: absolute so it never affects flex layout */
+.ec-shadow{
+  position:absolute;
+  bottom:calc(1em + 3px); /* sit above label, moved up */
+  left:50%;transform:translateX(-50%);
+  width:65%;height:3px;
+  background:rgba(0,0,0,0.55);border-radius:50%;filter:blur(2.5px);
+  pointer-events:none;
+}
 #ev-s img{width:100%;aspect-ratio:1;object-fit:contain;}
 #ev-s .en{font-size:6px;color:#8a7060;text-align:center;}
+/* locked evo icons — silhouette until first merge */
+img.evo-locked{filter:brightness(0);opacity:0.45;}
 
 /* ── BLUE top / CYAN bottom tiles ── */
 #top-tile{display:flex;align-items:center;justify-content:center;width:100%;}
@@ -243,11 +262,11 @@ html,body{width:100vw;height:100dvh;overflow:hidden;position:relative;font-famil
   #top-tile,#bottom-tile{display:none;}
   #main-content{height:100dvh;aspect-ratio:9/16;flex-shrink:0;}
   #evo-panel{display:none;}
-  #joyctrl{display:none !important;}
 }
 /* sidebar only when ratio > 12:16 */
 @media (min-aspect-ratio: 12/16){
-  #evo-panel{display:flex;flex-direction:column;align-self:stretch;overflow-y:auto;}
+  #evo-panel{display:flex;flex-direction:column;align-self:center;height:auto;max-height:100dvh;overflow-y:auto;}
+  #ev-s .en{display:none;}
 }
 </style>
 </head>
@@ -287,9 +306,18 @@ html,body{width:100vw;height:100dvh;overflow:hidden;position:relative;font-famil
             </div>
           </div>
           <div id="fz-ctrl">
-            <button id="gyro-btn" onclick="toggleGyro()" title="Tilt control">🌀</button>
-            <label><input type="checkbox" id="bgm-cb" onchange="toggleBGM(this.checked)"><span>BGM</span></label>
-            <label><input type="checkbox" id="ap" checked><span>Auto</span></label>
+            <div class="cb-item" onclick="document.getElementById('gyro-cb').click()">
+              <input type="checkbox" class="sprite-cb" id="gyro-cb" onchange="toggleGyro()">
+              <span class="fz-label">GYRO</span>
+            </div>
+            <div class="cb-item" onclick="document.getElementById('bgm-cb').click()">
+              <input type="checkbox" class="sprite-cb" id="bgm-cb" onchange="toggleBGM(this.checked)">
+              <span class="fz-label">BGM</span>
+            </div>
+            <div class="cb-item" onclick="document.getElementById('ap').click()">
+              <input type="checkbox" class="sprite-cb" id="ap" onchange="syncAp(this.checked)">
+              <span class="fz-label">AUTO</span>
+            </div>
           </div>
         </div>
       </div>
@@ -311,9 +339,21 @@ html,body{width:100vw;height:100dvh;overflow:hidden;position:relative;font-famil
     <div class="lbl" style="margin-bottom:6px">Evolution</div>
     <div id="ev"></div>
     <hr class="sep">
-    <label class="ar"><input type="checkbox" id="ap-ls" onchange="syncAp(this.checked)"><span>Autoplay</span></label>
-    <label class="ar"><input type="checkbox" id="bgm-ls" onchange="toggleBGM(this.checked)"><span>BGM</span></label>
-    <button id="gyro-ls" onclick="toggleGyro()" style="margin-top:4px;width:100%;padding:5px 0;background:#fdf2ea;border:.5px solid #dfc8b0;border-radius:8px;font-size:16px;cursor:pointer;" title="Tilt control">🌀</button>
+    <!-- only shown when floor-zone is hidden (height < 879px) -->
+    <div id="ls-cbs">
+      <div class="cb-item" onclick="document.getElementById('gyro-ls').click()">
+        <input type="checkbox" class="sprite-cb" id="gyro-ls" onchange="toggleGyro()">
+        <span class="fz-label">GYRO</span>
+      </div>
+      <div class="cb-item" onclick="document.getElementById('bgm-ls').click()">
+        <input type="checkbox" class="sprite-cb" id="bgm-ls" onchange="toggleBGM(this.checked)">
+        <span class="fz-label">BGM</span>
+      </div>
+      <div class="cb-item" onclick="document.getElementById('ap-ls').click()">
+        <input type="checkbox" class="sprite-cb" id="ap-ls" onchange="syncAp(this.checked)">
+        <span class="fz-label">AUTO</span>
+      </div>
+    </div>
   </div>
 
   <!-- CYAN: decorative filler (portrait only, no content) -->
@@ -579,7 +619,7 @@ function processMerges(){
     burst(px,py,PD[nl].body); updUI(); sfxMerge(nl);
     if(showSpawnRate) updateEvoLabels();
     popups.push({x:px,y:py,text:'+'+PTS[nl],color:PD[nl].body,life:1});
-    if(!firstMerged.has(nl)){ firstMerged.add(nl); spawnCelebration(px,py,nl); }
+    if(!firstMerged.has(nl)){ firstMerged.add(nl); spawnCelebration(px,py,nl); updateEvoUnlocks(); }
   }
   plushies=plushies.filter((_,i)=>!toRemove.has(i));
   for(const {x,y,lvl} of toAdd){
@@ -614,6 +654,7 @@ function restart(){
   document.getElementById('ov').classList.remove('show');
   cur=rnd(); nxt=rnd(); updNext();
   clawState='idle'; clawY=DROPY; clawLvl=cur;
+  resumeLoop(); // restart the paused animation loop
 }
 
 // ── PARTICLES ─────────────────────────────────────────────────────────
@@ -635,6 +676,7 @@ function tickPopups(){
 // ── FIRST-MERGE CELEBRATION ────────────────────────────────────────────
 const CONFETTI_COLORS=['#ff5a5a','#ffb830','#ffe234','#4ddc7a','#38c5f5','#c84dff','#ff6eb4','#ffffff'];
 function spawnCelebration(x,y,lvl){
+  if(showClaw) triggerGlare(); // flash glare on first-merge celebration
   // confetti burst: 60 particles from the merge point + along top
   for(let i=0;i<60;i++){
     const fromTop=i<20; // first 20 rain from above
@@ -684,13 +726,15 @@ function tickCelebrations(){
   celebrations.forEach(c=>{
     if(c.phase==='in'){
       c.scale=Math.min(1, c.scale+0.12);
-      if(c.scale>=1){ c.phase='hold'; c.holdTimer=60; } // hold ~1s at 60fps
+      c.y-=0.4; // slow upward drift from the start
+      if(c.scale>=1){ c.phase='hold'; c.holdTimer=60; }
     } else if(c.phase==='hold'){
       c.holdTimer--;
+      c.y-=0.4; // continue drifting during hold
       if(c.holdTimer<=0) c.phase='out';
     } else {
-      c.life-=0.022; // fade out ~1.5s
-      c.y-=0.8;     // drift up while fading
+      c.life-=0.022;
+      c.y-=0.8; // faster drift while fading out
     }
   });
 }
@@ -723,9 +767,10 @@ function loop(){
     }
     _joyLastMx=mx;
   }
-  tickParts(); tickPopups(); tickConfetti(); tickCelebrations(); if(!dead) checkDanger(); render();
-  requestAnimationFrame(loop);
+  tickParts(); tickPopups(); tickConfetti(); tickCelebrations(); if(!dead) checkDanger(); if(showClaw) tickGlare(); render();
+  if(!dead) requestAnimationFrame(loop); // pause loop on game-over to save battery
 }
+function resumeLoop(){ requestAnimationFrame(loop); }
 
 // ── DROP PREDICTION ───────────────────────────────────────────────────
 // Cast circle (radius r) straight down from x; return first contact Y
@@ -925,7 +970,7 @@ function render(){
   ctx.save(); ctx.textAlign='center';
   popups.forEach(p=>{
     const sz=Math.round((22+p.life*14)*FS); // shrinks as it fades
-    ctx.font=`700 ${sz}px 'Segoe UI',sans-serif`;
+    ctx.font=`700 ${sz}px 'Segoe UI',system-ui,sans-serif`;
     ctx.globalAlpha=p.life*0.92;
     // dark stroke for readability over any background
     ctx.strokeStyle='rgba(0,0,0,0.45)'; ctx.lineWidth=3;
@@ -934,27 +979,42 @@ function render(){
   });
   ctx.globalAlpha=1; ctx.restore();
 
-  // ── Glass glare (behind text/confetti, in front of plushies) ────────────
-  if(showClaw){
+  // ── Glass glare flash — sweeps horizontally left→right, no fade ─────────
+  if(showClaw&&_glareT>=0){
+    // two slanted streaks sweeping left → right (different widths)
+    const cx=(_glareT*1.6-0.3)*W;
     ctx.save();
-    const g1=ctx.createLinearGradient(WALL+20,H*0.18,W*0.60,H*0.80);
-    g1.addColorStop(0,  'rgba(255,255,255,0)');
-    g1.addColorStop(0.42,'rgba(255,255,255,0)');
-    g1.addColorStop(0.47,'rgba(255,255,255,0.55)');
-    g1.addColorStop(0.50,'rgba(255,255,255,0.70)');
-    g1.addColorStop(0.53,'rgba(255,255,255,0.55)');
-    g1.addColorStop(0.58,'rgba(255,255,255,0)');
-    g1.addColorStop(1,  'rgba(255,255,255,0)');
-    ctx.fillStyle=g1; ctx.fillRect(0,0,W,H);
-    const g2=ctx.createLinearGradient(W*0.50,H*0.22,W*0.90,H*0.72);
-    g2.addColorStop(0,  'rgba(255,255,255,0)');
-    g2.addColorStop(0.44,'rgba(255,255,255,0)');
-    g2.addColorStop(0.48,'rgba(255,255,255,0.40)');
-    g2.addColorStop(0.50,'rgba(255,255,255,0.55)');
-    g2.addColorStop(0.52,'rgba(255,255,255,0.40)');
-    g2.addColorStop(0.56,'rgba(255,255,255,0)');
-    g2.addColorStop(1,  'rgba(255,255,255,0)');
-    ctx.fillStyle=g2; ctx.fillRect(0,0,W,H);
+    ctx.beginPath(); ctx.rect(0,0,W,H); ctx.clip();
+    ctx.translate(cx, H/2);
+    ctx.rotate(-Math.PI/7); // ~26° slant
+
+    // streak 1 — wider, brighter
+    const hw1=W*0.20;
+    const g1=ctx.createLinearGradient(-hw1,0,hw1,0);
+    g1.addColorStop(0,    'rgba(255,255,255,0)');
+    g1.addColorStop(0.35, 'rgba(255,255,255,0)');
+    g1.addColorStop(0.48, 'rgba(255,255,255,0.55)');
+    g1.addColorStop(0.50, 'rgba(255,255,255,0.75)');
+    g1.addColorStop(0.52, 'rgba(255,255,255,0.55)');
+    g1.addColorStop(0.65, 'rgba(255,255,255,0)');
+    g1.addColorStop(1,    'rgba(255,255,255,0)');
+    ctx.fillStyle=g1;
+    ctx.fillRect(-hw1,-H*1.5,hw1*2,H*3);
+
+    // streak 2 — narrower, softer, offset to the right
+    const hw2=W*0.09;
+    const off2=W*0.28; // offset from streak 1 center
+    const g2=ctx.createLinearGradient(off2-hw2,0,off2+hw2,0);
+    g2.addColorStop(0,    'rgba(255,255,255,0)');
+    g2.addColorStop(0.35, 'rgba(255,255,255,0)');
+    g2.addColorStop(0.48, 'rgba(255,255,255,0.30)');
+    g2.addColorStop(0.50, 'rgba(255,255,255,0.45)');
+    g2.addColorStop(0.52, 'rgba(255,255,255,0.30)');
+    g2.addColorStop(0.65, 'rgba(255,255,255,0)');
+    g2.addColorStop(1,    'rgba(255,255,255,0)');
+    ctx.fillStyle=g2;
+    ctx.fillRect(off2-hw2,-H*1.5,hw2*2,H*3);
+
     ctx.restore();
   }
 
@@ -989,7 +1049,7 @@ function render(){
     ctx.shadowColor=c.stroke;
     ctx.shadowBlur=22;
     // outer stroke
-    ctx.font=`900 ${Math.round(52*FS)}px 'Segoe UI',system-ui,sans-serif`;
+    ctx.font=`400 ${Math.round(52*FS)}px 'Righteous','Segoe UI',system-ui,sans-serif`;
     ctx.lineWidth=8;
     ctx.strokeStyle=c.stroke;
     ctx.strokeText(c.name,0,0);
@@ -998,12 +1058,12 @@ function render(){
     ctx.fillText(c.name,0,0);
     // white inner highlight
     ctx.shadowBlur=0;
-    ctx.font=`900 ${Math.round(52*FS)}px 'Segoe UI',system-ui,sans-serif`;
+    ctx.font=`400 ${Math.round(52*FS)}px 'Righteous','Segoe UI',system-ui,sans-serif`;
     ctx.fillStyle='rgba(255,255,255,0.38)';
     ctx.fillText(c.name,0,-2);
     // sub-label: level + points
     ctx.shadowBlur=8; ctx.shadowColor='rgba(0,0,0,0.5)';
-    ctx.font=`600 16px 'Segoe UI',system-ui,sans-serif`;
+    ctx.font=`400 ${Math.round(16*FS)}px 'Righteous','Segoe UI',system-ui,sans-serif`;
     ctx.fillStyle='#fff';
     ctx.strokeStyle='rgba(0,0,0,0.6)'; ctx.lineWidth=3;
     const sub=`Lv ${c.level}  ·  ${c.pts} pts`;
@@ -1315,6 +1375,27 @@ let dbg=false, dbgPoly=false, solidMode=false;
 let showJoy=!window.matchMedia('(pointer:coarse)').matches;
 let _joyLastMx=null, _joyNoMovFrames=0; // joystick movement tracking
 
+// ── GLASS GLARE FLASH ─────────────────────────────────────────────────
+// sweeps horizontally across the canvas (no fade — full opacity, just moves)
+let _glareT=-1, _glareStart=0;
+const GLARE_DUR=480; // ms — sweep speed
+let _glareNextAt=Date.now()+5000+Math.random()*5000;
+
+function triggerGlare(){
+  // fire glare immediately and reset the next-interval timer
+  _glareT=0; _glareStart=Date.now();
+  _glareNextAt=Date.now()+GLARE_DUR+5000+Math.random()*5000;
+}
+function tickGlare(){
+  const now=Date.now();
+  if(_glareT<0){
+    if(now>=_glareNextAt){ _glareT=0; _glareStart=now; }
+  } else {
+    _glareT=(now-_glareStart)/GLARE_DUR;
+    if(_glareT>=1){ _glareT=-1; _glareNextAt=now+5000+Math.random()*5000; }
+  }
+}
+
 // ── JOYSTICK / BUTTON VISUALS ─────────────────────────────────────────
 const joyEl=()=>document.getElementById('joyctrl');
 const joyImg=()=>document.getElementById('joy-img');
@@ -1457,7 +1538,7 @@ function buildEvo(){
   const es=document.getElementById('ev-s'); es.innerHTML='';
   for(let i=1;i<=11;i++){
     const sc=i<=8?'transform:scale(1.3);transform-origin:center;':'';
-    const base=`src="Sprites/level_${i}.png" style="object-fit:contain;flex-shrink:0;${sc}"`;
+    const base=`src="Sprites/level_${i}.png" data-unlock-lvl="${i}" style="object-fit:contain;flex-shrink:0;${sc}"`;
     // landscape row
     const row=document.createElement('div');
     row.style.cssText='display:flex;align-items:center;gap:6px;padding:0;';
@@ -1467,11 +1548,21 @@ function buildEvo(){
     // portrait cell
     const cell=document.createElement('div'); cell.className='ec';
     cell.innerHTML=`<img ${base.replace('flex-shrink:0;','flex-shrink:0;width:100%;aspect-ratio:1;')}>
+      <div class="ec-shadow"></div>
       <span class="en" data-lvl="${i}">${PD[i].name}</span>`;
     es.appendChild(cell);
   }
+  updateEvoUnlocks();
 }
-function syncAp(v){ document.getElementById('ap').checked=v; }
+function updateEvoUnlocks(){
+  document.querySelectorAll('img[data-unlock-lvl]').forEach(img=>{
+    const lvl=+img.dataset.unlockLvl;
+    img.classList.toggle('evo-locked', lvl>3 && !firstMerged.has(lvl));
+  });
+}
+function syncAp(v){
+  ['ap','ap-ls'].forEach(id=>{ const el=document.getElementById(id); if(el) el.checked=v; });
+}
 function toggleHelp(force){
   const el=document.getElementById('help-popup');
   const show=force!==undefined?force:!el.classList.contains('show');
@@ -1539,7 +1630,7 @@ function tone(freq,start,type,vol,dur){
 
 // Drop: soft thud
 function sfxDrop(){
-  if(muted)return;
+  if(muted||document.getElementById('ap').checked)return; // silent on auto
   const a=getAC(),t=a.currentTime;
   const o=a.createOscillator(),g=a.createGain();
   o.connect(g);g.connect(a._sfxBus||a.destination);
@@ -1636,31 +1727,32 @@ function onDeviceOrientation(e){
   tiltAngle = Math.max(-TILT_MAX, Math.min(TILT_MAX, raw));
 }
 
+function _syncGyroCb(v){ const cb=document.getElementById('gyro-cb'); if(cb) cb.checked=v; }
 function toggleGyro(){
   if(gyroOn){ disableGyro(); return; }
-  // iOS 13+ requires explicit permission from a user gesture
   if(typeof DeviceOrientationEvent !== 'undefined' &&
      typeof DeviceOrientationEvent.requestPermission === 'function'){
     DeviceOrientationEvent.requestPermission().then(state => {
       if(state === 'granted'){ enableGyro(); }
-      else { alert('Tilt permission denied.'); }
-    }).catch(err => alert('Could not request tilt permission: ' + err));
+      else { alert('Tilt permission denied.'); _syncGyroCb(false); }
+    }).catch(err => { alert('Could not request tilt permission: ' + err); _syncGyroCb(false); });
   } else {
     // Android & desktop — no permission needed
     enableGyro();
   }
 }
+function _syncGyroBoth(v){
+  ['gyro-cb','gyro-ls'].forEach(id=>{ const el=document.getElementById(id); if(el) el.checked=v; });
+}
 function enableGyro(){
   window.addEventListener('deviceorientation', onDeviceOrientation);
   gyroOn = true;
-  document.getElementById('gyro-btn').classList.add('active');
-  document.getElementById('gyro-ls').classList.add('active');
+  _syncGyroBoth(true);
 }
 function disableGyro(){
   window.removeEventListener('deviceorientation', onDeviceOrientation);
   gyroOn = false; tiltAngle = 0;
-  document.getElementById('gyro-btn').classList.remove('active');
-  document.getElementById('gyro-ls').classList.remove('active');
+  _syncGyroBoth(false);
 }
 
 // ── VIEWPORT SCALE ────────────────────────────────────────────────────
@@ -1685,7 +1777,14 @@ window.addEventListener('orientationchange',()=>setTimeout(fitToViewport,200));
 
 cur=rnd();nxt=rnd();clawLvl=cur;updUI();buildEvo();
 if(showJoy){ const el=joyEl(); if(el) el.style.display='flex'; }
-loadSprites(()=>{ updNext(); fitToViewport(); requestAnimationFrame(loop); });
+// force-download Righteous (just declaring the @font-face doesn't download it)
+// then start the game once all fonts are ready
+Promise.all([
+  document.fonts.load('400 16px Righteous'),
+  document.fonts.ready
+]).then(()=>{
+  loadSprites(()=>{ updNext(); fitToViewport(); requestAnimationFrame(loop); });
+});
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 </script>
 </body>
