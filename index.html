@@ -248,7 +248,7 @@ img.evo-locked{filter:brightness(0);opacity:0.45;}
 
 
 /* ── PORTRAIT: viewport taller than 9:16 ── */
-@media (max-aspect-ratio: 9/16){
+@media (max-aspect-ratio: 2/3){
   /* min-height = top-tile (~48px) + 9:16 main-content; body scrolls if viewport is too short */
   html{height:auto;}
   body{
@@ -278,7 +278,7 @@ img.evo-locked{filter:brightness(0);opacity:0.45;}
 }
 
 /* ── WIDE: viewport fatter than 9:16 — row layout, no evo zone, sidebar shows ── */
-@media (min-aspect-ratio: 9/16){
+@media (min-aspect-ratio: 2/3){
   body{display:flex;}
   #game-root{
     position:relative !important;top:auto !important;left:auto !important;
@@ -451,21 +451,22 @@ img.evo-locked{filter:brightness(0);opacity:0.45;}
 // stroke = same hue but darker
 // r values: linear 18→89 so lv11 diameter = 40% of tank width (444px)
 // scale: linear 0.277 → 1.108 (lv1→lv11 = 400% size). r = imgR × scale
-// lv1-9 radii interpolated linearly from 40 (Mây) to 116 (Bunny), step=9.5; lv10-11 unchanged
+// lv1-9 radii interpolated linearly from 30 (Mây) to 116 (Bunny), step=10.75; lv10-11 unchanged
+// lv5/6/7/11 physR keeps original ratio: 0.907 / 0.951 / 0.956 / 0.949
 const PD=[null,
-  {name:'Mây',       r:40,  body:'#8ee8ff', stroke:'#38a8d0'},
-  {name:'Bơ',        r:50,  body:'#4a8c40', stroke:'#245820'},
-  {name:'Vincam',    r:59,  body:'#f5f5f5', stroke:'#b8b8b8'},
-  {name:'Mini Dora', r:65,  body:'#e83030', stroke:'#980808'},
-  {name:'Baby Bunny',r:78,  physR:71, body:'#fff0f8', stroke:'#d89ab8'},
-  {name:'Poko',      r:88,  physR:84, body:'#c87830', stroke:'#884808'},
-  {name:'Doraemi',   r:97,  physR:93, body:'#f0c820', stroke:'#b08800'},
-  {name:'Doraemon',  r:107, body:'#1090e8', stroke:'#0055b0'},
+  {name:'Mây',       r:30,  body:'#8ee8ff', stroke:'#38a8d0'},
+  {name:'Bơ',        r:41,  body:'#4a8c40', stroke:'#245820'},
+  {name:'Vincam',    r:52,  body:'#f5f5f5', stroke:'#b8b8b8'},
+  {name:'Mini Dora', r:62,  body:'#e83030', stroke:'#980808'},
+  {name:'Baby Bunny',r:73,  physR:66, body:'#fff0f8', stroke:'#d89ab8'},
+  {name:'Poko',      r:84,  physR:80, body:'#c87830', stroke:'#884808'},
+  {name:'Doraemi',   r:95,  physR:91, body:'#f0c820', stroke:'#b08800'},
+  {name:'Doraemon',  r:105, body:'#1090e8', stroke:'#0055b0'},
   {name:'Bunny',     r:116, body:'#f060a0', stroke:'#a81858'},
   {name:'Mimi',      r:125, body:'#9848d4', stroke:'#601898'},
   {name:'Racoon',    r:136, physR:129, body:'#282838', stroke:'#080818'},
 ];
-const PTS=[0,10,30,60,100,150,210,280,360,450,550,1000];
+const PTS=[0,1,3,6,10,15,21,28,36,45,55,100];
 
 // ── CONSTANTS ─────────────────────────────────────────────────────────
 const W=632,H=1049,WALL=11,DY=178,DROPY=94;
@@ -561,13 +562,14 @@ nctxls.scale(dpr,dpr);
 nctxls.imageSmoothingEnabled=true; nctxls.imageSmoothingQuality='high';
 
 // ── PRE-CALCULATED PHYSICS TABLES ─────────────────────────────────────
-// physR per level: [40,50,59,65,71,84,93,107,116,125,129]
+// physR per level: [30,41,52,62,66,80,91,105,116,125,129]
 // MASS = physR²  (used for impulse/position correction in collision)
-const MASS=[0,1600,2500,3481,4225,5041,7056,8649,11449,13456,15625,16641];
+const MASS=[0,900,1681,2704,3844,4356,6400,8281,11025,13456,15625,16641];
 // INV_MASS = 1/MASS  (avoids division per collision)
 const INV_MASS=[0,...MASS.slice(1).map(m=>1/m)];
-// max merge distance (center-to-center) = 2*physR + 8
-const MERGE_DIST=[0,88,108,126,138,150,176,194,222,240,258,266];
+// max merge distance (center-to-center) = 2*physR + 6 (X = lv1 r 30 * 20% = 6)
+// lv1:66  lv2:88  lv3:110  lv4:130  lv5:138  lv6:166  lv7:188  lv8:216  lv9:238  lv10:256  lv11:264
+const MERGE_DIST=[0,66,88,110,130,138,166,188,216,238,256,264];
 // MERGE_DIST² — used directly in distance check to avoid sqrt
 const MERGE_DIST_SQ=MERGE_DIST.map(d=>d*d);
 // DAMP_DT = DAMP^(1/SUBSTEPS) — constant per-substep damping factor, no Math.pow at runtime
@@ -853,13 +855,13 @@ function checkDanger(){
   const now=Date.now();
   let dangerCount=0;
   for(const p of plushies){
-    const vr=PD[p.level].r;
-    if((p.y-vr)<DY&&p.speed<1.4&&now-p.born>1000){
+    if(p.y<DY&&p.speed<1.4&&now-p.born>1000){
       danger[p.born]=danger[p.born]??now;
       dangerCount++;
-      if(now-danger[p.born]>2200&&dangerCount>=3){gameOver();return;}
+      if(now-danger[p.born]>1000){gameOver();return;} // single plushie above line for 1s
     } else delete danger[p.born];
   }
+  if(dangerCount>=3){gameOver();} // 3+ plushies above line simultaneously
 }
 
 function gameOver(){
@@ -1209,7 +1211,7 @@ function render(){
   ctx.textAlign='right';
   ctx.font=`${Math.round(9*FS)}px 'Segoe UI',system-ui,sans-serif`;
   ctx.fillStyle='rgba(90,56,32,0.45)';
-  ctx.fillText('v17',W-dzPad-4,DY-5);
+  ctx.fillText('v18',W-dzPad-4,DY-5);
   ctx.restore();
   // ── CLAW + held plushie ───────────────────────────────────────────────
   if(!dead && !showClaw){

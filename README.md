@@ -43,16 +43,16 @@ Open on mobile → Share → **Add to Home Screen** to install as an app (PWA).
 
 | Rank | Character | Merge score (base) |
 |------|-----------|--------------------|
-| 1 | Mây | +10 |
-| 2 | Bơ | +30 |
-| 3 | Vincam | +60 |
-| 4 | Mini Dora | +100 |
-| 5 | Baby Bunny | +150 |
-| 6 | Poko | +210 |
-| 7 | Doraemi | +280 |
-| 8 | Doraemon | +360 |
-| 9 | Bunny | +450 |
-| 10 | Mimi | +550 |
+| 1 | Mây | +1 |
+| 2 | Bơ | +3 |
+| 3 | Vincam | +6 |
+| 4 | Mini Dora | +10 |
+| 5 | Baby Bunny | +15 |
+| 6 | Poko | +21 |
+| 7 | Doraemi | +28 |
+| 8 | Doraemon | +36 |
+| 9 | Bunny | +45 |
+| 10 | Mimi | +55 |
 | 11 | Racoon ★ | — (triggers WIPE OUT) |
 
 Merging two of the same rank produces the next rank up. Two rank-11 Racoons trigger **WIPE OUT**.

@@ -2,7 +2,19 @@
 
 ---
 
-## v17 (current)
+## v18 (current)
+> ── session break ──
+- **Rebalanced character sizes** — lv1 (Mây) radius reduced to 30; lv1–9 linearly interpolated to Bunny (r=116), step≈10.75; lv10–11 unchanged; physR overrides for Baby Bunny/Poko/Doraemi/Racoon keep original collision-to-visual ratios
+- **Physics pre-calculation** — MASS (physR²), INV_MASS, MERGE_DIST, MERGE_DIST_SQ, and DAMP_DT all computed once at load; hot collision loop uses lookup tables instead of runtime r² and Math.pow
+- **Merge distance formula** — gap constant updated to X=6 (lv1 r×20%); MERGE_DIST = 2×physR + 6; squared table used directly in distance check (no sqrt)
+- **Speed cap optimised** — anti-tunneling check uses squared comparison (spd²>196) before sqrt; rolling movement average also uses squared distance (threshold 0.0625 = 0.25²)
+- **Merge detection** — same-type check enforced before distance test; MERGE_DIST_SQ lookup replaces per-call squaring
+- **Merge scores ÷10** — all base PTS values divided by 10 (Mây +1 … Mimi +55, Racoon triggers WIPE OUT)
+- **Game-over conditions split** — two independent triggers: (1) any plushie center above danger line for 1 s; (2) 3+ plushie centers above danger line simultaneously; previously a single AND condition requiring both
+
+---
+
+## v17
 - **WIPE OUT event** — merging two rank-11 Racoons triggers WIPE OUT: all remaining plushies pop simultaneously, bonus points awarded for each pop, a single large total-bonus popup replaces individual overlays, tank empties, evo zone resets to ranks 1–3 locked
 - **Game levels** — each WIPE OUT increments the game level; merge scores multiply by 2^(level−1) (Level 2 = ×2, Level 3 = ×4 …); multiplier cached in `scoreMultiplier` and a pre-computed `PTS_M[rank]` table rebuilt once per level-up
 - **LEVEL X celebration** — after WIPE OUT a "LEVEL X" card appears with the new multiplier shown in the sub-label; first-appearance tracking resets so celebration cards fire again for each rank
