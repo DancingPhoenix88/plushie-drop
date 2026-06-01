@@ -2,7 +2,16 @@
 
 ---
 
-## v12 (current)
+## v13 (current)
+- **Reflection optimization** — reflections now read from a separate offscreen buffer (`reflectBuf`) instead of the live canvas, eliminating the GPU read-back stall
+- **Half-resolution capture** — source strips stored at 50% resolution, scaled back up on draw (cuts pixel data by 4×)
+- **~20fps throttle** — buffer updated every 3rd frame; one frame behind at 60fps, imperceptible
+- **Fixed double-draw** — reflections were being drawn twice per frame; removed the redundant second call
+- **AUTO dial** — `#ap` checkbox replaced with a cycling dial (0→1→2→3→0); `apSpeed` controls drop interval (off / 1200ms / 820ms / 500ms); styled with `Righteous` font, dark red glow, 6° skew
+
+---
+
+## v12
 - **Claw frozen during cooldown** — mouse, touch, and arrow keys ignored while `cooling=true`; claw stays at drop position until ready
 - **5% left/right play-area padding** — claw and plushies can no longer touch the side walls (`PAD = 5% W` constant, separate from `WALL`)
 - **Reflection fixes** — right wall transform corrected (`translate(2*(W-rv))`), source coordinates now multiplied by `dpr` (fixes size mismatch and wrong zone sampling), reflections now drawn *before* popups/confetti so text/effects are not included in reflection

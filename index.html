@@ -138,6 +138,29 @@ input.sprite-cb{
   background:url('Sprites/checkbox_bg.png') no-repeat center/contain;
 }
 input.sprite-cb:checked{background-image:url('Sprites/checkbox_tick.png');}
+/* AUTO fan-dial */
+.ap-dial{
+  width:56px;height:56px;margin:0;cursor:pointer;
+  background:url('Sprites/checkbox_bg.png') no-repeat center/contain;
+  display:flex;align-items:center;justify-content:center;
+  user-select:none;
+}
+.ap-dial .ap-seg{
+  display:none;
+  font-family:'Righteous','Share Tech Mono','Courier New',monospace;
+  font-size:28px;font-weight:400;line-height:1;
+  transform:translateX(-2px) skew(6deg, 0deg);
+}
+.ap-dial .ap-seg.active{
+  display:block;
+  color:#8b0000;
+  text-shadow:0 0 6px #ff2020,0 0 14px #cc0000;
+}
+.ap-dial .ap-seg[data-spd="0"].active{
+  display:block;
+  color:transparent;
+  text-shadow:none;
+}
 /* force-hide joystick on very tall screens (taller than 9:19) */
 @media (max-aspect-ratio: 9/19){ #joyctrl{ display:none !important; } }
 /* when wide (≥9:16) AND short (<879px): hide floor/evo, expand canvas */
@@ -314,10 +337,15 @@ img.evo-locked{filter:brightness(0);opacity:0.45;}
               <input type="checkbox" class="sprite-cb" id="bgm-cb" onchange="toggleBGM(this.checked);saveCbPrefs()">
               <span class="fz-label">BGM</span>
             </label>
-            <label class="cb-item">
-              <input type="checkbox" class="sprite-cb" id="ap" onchange="syncAp(this.checked)">
+            <div class="cb-item" onclick="cycleAp()" id="ap-wrap">
+              <div class="ap-dial" id="ap">
+                <span class="ap-seg" data-spd="0">0</span>
+                <span class="ap-seg" data-spd="1">1</span>
+                <span class="ap-seg" data-spd="2">2</span>
+                <span class="ap-seg" data-spd="3">3</span>
+              </div>
               <span class="fz-label">AUTO</span>
-            </label>
+            </div>
           </div>
         </div>
       </div>
@@ -350,10 +378,15 @@ img.evo-locked{filter:brightness(0);opacity:0.45;}
         <input type="checkbox" class="sprite-cb" id="bgm-ls" onchange="toggleBGM(this.checked)">
         <span class="fz-label">BGM</span>
       </label>
-      <label class="cb-item">
-        <input type="checkbox" class="sprite-cb" id="ap-ls" onchange="syncAp(this.checked)">
+      <div class="cb-item" onclick="cycleAp()" id="ap-ls-wrap">
+        <div class="ap-dial" id="ap-ls">
+          <span class="ap-seg" data-spd="0">0</span>
+          <span class="ap-seg" data-spd="1">1</span>
+          <span class="ap-seg" data-spd="2">2</span>
+          <span class="ap-seg" data-spd="3">3</span>
+        </div>
         <span class="fz-label">AUTO</span>
-      </label>
+      </div>
     </div>
   </div>
 
@@ -466,6 +499,16 @@ cv.width=W*dpr; cv.height=H*dpr;
 // canvas CSS size controlled by .cw inset (width:100%;height:100%) — do not set inline style
 ctx.scale(dpr,dpr);
 ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
+
+// Reflection buffer — stores last frame's source strips at half resolution.
+// Reading from a separate canvas (not cv itself) eliminates the GPU read-back stall.
+// Updated every 3rd frame (~20fps) since plushies near walls move slowly.
+const REFLECT_SCALE = 0.5; // half-res
+const reflectBuf = document.createElement('canvas');
+reflectBuf.width  = Math.round(SOURCE_W * REFLECT_SCALE * dpr) * 2; // two strips side by side
+reflectBuf.height = Math.round(H * REFLECT_SCALE * dpr);
+const reflectCtx  = reflectBuf.getContext('2d');
+let _reflectFrame = 0; // frame counter for throttle
 
 // Portrait next: img element (no canvas needed)
 const nc=document.getElementById('nc');
@@ -865,29 +908,26 @@ const _panelSpr = (() => {
 //   REFLECT_W (cyan)  — where the reflection is drawn (scaled+flipped from source)
 function drawReflections(){
   const sw=SOURCE_W, rv=REFLECT_VIS, rw=REFLECT_W;
-  // source zone starts at rv from edge so it doesn't overlap the cyan zone
-  const srcX_L=rv, srcX_R=W-rv-sw;  // left/right source x offsets
+  const bw=reflectBuf.width, bh=reflectBuf.height;
+  if(!bw||!bh) return;
+  // reflectBuf layout: left strip [0, bw/2), right strip [bw/2, bw)
+  const stripW=bw/2;
 
-  // source coords must be in PHYSICAL pixels (cv is W*dpr × H*dpr)
-  const srcL_px=srcX_L*dpr, srcR_px=(W-srcX_L-sw)*dpr;
-  const sw_px=sw*dpr, H_px=H*dpr;
-
-  // LEFT — sample physical [srcL_px, srcL_px+sw_px], flip into x∈[0,rv]
+  // LEFT — flip left strip into x∈[0,rv]
   ctx.save();
   ctx.beginPath(); ctx.rect(0,0,rv,H); ctx.clip();
   ctx.globalAlpha=0.22;
   ctx.translate(rv,0); ctx.scale(-rw/sw,1);
-  ctx.drawImage(cv, srcL_px,0,sw_px,H_px, 0,0,sw,H);
+  ctx.drawImage(reflectBuf, 0,0,stripW,bh, 0,0,sw,H);
   ctx.restore();
 
-  // RIGHT — rightmost orange pixel (W-rv) → left edge of cyan (W-rv), excess cut off right
+  // RIGHT — flip right strip; rightmost orange pixel → left edge of cyan (W-rv)
   ctx.save();
   ctx.beginPath(); ctx.rect(W-rv,0,rv,H); ctx.clip();
   ctx.globalAlpha=0.22;
   ctx.translate(2*(W-rv),0); ctx.scale(-1,1);
-  ctx.drawImage(cv, srcR_px,0,sw_px,H_px, W-rv-sw,0,sw,H);
+  ctx.drawImage(reflectBuf, stripW,0,stripW,bh, W-rv-sw,0,sw,H);
   ctx.restore();
-
 }
 
 function drawCoverPatches(){
@@ -953,7 +993,7 @@ function render(){
   ctx.textAlign='right';
   ctx.font=`${Math.round(9*FS)}px 'Segoe UI',system-ui,sans-serif`;
   ctx.fillStyle='rgba(90,56,32,0.45)';
-  ctx.fillText('v10',W-dzPad-4,DY-5);
+  ctx.fillText('v13',W-dzPad-4,DY-5);
   ctx.restore();
   // ── CLAW + held plushie ───────────────────────────────────────────────
   if(!dead && !showClaw){
@@ -1147,10 +1187,7 @@ function render(){
   ctx.globalAlpha=1;
   ctx.restore();
 
-  // ── ORDER: reflections → cover patches → main objects (all via destination-over) ──
-  ctx.globalCompositeOperation='destination-over';
-  if(!isMobile){ drawCoverPatches(); drawReflections(); } // reflections off on mobile
-  ctx.globalCompositeOperation='source-over';
+  // (reflections + cover patches drawn earlier, before popups/confetti, via destination-over)
 
   // ── DEBUG OVERLAY (press D) ──────────────────────────────────────────
   if(dbg){
@@ -1198,6 +1235,22 @@ function render(){
     ctx.textAlign='left'; ctx.fillStyle='rgba(0,0,0,.65)'; ctx.font='10px monospace';
     ctx.fillText(`C = polygon colliders | [ ] adjust sides | lv1=${getSides(1)}-gon lv11=${getSides(11)}-gon (offset ${sidesOffset>=0?'+':''}${sidesOffset})`,WALL+4,H-WALL-4);
     ctx.restore();
+  }
+
+  // ── CAPTURE REFLECTION BUFFER (last-frame strips, throttled to ~20fps) ──
+  // Read from cv into reflectBuf at half resolution every 3rd frame.
+  // This eliminates the GPU read-back stall in drawReflections (separate texture).
+  if(!isMobile && (++_reflectFrame % 3 === 0)){
+    const sw=SOURCE_W, rv=REFLECT_VIS;
+    const bw=reflectBuf.width, bh=reflectBuf.height;
+    const stripW=bw/2;
+    const srcL_px=rv*dpr, srcR_px=(W-rv-sw)*dpr;
+    const sw_px=sw*dpr, H_px=H*dpr;
+    reflectCtx.clearRect(0,0,bw,bh);
+    // left strip
+    reflectCtx.drawImage(cv, srcL_px,0,sw_px,H_px, 0,0,stripW,bh);
+    // right strip
+    reflectCtx.drawImage(cv, srcR_px,0,sw_px,H_px, stripW,0,stripW,bh);
   }
 }
 
@@ -1505,7 +1558,7 @@ document.addEventListener('keydown',e=>{
   if(e.key==='d'||e.key==='D'){ dbg=!dbg; if(dbg)dbgPoly=false; return; }
   if(e.key==='c'||e.key==='C'){ dbgPoly=!dbgPoly; if(dbgPoly){dbg=false;solidMode=false;} return; }
   if(e.key==='h'||e.key==='H'){ solidMode=!solidMode; if(solidMode)dbgPoly=false; return; }
-  if(e.key==='a'||e.key==='A'){ const cb=document.getElementById('ap'); cb.checked=!cb.checked; syncAp(cb.checked); return; }
+  if(e.key==='a'||e.key==='A'){ cycleAp(); return; }
   if(e.key==='?'||e.key==='/'){ toggleHelp(); return; }
   if(e.key==='Escape'){ toggleHelp(false); return; }
   if(e.key==='['){ e.preventDefault(); sidesOffset=Math.max(SIDES_MIN,sidesOffset-1); if(!solidMode){dbg=false;dbgPoly=true;} return; }
@@ -1528,11 +1581,26 @@ document.addEventListener('keydown',e=>{
   }
 });
 
-// ── AUTOPLAY (reads portrait #ap; landscape #ap-ls syncs to it via syncAp) ──
-setInterval(()=>{
-  if(!document.getElementById('ap').checked) return;
-  drop();
-}, 820);
+// ── AUTOPLAY fan-dial (0=off, 1=slow, 2=medium, 3=fast) ──
+let apSpeed=0;
+const AP_DELAYS=[0,1200,820,500]; // ms per speed level (0 = off)
+let _apTimer=null;
+function setApSpeed(spd){
+  apSpeed=spd;
+  // update both dials
+  ['ap','ap-ls'].forEach(id=>{
+    const dial=document.getElementById(id);
+    if(!dial) return;
+    dial.querySelectorAll('.ap-seg').forEach(seg=>{
+      seg.classList.toggle('active', +seg.dataset.spd===spd);
+    });
+  });
+  // restart timer
+  if(_apTimer){ clearInterval(_apTimer); _apTimer=null; }
+  if(spd>0) _apTimer=setInterval(()=>{ if(!dead) drop(); }, AP_DELAYS[spd]);
+}
+function cycleAp(){ setApSpeed((apSpeed+1)%4); }
+function syncAp(v){ setApSpeed(v?1:0); } // legacy compat (keyboard 'A')
 
 function drop(){
   if(cooling||dead) return;
@@ -1656,9 +1724,6 @@ function loadCbPrefs(){
     if(p.gyro&&p.gyro===true){ toggleGyro(); }
   }catch(e){}
 }
-function syncAp(v){
-  ['ap','ap-ls'].forEach(id=>{ const el=document.getElementById(id); if(el) el.checked=v; });
-}
 function toggleHelp(force){
   const el=document.getElementById('help-popup');
   const show=force!==undefined?force:!el.classList.contains('show');
@@ -1726,7 +1791,7 @@ function tone(freq,start,type,vol,dur){
 
 // Drop: soft thud
 function sfxDrop(){
-  if(muted||document.getElementById('ap').checked)return; // silent on auto
+  if(muted||apSpeed>0)return; // silent on auto
   const a=getAC(),t=a.currentTime;
   const o=a.createOscillator(),g=a.createGain();
   o.connect(g);g.connect(a._sfxBus||a.destination);
@@ -1871,7 +1936,7 @@ document.addEventListener('touchmove',e=>{if(e.touches.length>1)e.preventDefault
 // Re-fit on orientation change
 window.addEventListener('orientationchange',()=>setTimeout(fitToViewport,200));
 
-cur=rnd();nxt=rnd();clawLvl=cur;updUI();buildEvo();loadCbPrefs();
+cur=rnd();nxt=rnd();clawLvl=cur;updUI();buildEvo();loadCbPrefs();setApSpeed(0);
 if(showJoy){ const el=joyEl(); if(el) el.style.display='flex'; }
 // force-download Righteous (just declaring the @font-face doesn't download it)
 // then start the game once all fonts are ready

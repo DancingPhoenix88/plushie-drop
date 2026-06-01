@@ -1,4 +1,4 @@
-const CACHE = 'plushie-v12';
+const CACHE = 'plushie-v13';
 const FILES = [
   './index.html',
   './manifest.json',
