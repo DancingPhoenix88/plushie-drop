@@ -66,7 +66,7 @@ html,body{width:100vw;height:100dvh;overflow:hidden;position:relative;font-famil
 /* ── GAME FRAME: full 9:16 zone — all content inside ── */
 #game-frame{
   width:100%;height:100%;
-  position:relative;
+  position:relative;overflow:hidden;
   border-style:solid;border-color:transparent;border-width:0;
   border-image:url('Sprites/claw_machine_middle_tile.png') 70 116 240 116 fill / 6.08% 16.11% 22.57% 16.11% round;
 }
@@ -190,15 +190,19 @@ html,body{width:100vw;height:100dvh;overflow:hidden;position:relative;font-famil
 .ar span{font-size:10px;color:#b09878;text-transform:uppercase;letter-spacing:.05em;}
 
 
-/* ── PORTRAIT: tall viewport (< 9:16) — game-root full width, game-frame 9:16 centered ── */
+/* ── PORTRAIT: viewport taller than 9:16 ── */
 @media (max-aspect-ratio: 9/16){
-  /* html+body must both have explicit height for flex:1 tiles to distribute correctly */
-  html,body{height:100dvh;}
-  body{display:flex;flex-direction:column;align-items:center;}
+  /* min-height = top-tile (~48px) + 9:16 main-content; body scrolls if viewport is too short */
+  html{height:auto;}
+  body{
+    display:flex;flex-direction:column;align-items:center;
+    min-height:calc(100vw * 16/9 + 48px);
+    overflow-y:auto;
+  }
   #game-root{
     position:relative !important;top:auto !important;left:auto !important;
     transform:none !important;
-    width:100%;flex:1;min-height:0;
+    width:100%;flex:1;
     display:flex;flex-direction:column;align-items:center;
   }
   /* top-tile: fixed to text height only — no growing */
@@ -216,7 +220,7 @@ html,body{width:100vw;height:100dvh;overflow:hidden;position:relative;font-famil
   #ev-s{display:grid;}
 }
 
-/* ── LANDSCAPE: wide viewport (> 9:16) — game-frame full height, top/bottom cut off ── */
+/* ── WIDE: viewport fatter than 9:16 — row layout, no evo zone, sidebar shows ── */
 @media (min-aspect-ratio: 9/16){
   body{display:flex;}
   #game-root{
@@ -229,6 +233,7 @@ html,body{width:100vw;height:100dvh;overflow:hidden;position:relative;font-famil
   #top-tile,#bottom-tile{display:none;}
   #main-content{height:100dvh;aspect-ratio:9/16;flex-shrink:0;}
   #evo-panel{display:none;}
+  #joyctrl{display:none !important;}
 }
 /* sidebar only when ratio > 12:16 */
 @media (min-aspect-ratio: 12/16){
@@ -696,12 +701,17 @@ function loop(){
   processKeys();
   if(!dead){step();detectMerges();processMerges();}
   updateClaw();
-  // update joystick direction from current mx + held keys
+  // joystick: tilt only while movement is active (reset after 3 still frames)
   if(showJoy){
     const hasL=keysDown.has('ArrowLeft'), hasR=keysDown.has('ArrowRight');
-    if(hasL) updateJoyDir('left');
-    else if(hasR) updateJoyDir('right');
-    else updateJoyDir(mx<W/2-20?'left':mx>W/2+20?'right':'none');
+    if(hasL){ updateJoyDir('left'); _joyNoMovFrames=0; }
+    else if(hasR){ updateJoyDir('right'); _joyNoMovFrames=0; }
+    else {
+      const dMx=(_joyLastMx!==null)?mx-_joyLastMx:0;
+      if(Math.abs(dMx)>0.5){ _joyNoMovFrames=0; updateJoyDir(dMx<0?'left':'right'); }
+      else { _joyNoMovFrames++; if(_joyNoMovFrames>=3) updateJoyDir('none'); }
+    }
+    _joyLastMx=mx;
   }
   tickParts(); tickPopups(); tickConfetti(); tickCelebrations(); if(!dead) checkDanger(); render();
   requestAnimationFrame(loop);
@@ -1293,6 +1303,7 @@ function clamp(x,lvl){const r=PD[lvl].r;return Math.max(WALL+r+1,Math.min(W-WALL
 let dbg=false, dbgPoly=false, solidMode=false;
 // joystick on by default on PC (non-touch), off on touch devices
 let showJoy=!window.matchMedia('(pointer:coarse)').matches;
+let _joyLastMx=null, _joyNoMovFrames=0; // joystick movement tracking
 
 // ── JOYSTICK / BUTTON VISUALS ─────────────────────────────────────────
 const joyEl=()=>document.getElementById('joyctrl');
