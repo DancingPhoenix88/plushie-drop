@@ -306,18 +306,18 @@ img.evo-locked{filter:brightness(0);opacity:0.45;}
             </div>
           </div>
           <div id="fz-ctrl">
-            <div class="cb-item" onclick="document.getElementById('gyro-cb').click()">
+            <label class="cb-item">
               <input type="checkbox" class="sprite-cb" id="gyro-cb" onchange="toggleGyro()">
               <span class="fz-label">GYRO</span>
-            </div>
-            <div class="cb-item" onclick="document.getElementById('bgm-cb').click()">
+            </label>
+            <label class="cb-item">
               <input type="checkbox" class="sprite-cb" id="bgm-cb" onchange="toggleBGM(this.checked)">
               <span class="fz-label">BGM</span>
-            </div>
-            <div class="cb-item" onclick="document.getElementById('ap').click()">
+            </label>
+            <label class="cb-item">
               <input type="checkbox" class="sprite-cb" id="ap" onchange="syncAp(this.checked)">
               <span class="fz-label">AUTO</span>
-            </div>
+            </label>
           </div>
         </div>
       </div>
@@ -341,18 +341,18 @@ img.evo-locked{filter:brightness(0);opacity:0.45;}
     <hr class="sep">
     <!-- only shown when floor-zone is hidden (height < 879px) -->
     <div id="ls-cbs">
-      <div class="cb-item" onclick="document.getElementById('gyro-ls').click()">
+      <label class="cb-item">
         <input type="checkbox" class="sprite-cb" id="gyro-ls" onchange="toggleGyro()">
         <span class="fz-label">GYRO</span>
-      </div>
-      <div class="cb-item" onclick="document.getElementById('bgm-ls').click()">
+      </label>
+      <label class="cb-item">
         <input type="checkbox" class="sprite-cb" id="bgm-ls" onchange="toggleBGM(this.checked)">
         <span class="fz-label">BGM</span>
-      </div>
-      <div class="cb-item" onclick="document.getElementById('ap-ls').click()">
+      </label>
+      <label class="cb-item">
         <input type="checkbox" class="sprite-cb" id="ap-ls" onchange="syncAp(this.checked)">
         <span class="fz-label">AUTO</span>
-      </div>
+      </label>
     </div>
   </div>
 
