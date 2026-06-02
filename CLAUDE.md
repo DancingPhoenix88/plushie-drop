@@ -15,17 +15,20 @@ Live at: https://DancingPhoenix88.github.io/plushie-drop/
 ## File structure
 
 ```
-index.html       — everything: CSS + HTML + JS
-sw.js            — service worker (cache name = plushie-vN, must bump on every release)
-manifest.json    — PWA icons and display config
-CHANGES.md       — version changelog
-README.md        — player-facing docs
-Sprites/         — all sprite PNGs
-  level_1.png … level_11.png
-  app_icon.png   — PWA/homescreen icon (must exist; currently referenced but not yet created)
-  checkbox_bg.png, checkbox_tick.png
-  joystick_released.png, joystick_tilted.png, button_released.png
-  claw_machine_*.png — UI chrome sprites
+index.html          — everything: CSS + HTML + JS
+sw.js               — service worker (cache name = plushie-vN, must bump on every release)
+manifest.json       — PWA icons and display config
+CHANGES.md          — version changelog
+README.md           — player-facing docs
+Sprites/
+  characters/       — level_0.png … level_11.png (plushie sprites)
+  claw/             — claw_back.png, claw_front.png, claw_open.png
+  machine/          — claw_machine_*.png (UI chrome: top/middle/bottom tiles, floor, covers, score bg)
+  ui/               — checkbox_bg.png, checkbox_tick.png, joystick_*.png, button_*.png
+  icons/            — app_icon.png (PWA/homescreen icon; must exist — currently referenced but not yet created)
+dev/                — dev/experimental tools, not deployed
+  tool_9slice.html  — 9-slice border-image preview tool
+  index-pixijs.html — PixiJS experiment (not production)
 ```
 
 ---
