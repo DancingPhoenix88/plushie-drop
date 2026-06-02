@@ -11,16 +11,15 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="BB Tower">
+<link rel="icon" href="Sprites/icons/app_icon.png">
 <link rel="apple-touch-icon" href="Sprites/icons/app_icon.png">
+<!-- PixiJS v8 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/8.9.1/pixi.min.js"></script>
 <style>
 :root{color-scheme:light}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;}
 html,body{width:100vw;height:100dvh;overflow:hidden;position:relative;font-family:'Segoe UI',system-ui,sans-serif;
   background-color:#A47966;}
-/* ── REFERENCE: 720×1280 group, zones: game=720×771, floor=720×315, evo=720×194 ──
-   Border-image-width uses % of element dimensions (height for top/bottom, width for sides).
-   Absolute % insets on .cw and #fz-inner reference their containing block's width/height. ── */
-/* ── GAME ROOT ── */
 #game-root{
   position:absolute;top:50%;left:50%;
   transform:translate(-50%,-50%);transform-origin:center center;
@@ -28,19 +27,16 @@ html,body{width:100vw;height:100dvh;overflow:hidden;position:relative;font-famil
 }
 .cw{position:relative;}
 #gc{display:block;cursor:crosshair;touch-action:none;}
-/* ── GAME OVER OVERLAY ── */
 #ov{display:none;position:fixed;inset:0;z-index:9999;background:rgba(253,246,240,.93);flex-direction:column;align-items:center;justify-content:center;gap:8px;}
 #ov.show{display:flex;}
 #ov h2{font-size:20px;font-weight:500;color:#5a3820;}
 #ov .sub{font-size:12px;color:#a09078;}
 #ov .fs{font-size:28px;font-weight:500;color:#c05020;}
 #ov button{margin-top:4px;padding:10px 26px;background:#c05020;color:#fff;border:none;border-radius:8px;font-size:13px;font-family:inherit;cursor:pointer;}
-/* fullscreen prompt */
 #fs-prompt{display:none;position:fixed;inset:0;z-index:10000;background:rgba(253,246,240,.96);align-items:center;justify-content:center;}
 #fs-prompt.show{display:flex;}
 #fs-prompt-box{text-align:center;padding:28px 32px;background:#fff8f2;border:1px solid #dfc8b0;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,.10);}
 #fs-prompt button{padding:10px 26px;background:#c05020;color:#fff;border:none;border-radius:8px;font-size:13px;font-family:inherit;cursor:pointer;}
-/* ── KEYBOARD HELP ── */
 #help-popup{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:999;align-items:center;justify-content:center;}
 #help-popup.show{display:flex;}
 #help-box{background:#fdf6f0;border-radius:14px;padding:20px 24px;max-width:340px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.3);}
@@ -50,28 +46,19 @@ html,body{width:100vw;height:100dvh;overflow:hidden;position:relative;font-famil
 #help-box td:first-child{font-family:monospace;background:#f0e4d4;border-radius:4px;text-align:center;width:80px;font-weight:600;color:#c05020;}
 #help-box tr+tr td{border-top:.5px solid #e8d8c8;}
 #help-box .close-btn{display:block;margin:14px auto 0;padding:7px 22px;background:#c05020;color:#fff;border:none;border-radius:8px;font-size:12px;font-family:inherit;cursor:pointer;}
-/* ── SHARED UTIL ── */
 .lbl{font-size:10px;color:#b09878;text-align:center;letter-spacing:.06em;text-transform:uppercase;}
 .val{font-size:21px;font-weight:500;color:#5a3820;text-align:center;margin:2px 0 8px;}
 .sep{border:none;border-top:.5px solid #dfc8b0;margin:7px 0;}
-/* ── BLUE: top tile (portrait only) ── */
 #top-tile{
   width:calc(460px + var(--bms)*2);
   border-width:24px;border-style:solid;border-color:transparent;
   border-image:url('Sprites/machine/claw_machine_top_tile.png') 48 fill / 24px round;
   display:flex;align-items:center;justify-content:center;
 }
-#top-tile h1{
-  font-size:14px;font-weight:700;color:#5a3820;
-  letter-spacing:.1em;text-transform:uppercase;position:relative;z-index:1;
-}
-/* ── MAIN CONTENT: 9:16 sizing wrapper for game-frame ── */
+#top-tile h1{font-size:14px;font-weight:700;color:#5a3820;letter-spacing:.1em;text-transform:uppercase;position:relative;z-index:1;}
 #main-content{flex-shrink:0;}
-
-/* ── GAME FRAME: full 9:16 zone — all content inside ── */
 #game-frame{
-  width:100%;height:100%;
-  position:relative;overflow:hidden;
+  width:100%;height:100%;position:relative;overflow:hidden;
   border-style:solid;border-color:transparent;border-width:0;
   border-image:url('Sprites/machine/claw_machine_middle_tile.png') 70 116 240 116 fill / 6.08% 16.11% 22.57% 16.11% round;
 }
@@ -79,16 +66,13 @@ html,body{width:100vw;height:100dvh;overflow:hidden;position:relative;font-famil
 /* .cw: canvas area — 632×1049 at 720×1280 reference */
 #game-frame .cw{
   position:absolute;
-  top:calc(11/1280*100%); /* proportional to ref 720×1280; keeps cover-patch alignment consistent across device sizes */
+  top:calc(11/1280*100%);
   left:calc(45/720*100%);
   width:calc(632/720*100%);
   height:calc(1049/1280*100%);
   overflow:hidden;
 }
 #game-frame canvas{display:block;width:100%;height:auto;aspect-ratio:632/1049;}
-
-/* cover patches + trap door drawn on canvas — no CSS proxies */
-/* floor-zone — left/right aligned with canvas (45/720 and 43/720) */
 #floor-zone{
   position:absolute;
   left:calc(20/720*100%);right:calc(20/720*100%);
@@ -96,203 +80,59 @@ html,body{width:100vw;height:100dvh;overflow:hidden;position:relative;font-famil
   height:calc(112/1280*100%);
   border-style:solid;border-color:transparent;border-width:0;
 }
-/* ── FLOOR ZONE: 3 independent absolute panels ── */
 #fz-inner{position:absolute;inset:0;overflow:hidden;margin:0 10px;}
-
-/* LEFT: score + next */
 #fz-scorenext{
   position:absolute;left:0;top:10%;bottom:0;
-  height:70%;
-  aspect-ratio:174/60;
+  height:70%;aspect-ratio:174/60;
   background:url('Sprites/machine/claw_machine_score_next_bg.png') no-repeat center/100% 100%;
-  display:flex;gap:0;padding:0;
-  box-sizing:border-box;
+  display:flex;gap:0;padding:0;box-sizing:border-box;
 }
-#fz-score,#fz-next{
-  display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
-  flex:1;min-width:0;height:90%;
-}
+#fz-score,#fz-next{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;flex:1;min-width:0;height:90%;}
 #fz-next{padding-right:4%;}
-.fz-label{
-  font-size:clamp(6px,12%,9px);color:#8a6848;text-transform:uppercase;
-  letter-spacing:.08em;text-align:center;line-height:1.2;
-  font-family:'Segoe UI',system-ui,sans-serif;
-  margin:12% 0 0 11%;
-}
+.fz-label{font-size:clamp(6px,12%,9px);color:#8a6848;text-transform:uppercase;letter-spacing:.08em;text-align:center;line-height:1.2;font-family:'Segoe UI',system-ui,sans-serif;margin:12% 0 0 11%;}
 #fz-next-label{width:70%;margin-left:32%;}
 #nc{display:block;width:60%;height:auto;aspect-ratio:1;margin-top:-8%;margin-left:30%;}
-#sc-p{
-  font-family:'Righteous','Share Tech Mono','Courier New',monospace;
-  font-weight:400;color:#3a2010;
-  white-space:nowrap;overflow:hidden;
-  width:100%;text-align:center;
-  display:flex;align-items:center;justify-content:center;
-  font-size:30px;flex:1; /* initial value; overridden by fitScoreFont() */
-}
-
-/* CENTER: joystick — sized as % of floor-zone height (ref: 52px joy / 112px floor ≈ 46%, 25px btn ≈ 22%) */
-#joyctrl{
-  position:absolute;left:50%;top:0;bottom:0;
-  transform:translateX(-50%);
-  height:100%;width:auto;
-  display:none; /* shown via JS */
-  align-items:flex-end;justify-content:center;gap:8%;
-  pointer-events:none;
-  padding-bottom:5%;box-sizing:border-box;
-}
+#sc-p{font-family:'Righteous','Share Tech Mono','Courier New',monospace;font-weight:400;color:#3a2010;white-space:nowrap;overflow:hidden;width:100%;text-align:center;display:flex;align-items:center;justify-content:center;font-size:30px;flex:1;}
+#joyctrl{position:absolute;left:50%;top:0;bottom:0;transform:translateX(-50%);height:100%;width:auto;display:none;align-items:flex-end;justify-content:center;gap:8%;pointer-events:none;padding-bottom:5%;box-sizing:border-box;}
 #joy-img{height:92%;width:auto;display:block;}
 #drop-btn{height:44%;width:auto;display:block;margin-left:-14%;}
 #joy-img.flip{transform:scaleX(-1);}
-
-/* RIGHT: checkboxes — anchored right, height=100% */
-#fz-ctrl{
-  position:absolute;right:0;top:5%;height:80%;
-  display:flex;align-items:stretch; /* stretch so cb-items fill height */
-  justify-content:flex-end;
-  gap:4px;padding:0;box-sizing:border-box;
-}
+#fz-ctrl{position:absolute;right:0;top:5%;height:80%;display:flex;align-items:stretch;justify-content:flex-end;gap:4px;padding:0;box-sizing:border-box;}
 #fz-ctrl button{background:none;border:.5px solid #dfc8b0;border-radius:8px;font-size:20px;padding:2px 6px;cursor:pointer;line-height:1;}
 #fz-ctrl button.active,#gyro-ls.active{background:#fde8d8;border-color:#c05020;}
-/* cb-item fills #fz-ctrl height; input is a square at 72% of that height */
 .cb-item{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:0;cursor:pointer;height:100%;}
 .cb-item .fz-label{font-size:clamp(5px,1.8vw,8px);margin-top:1px;position:relative;z-index:1;}
-input.sprite-cb{
-  -webkit-appearance:none;appearance:none;
-  height:72%;width:auto;aspect-ratio:1;flex-shrink:0;margin:0;cursor:pointer;
-  background:url('Sprites/ui/checkbox_bg.png') no-repeat center/contain;
-}
+input.sprite-cb{-webkit-appearance:none;appearance:none;height:72%;width:auto;aspect-ratio:1;flex-shrink:0;margin:0;cursor:pointer;background:url('Sprites/ui/checkbox_bg.png') no-repeat center/contain;}
 input.sprite-cb:checked{background-image:url('Sprites/ui/checkbox_tick.png');}
-/* AUTO fan-dial */
-.ap-dial{
-  height:72%;width:auto;aspect-ratio:1;flex-shrink:0;margin:0;cursor:pointer;
-  background:url('Sprites/ui/checkbox_bg.png') no-repeat center/contain;
-  display:flex;align-items:center;justify-content:center;
-  user-select:none;
-}
-.ap-dial .ap-seg{
-  display:none;
-  font-family:'Righteous','Share Tech Mono','Courier New',monospace;
-  font-size:20px;font-weight:400;line-height:1;
-  transform:translateX(-2px) skew(6deg, 0deg);
-}
-.ap-dial .ap-seg.active{
-  display:block;
-  color:#8b0000;
-  text-shadow:0 0 6px #ff2020,0 0 14px #cc0000;
-}
-.ap-dial .ap-seg[data-spd="0"].active{
-  display:block;
-  color:transparent;
-  text-shadow:none;
-}
-/* gyro "true down" arrow — shown in joyctrl center when joystick hidden and gyro ON */
-#gyro-arrow{
-  display:none;
-  flex-direction:column;align-items:center;justify-content:center;
-  height:80%;width:auto;aspect-ratio:1;
-  font-size:clamp(28px,8vw,52px);
-  line-height:1;
-  filter:drop-shadow(0 0 6px #f9a04088);
-  transition:transform 0.1s linear;
-  pointer-events:none;
-  color:#f9a040;
-}
-#gyro-arrow.visible{ display:flex; }
-/* debug gyro-drag HUD */
-#gyro-drag-hud{
-  display:none;position:fixed;bottom:12px;left:50%;transform:translateX(-50%);
-  background:rgba(0,0,0,.72);color:#f9a040;
-  font-family:'Share Tech Mono','Courier New',monospace;font-size:12px;
-  padding:5px 14px;border-radius:20px;pointer-events:none;z-index:9999;
-  white-space:nowrap;letter-spacing:.04em;
-}
-#gyro-drag-hud.active{ display:block; }
-/* hide GYRO controls on desktop (pointer:fine) — gyro not useful without touch/tilt */
-/* exception: debug-mode keeps them visible for keyboard simulation testing */
-@media (pointer: fine){
-  body:not(.debug-mode) #fz-ctrl label:has(#gyro-cb),
-  body:not(.debug-mode) #ls-cbs label:has(#gyro-ls){ display:none !important; }
-}
-/* joystick visibility controlled by JS (showJoy) only — no CSS breakpoint */
-/* landscape/wide (≥4:5) AND short (<879px): expand canvas; floor-zone stays visible so score is always accessible */
-/* threshold raised from 9/16→4/5 to avoid iPhone 13 portrait w/ collapsed Safari chrome (~0.587) */
-@media (min-aspect-ratio: 4/5) and (max-height: 878px){
-  #ev-s{ display:none !important; }
-  #game-frame .cw{ bottom:0 !important; height:auto !important; }
-}
-/* sidebar checkboxes only visible when floor-zone would otherwise be hidden — keep for compat */
-#ls-cbs{ display:none; }
-@media (min-aspect-ratio: 4/5) and (max-height: 878px){ #ls-cbs{ display:flex;flex-wrap:wrap;justify-content:center;gap:0;padding-left:18px; } }
-/* (old standalone joyctrl removed — now lives inside #fz-inner) */
-
-/* ev-s — same alignment as canvas/floor-zone */
-#ev-s{
-  position:absolute;
-  left:calc(45/720*100%);right:calc(43/720*100%);
-  bottom:0;
-  height:calc(81/1280*100%);
-  display:grid;grid-template-columns:repeat(11,1fr);gap:2px;
-  box-sizing:border-box;padding-top:8px;
-}
-#ev-s .en{
-  font-size:6px;color:#8a7060;text-align:center;
-  background-color:#fcf1e0;
-  border:1px solid #5b231d;
-  display:block;width:39px;padding:2px 0;
-  border-radius:8px;margin-top:-5px;
-}
+.ap-dial{height:72%;width:auto;aspect-ratio:1;flex-shrink:0;margin:0;cursor:pointer;background:url('Sprites/ui/checkbox_bg.png') no-repeat center/contain;display:flex;align-items:center;justify-content:center;user-select:none;}
+.ap-dial .ap-seg{display:none;font-family:'Righteous','Share Tech Mono','Courier New',monospace;font-size:20px;font-weight:400;line-height:1;transform:translateX(-2px) skew(6deg, 0deg);}
+.ap-dial .ap-seg.active{display:block;color:#8b0000;text-shadow:0 0 6px #ff2020,0 0 14px #cc0000;}
+.ap-dial .ap-seg[data-spd="0"].active{display:block;color:transparent;text-shadow:none;}
+#gyro-arrow{display:none;flex-direction:column;align-items:center;justify-content:center;height:80%;width:auto;aspect-ratio:1;font-size:clamp(28px,8vw,52px);line-height:1;filter:drop-shadow(0 0 6px #f9a04088);transition:transform 0.1s linear;pointer-events:none;color:#f9a040;}
+#gyro-arrow.visible{display:flex;}
+#gyro-drag-hud{display:none;position:fixed;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.72);color:#f9a040;font-family:'Share Tech Mono','Courier New',monospace;font-size:12px;padding:5px 14px;border-radius:20px;pointer-events:none;z-index:9999;white-space:nowrap;letter-spacing:.04em;}
+#gyro-drag-hud.active{display:block;}
+@media (pointer:fine){body:not(.debug-mode) #fz-ctrl label:has(#gyro-cb),body:not(.debug-mode) #ls-cbs label:has(#gyro-ls){display:none !important;}}
+@media (min-aspect-ratio: 4/5) and (max-height: 878px){#ev-s{display:none !important;}#game-frame .cw{bottom:0 !important;height:auto !important;}}
+#ls-cbs{display:none;}
+@media (min-aspect-ratio: 4/5) and (max-height: 878px){#ls-cbs{display:flex;flex-wrap:wrap;justify-content:center;gap:0;padding-left:18px;}}
+#ev-s{position:absolute;left:calc(45/720*100%);right:calc(43/720*100%);bottom:0;height:calc(81/1280*100%);display:grid;grid-template-columns:repeat(11,1fr);gap:2px;box-sizing:border-box;padding-top:8px;}
+#ev-s .en{font-size:6px;color:#8a7060;text-align:center;background-color:#fcf1e0;border:1px solid #5b231d;display:block;width:39px;padding:2px 0;border-radius:8px;margin-top:-5px;}
 #ev-s .ec{display:flex;flex-direction:column;align-items:center;position:relative;}
-/* blob shadow: absolute so it never affects flex layout */
-.ec-shadow{
-  position:absolute;
-  bottom:calc(1em + 3px); /* sit above label, moved up */
-  left:50%;transform:translateX(-50%);
-  width:65%;height:3px;
-  background:rgba(0,0,0,0.55);border-radius:50%;filter:blur(2.5px);
-  pointer-events:none;
-}
+.ec-shadow{position:absolute;bottom:calc(1em + 3px);left:50%;transform:translateX(-50%);width:65%;height:3px;background:rgba(0,0,0,0.55);border-radius:50%;filter:blur(2.5px);pointer-events:none;}
 #ev-s img{width:100%;aspect-ratio:1;object-fit:contain;}
-#ev-s .en{font-size:6px;color:#8a7060;text-align:center;}
-/* locked evo icons — silhouette until first merge */
 img.evo-locked{filter:brightness(0);opacity:0.45;}
-
-/* ── BLUE top / CYAN bottom tiles ── */
 #top-tile{display:flex;align-items:center;justify-content:center;width:100%;}
 #bottom-tile{position:relative;overflow:hidden;width:100%;}
-#bottom-tile::before{
-  content:'';position:absolute;top:0;left:0;right:0;
-  /* meta: top=4, bottom=50, sides=54 */
-  /* top border-image-width: linear formula from 2 viewport measurements
-     top = 431px - 64.3vw  (derived from W=495→113px, W=523→95px) */
-  height:max(100%,54px);
-  border-width:4px 54px 50px 54px;border-style:solid;border-color:transparent;
-  border-image:url('Sprites/machine/claw_machine_bottom_tile.png')
-    4 54 50 54 fill / clamp(0px, calc(431px - 64.3vw), 200px) 54px 50px 54px round;
-}
-
-/* ── LANDSCAPE SIDEBAR ── */
-#evo-panel{
-  width:118px;background:#fdf2ea;border:.5px solid #dfc8b0;
-  border-radius:14px;padding:12px 10px;flex-shrink:0;overflow-y:auto;
-}
+#bottom-tile::before{content:'';position:absolute;top:0;left:0;right:0;height:max(100%,54px);border-width:4px 54px 50px 54px;border-style:solid;border-color:transparent;border-image:url('Sprites/machine/claw_machine_bottom_tile.png') 4 54 50 54 fill / clamp(0px, calc(431px - 64.3vw), 200px) 54px 50px 54px round;}
+#evo-panel{width:118px;background:#fdf2ea;border:.5px solid #dfc8b0;border-radius:14px;padding:12px 10px;flex-shrink:0;overflow-y:auto;}
 .ar{display:flex;align-items:center;gap:6px;padding:4px 0;cursor:pointer;}
 .ar input{width:14px;height:14px;cursor:pointer;accent-color:#c05020;}
 .ar span{font-size:10px;color:#b09878;text-transform:uppercase;letter-spacing:.05em;}
-
-
-/* ── PORTRAIT: viewport narrower than 2:3 ── */
 @media (max-aspect-ratio: 2/3){
-  /* lock to viewport — no scroll; content anchors to bottom, clips at top if too tall */
   html,body{height:100dvh;overflow:hidden;}
   body{display:flex;flex-direction:column;align-items:center;}
-  #game-root{
-    position:relative !important;top:auto !important;left:auto !important;
-    transform:none !important;
-    width:100%;height:100dvh;
-    display:flex;flex-direction:column;align-items:center;
-    justify-content:flex-end; /* stick to bottom */
-    overflow:hidden;
-  }
+  #game-root{position:relative !important;top:auto !important;left:auto !important;transform:none !important;width:100%;height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;overflow:hidden;}
   #ev-s .en{display:none;}
   #top-tile{flex:0 0 auto;width:100%;}
   #main-content{width:100%;aspect-ratio:9/16;flex-shrink:0;}
@@ -300,29 +140,17 @@ img.evo-locked{filter:brightness(0);opacity:0.45;}
   #evo-panel{display:none;}
   #ev-s{display:grid;}
 }
-
-/* ── PORTRAIT MID-RANGE [0.527, 0.667]: shift top-bar + main-content down by evo zone height ──
-   evo height = 81/1280 × 16/9 × 100vw = 11.25vw (vw keeps the amount consistent for both elements) */
 @media (min-aspect-ratio: 6/10) and (max-aspect-ratio: 2/3){
-  #top-tile   { transform:translateY(11.25vw); }
-  #main-content{ transform:translateY(11.25vw); }
+  #top-tile{transform:translateY(11.25vw);}
+  #main-content{transform:translateY(11.25vw);}
 }
-
-/* ── WIDE: viewport fatter than 9:16 — row layout, no evo zone, sidebar shows ── */
 @media (min-aspect-ratio: 2/3){
   body{display:flex;}
-  #game-root{
-    position:relative !important;top:auto !important;left:auto !important;
-    transform:none !important;
-    width:100vw;height:100dvh;overflow:hidden;
-    display:flex;flex-direction:row;align-items:center;justify-content:center;gap:10px;
-    padding:0 10px;box-sizing:border-box;
-  }
+  #game-root{position:relative !important;top:auto !important;left:auto !important;transform:none !important;width:100vw;height:100dvh;overflow:hidden;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:10px;padding:0 10px;box-sizing:border-box;}
   #top-tile,#bottom-tile{display:none;}
   #main-content{height:100dvh;aspect-ratio:9/16;flex-shrink:0;}
   #evo-panel{display:none;}
 }
-/* sidebar only when ratio > 12:16 */
 @media (min-aspect-ratio: 12/16){
   #evo-panel{display:flex;flex-direction:column;align-self:center;height:auto;max-height:100dvh;overflow-y:auto;}
   #ev-s .en{display:none;}
@@ -330,74 +158,35 @@ img.evo-locked{filter:brightness(0);opacity:0.45;}
 </style>
 </head>
 <body>
-
 <div id="game-root">
-
-  <!-- BLUE: "BB Tower" header (portrait only) -->
   <div id="top-tile"><h1>BB Tower <span id="level-label" style="font-size:11px;opacity:0.7;letter-spacing:.06em;">· LV 1</span></h1></div>
-
-  <!-- MAIN CONTENT: 9:16 block — all zones inside game-frame -->
   <div id="main-content">
     <div id="game-frame">
-
-      <!-- cover patches + trap door drawn on canvas -->
-
-      <!-- Canvas — fills .cw area -->
-      <div class="cw">
-        <canvas id="gc" width="870" height="1046"></canvas>
-      </div>
-
-      <!-- Floor zone: score/next/controls — inside game-frame bottom area -->
+      <div class="cw"><canvas id="gc" width="870" height="1046"></canvas></div>
       <div id="floor-zone">
         <div id="fz-inner">
-          <!-- LEFT: score + next -->
           <div id="fz-scorenext">
-            <div id="fz-score">
-              <span class="fz-label">SCORE</span>
-              <span id="sc-p">0</span>
-            </div>
-            <div id="fz-next">
-              <span class="fz-label" id="fz-next-label">NEXT</span>
-              <img id="nc" src="" alt="next">
-            </div>
+            <div id="fz-score"><span class="fz-label">SCORE</span><span id="sc-p">0</span></div>
+            <div id="fz-next"><span class="fz-label" id="fz-next-label">NEXT</span><img id="nc" src="" alt="next"></div>
           </div>
-          <!-- CENTER: joystick + drop button -->
           <div id="joyctrl">
-            <img id="joy-img"  src="Sprites/ui/joystick_released.png" alt="">
-            <img id="drop-btn" src="Sprites/ui/button_released.png"   alt="">
+            <img id="joy-img" src="Sprites/ui/joystick_released.png" alt="">
+            <img id="drop-btn" src="Sprites/ui/button_released.png" alt="">
             <div id="gyro-arrow">▼</div>
           </div>
-          <!-- RIGHT: checkboxes -->
           <div id="fz-ctrl">
-            <label class="cb-item">
-              <input type="checkbox" class="sprite-cb" id="gyro-cb" onchange="toggleGyro();saveCbPrefs()">
-              <span class="fz-label">GYRO</span>
-            </label>
-            <label class="cb-item">
-              <input type="checkbox" class="sprite-cb" id="bgm-cb" onchange="toggleBGM(this.checked);saveCbPrefs()">
-              <span class="fz-label">BGM</span>
-            </label>
+            <label class="cb-item"><input type="checkbox" class="sprite-cb" id="gyro-cb" onchange="toggleGyro();saveCbPrefs()"><span class="fz-label">GYRO</span></label>
+            <label class="cb-item"><input type="checkbox" class="sprite-cb" id="bgm-cb" onchange="toggleBGM(this.checked);saveCbPrefs()"><span class="fz-label">BGM</span></label>
             <div class="cb-item" onclick="cycleAp()" id="ap-wrap">
-              <div class="ap-dial" id="ap">
-                <span class="ap-seg" data-spd="0">0</span>
-                <span class="ap-seg" data-spd="1">1</span>
-                <span class="ap-seg" data-spd="2">2</span>
-                <span class="ap-seg" data-spd="3">3</span>
-              </div>
+              <div class="ap-dial" id="ap"><span class="ap-seg" data-spd="0">0</span><span class="ap-seg" data-spd="1">1</span><span class="ap-seg" data-spd="2">2</span><span class="ap-seg" data-spd="3">3</span></div>
               <span class="fz-label">AUTO</span>
             </div>
           </div>
         </div>
       </div>
-
-      <!-- Evolution chart — inside game-frame bottom area -->
       <div id="ev-s"></div>
-
-
-    </div><!-- #game-frame -->
-  </div><!-- #main-content -->
-
-  <!-- LANDSCAPE RIGHT SIDEBAR -->
+    </div>
+  </div>
   <div id="evo-panel">
     <div class="lbl">Score</div><div class="val" id="sc">0</div>
     <hr class="sep">
@@ -410,52 +199,26 @@ img.evo-locked{filter:brightness(0);opacity:0.45;}
     <div class="lbl" style="margin-bottom:6px">Evolution</div>
     <div id="ev"></div>
     <hr class="sep">
-    <!-- only shown when floor-zone is hidden (height < 879px) -->
     <div id="ls-cbs">
-      <label class="cb-item">
-        <input type="checkbox" class="sprite-cb" id="gyro-ls" onchange="toggleGyro()">
-        <span class="fz-label">GYRO</span>
-      </label>
-      <label class="cb-item">
-        <input type="checkbox" class="sprite-cb" id="bgm-ls" onchange="toggleBGM(this.checked)">
-        <span class="fz-label">BGM</span>
-      </label>
+      <label class="cb-item"><input type="checkbox" class="sprite-cb" id="gyro-ls" onchange="toggleGyro()"><span class="fz-label">GYRO</span></label>
+      <label class="cb-item"><input type="checkbox" class="sprite-cb" id="bgm-ls" onchange="toggleBGM(this.checked)"><span class="fz-label">BGM</span></label>
       <div class="cb-item" onclick="cycleAp()" id="ap-ls-wrap">
-        <div class="ap-dial" id="ap-ls">
-          <span class="ap-seg" data-spd="0">0</span>
-          <span class="ap-seg" data-spd="1">1</span>
-          <span class="ap-seg" data-spd="2">2</span>
-          <span class="ap-seg" data-spd="3">3</span>
-        </div>
+        <div class="ap-dial" id="ap-ls"><span class="ap-seg" data-spd="0">0</span><span class="ap-seg" data-spd="1">1</span><span class="ap-seg" data-spd="2">2</span><span class="ap-seg" data-spd="3">3</span></div>
         <span class="fz-label">AUTO</span>
       </div>
     </div>
   </div>
-
-  <!-- CYAN: decorative filler (portrait only, no content) -->
   <div id="bottom-tile"></div>
-
-</div><!-- #game-root -->
-
-<!-- FULLSCREEN PROMPT (mobile only, shown on load) -->
+</div>
 <div id="fs-prompt">
   <div id="fs-prompt-box">
     <div style="font-size:28px;margin-bottom:4px">⛶</div>
     <div style="font-size:14px;font-weight:500;color:#5a3820;margin-bottom:6px">Full Screen</div>
-    <div id="fs-prompt-body"></div>
-    <div id="fs-prompt-action"></div>
+    <div id="fs-prompt-body"></div><div id="fs-prompt-action"></div>
     <div style="margin-top:10px"><a onclick="dismissFsPrompt()" style="font-size:11px;color:#a09078;cursor:pointer;text-decoration:underline">Skip</a></div>
   </div>
 </div>
-
-<!-- GAME OVER: fullscreen overlay -->
-<div id="ov">
-  <h2>Game Over!</h2>
-  <div class="sub">final score</div>
-  <div class="fs" id="fs">0</div>
-  <button onclick="restart()">Play Again ↺</button>
-</div>
-
+<div id="ov"><h2>Game Over!</h2><div class="sub">final score</div><div class="fs" id="fs">0</div><button onclick="restart()">Play Again ↺</button></div>
 <div id="help-popup">
   <div id="help-box">
     <!-- tab buttons — gamepad tab only shown when gamepad connected -->
@@ -480,11 +243,11 @@ img.evo-locked{filter:brightness(0);opacity:0.45;}
       <tr><td>H</td><td>Toggle solid n-gon shapes</td></tr>
       <tr><td>S</td><td>Toggle spawn rate display</td></tr>
       <tr><td>2–9, 0, 1</td><td>Spawn rank 2–11</td></tr>
-      <tr><td>Q / E</td><td>Gyro tilt left / right (−5° / +5°)</td></tr>
-      <tr><td>R</td><td>Reset gyro tilt to 0°</td></tr>
-      <tr><td>G + mouse</td><td>Hold G, move mouse ←→ to tilt</td></tr>
-      <tr><td>F + mouse</td><td>Hold F, flick mouse fast to shake</td></tr>
+      <tr><td>G + mouse</td><td>Hold G, drag mouse ←→ to simulate tilt</td></tr>
+      <tr><td>F + mouse</td><td>Hold F, flick mouse fast to simulate shake</td></tr>
       <tr><td>M</td><td>Toggle merge on/off <input type="checkbox" id="dbg-nomerge-cb" onchange="noMerge=this.checked" style="margin-left:4px;cursor:pointer;vertical-align:middle;"></td></tr>
+      <tr><td>P</td><td>Pause simulation</td></tr>
+      <tr><td>.</td><td>Step one frame (while paused)</td></tr>
       </tbody>
     </table>
     <!-- gamepad tab -->
@@ -500,7 +263,6 @@ img.evo-locked{filter:brightness(0);opacity:0.45;}
     <button class="close-btn" onclick="toggleHelp(false)">Close</button>
   </div>
 </div>
-
 <script>
 'use strict';
 const IS_DEBUG = false; // set to false on release branch
@@ -510,1278 +272,615 @@ if(!IS_DEBUG){
 } else {
   document.body.classList.add('debug-mode');
 }
-
-// ── DATA ──────────────────────────────────────────────────────────────
-// stroke = same hue but darker
-// r values: linear 18→89 so lv11 diameter = 40% of tank width (444px)
-// scale: linear 0.277 → 1.108 (lv1→lv11 = 400% size). r = imgR × scale
-// lv1-9 radii interpolated linearly from 30 (Mây) to 116 (Bunny), step=10.75; lv10-11 unchanged
-// lv5/6/7/11 physR keeps original ratio: 0.907 / 0.951 / 0.956 / 0.949
 const PD=[null,
-  {name:'Mây',       r:30,  body:'#8ee8ff', stroke:'#38a8d0'},
-  {name:'Bo',        r:41,  body:'#4a8c40', stroke:'#245820'},
-  {name:'Vincam',    r:52,  body:'#f5f5f5', stroke:'#b8b8b8'},
-  {name:'Mini Dora', r:62,  body:'#e83030', stroke:'#980808'},
-  {name:'Baby Bunny',r:73,  physR:66, body:'#fff0f8', stroke:'#d89ab8'},
-  {name:'Poko',      r:84,  physR:80, body:'#c87830', stroke:'#884808'},
-  {name:'Doraemi',   r:95,  physR:91, body:'#f0c820', stroke:'#b08800'},
-  {name:'Doraemon',  r:105, body:'#1090e8', stroke:'#0055b0'},
-  {name:'Bunny',     r:116, body:'#f060a0', stroke:'#a81858'},
-  {name:'Mimi',      r:125, body:'#9848d4', stroke:'#601898'},
-  {name:'Racoon',    r:136, physR:129, body:'#282838', stroke:'#080818'},
+  {name:'Mây',r:30,body:'#8ee8ff',stroke:'#38a8d0'},
+  {name:'Bo',r:41,body:'#4a8c40',stroke:'#245820'},
+  {name:'Vincam',r:52,body:'#f5f5f5',stroke:'#b8b8b8'},
+  {name:'Mini Dora',r:62,body:'#e83030',stroke:'#980808'},
+  {name:'Baby Bunny',r:73,physR:66,body:'#fff0f8',stroke:'#d89ab8'},
+  {name:'Poko',r:84,physR:80,body:'#c87830',stroke:'#884808'},
+  {name:'Doraemi',r:95,physR:91,body:'#f0c820',stroke:'#b08800'},
+  {name:'Doraemon',r:105,body:'#1090e8',stroke:'#0055b0'},
+  {name:'Bunny',r:116,body:'#f060a0',stroke:'#a81858'},
+  {name:'Mimi',r:125,body:'#9848d4',stroke:'#601898'},
+  {name:'Racoon',r:136,physR:129,body:'#282838',stroke:'#080818'},
 ];
 const PTS=[0,1,3,6,10,15,21,28,36,45,55,100];
-
-// ── CONSTANTS ─────────────────────────────────────────────────────────
 const W=632,H=1049,WALL=11,DY=178,DROPY=94;
-const PAD=Math.round(W*0.05); // 5% W left/right padding for claw + play area
-const SOURCE_W  =Math.round(W*0.10); // source zone width (orange, 10% W)
-const REFLECT_W =Math.round(W*0.10); // reflection zone total width (cyan, 10% W)
-const REFLECT_VIS=Math.round(W*0.05);// visible half of reflection zone (5% W on-screen)
-const REFLECT_PAD=0;                 // no top/bottom padding
-// orange zone starts at REFLECT_VIS from edge so it doesn't overlap cyan
-const FS=W/460; // font/size scale factor (~1.36) — multiply all px sizes by this
-const GRAV=0.38, DAMP=0.994, REST=0.35, FRIC=0.84;
-const SUBSTEPS=6, ITERS=4;
-const V_EPS=0.08;   // velocity epsilon — zero out micro-motion
-const AV_MAX=0.12;  // max angular velocity (rad/frame)
-
-// ── STATE ─────────────────────────────────────────────────────────────
-let plushies=[], parts=[], mergeQ=[], popups=[], confetti=[], celebrations=[], sparkles=[];
+const PAD=Math.round(W*0.05);
+const FS=W/460;
+const GRAV=0.38,DAMP=0.994,REST=0.35,FRIC=0.84;
+const SUBSTEPS=6,ITERS=4;
+const V_EPS=0.08,AV_MAX=0.12;
+let plushies=[],parts=[],mergeQ=[],popups=[],confetti=[],celebrations=[],sparkles=[];
 let score=0,best=0,cur=1,nxt=1;
-let mx=W/2, cooling=false, dead=false;
-let tapHint=false; // show "TAP TO DROP" until first drop when auto is off
-let danger={};
-let firstMerged=new Set(); // tracks levels merged for the first time this game
-let gameLevel=1, wipeOutActive=false, scoreMultiplier=1;
-let trapDoorOpen=false;    // true only while plushies should fall through
-let trapDoorScale=0;      // animated toward target (1=visible, 0=hidden)
-const TRAP_ANIM_SPEED=1/(60*0.25); // 0.25s at 60fps
-// trap door size/position read from #trap-door-ref DOM rect at render time
-// Pre-computed points table per rank — rebuilt once on WIPE OUT via rebuildPtsTable()
-const PTS_M=new Array(12); // PTS_M[rank] = PTS[rank] * scoreMultiplier
-function rebuildPtsTable(){ for(let i=1;i<=11;i++) PTS_M[i]=PTS[i]*scoreMultiplier; }
-
+let mx=W/2,cooling=false,dead=false,tapHint=false;
+let danger={},firstMerged=new Set();
+let gameLevel=1,wipeOutActive=false,scoreMultiplier=1;
+let trapDoorOpen=false,trapDoorScale=0,trapDoorDir=0;
+const TRAP_ANIM_SPEED=1/(60*0.25); // 0.25s; scale 0=hidden, 1=fully shown
+const WIPEOUT_DAMP=0.97; // ~85% velocity retained per frame // per-substep extra damping during wipeout (~74% velocity retained per frame)        // extra per-frame damping during wipeout to slow terminal velocity     // gravity multiplier while plushies fall through (1=normal, lower=slower)
+window.TD={x:0,w:W,h:44,bottomY:H,capL:90,capR:90};
+const PTS_M=new Array(12);
+function rebuildPtsTable(){for(let i=1;i<=11;i++)PTS_M[i]=PTS[i]*scoreMultiplier;}
 let showClaw=true;
-function toggleClaw(v){
-  showClaw=v;
-}
-
-// ── CLAW STATE ────────────────────────────────────────────────────────────
-let clawY=DROPY, clawX=W/2, clawDropX=W/2, clawLvl=1;
-let clawState='idle'; // idle | dropping | opening | retracting
-let clawOpenTimer=0;
+function toggleClaw(v){showClaw=v;}
+let clawY=DROPY,clawX=W/2,clawDropX=W/2,clawLvl=1;
+let clawState='idle',clawOpenTimer=0;
 const CLAW_OPEN_FRAMES=18;
-const clawImg={
-  back :new Image(), front:new Image(), open:new Image()
-};
-clawImg.back.src ='Sprites/claw/claw_back.png';
-clawImg.front.src='Sprites/claw/claw_front.png';
-clawImg.open.src ='Sprites/claw/claw_open.png';
-
-// Reflection corner cover sprites
-const coverImg={ top:new Image(), bot:new Image() };
-coverImg.top.src='Sprites/machine/claw_machine_top_left_reflection_cover.png';
-coverImg.bot.src='Sprites/machine/claw_machine_bottom_left_reflection_cover.png';
-// Trap door sprite
-const trapDoorImg=new Image();
-trapDoorImg.src='Sprites/machine/claw_machine_floor_tile.png';
-
 const dpr=window.devicePixelRatio||1;
 
-// Main game canvas
-const cv=document.getElementById('gc'), ctx=cv.getContext('2d');
-cv.width=W*dpr; cv.height=H*dpr;
-// canvas CSS size controlled by .cw inset (width:100%;height:100%) — do not set inline style
-ctx.scale(dpr,dpr);
-ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
+// ── PIXI SETUP (v8 — async init) ──────────────────────────────────────
+const cv=document.getElementById('gc');
+const app=new PIXI.Application();
+// DevTools getter — always returns live stage/renderer even before async init
+Object.defineProperty(window,'__PIXI_DEVTOOLS__',{
+  get:()=>({app,stage:app.stage??undefined,renderer:app.renderer??undefined}),
+  configurable:true
+});
 
-// Reflection buffer — stores last frame's source strips at half resolution.
-// Reading from a separate canvas (not cv itself) eliminates the GPU read-back stall.
-// Updated every 3rd frame (~20fps) since plushies near walls move slowly.
-const REFLECT_SCALE = 0.25; // quarter-res (4× smaller buffer, ~20fps throttle)
-const reflectBuf = document.createElement('canvas');
-reflectBuf.width  = Math.round(SOURCE_W * REFLECT_SCALE * dpr) * 2; // two strips side by side
-reflectBuf.height = Math.round(H * REFLECT_SCALE * dpr);
-const reflectCtx  = reflectBuf.getContext('2d');
-let _reflectFrame = 0; // frame counter for throttle
+// Populated by initPixi() before loop starts
+let stage,layerBg,layerUI,layerClaw,layerPlushie,layerFx;
+let gfxUI,gfxClaw,gfxFx;
+let clawSprBack,clawSprFront,clawHeldSpr,trapDoorSpr;
+let _dangerText,_versionText,_tapText;
+const plushieTextures=new Array(12);
+let _clawTexBack,_clawTexFront,_clawTexOpen;
 
-// ── ADAPTIVE REFLECTION (mobile only) ────────────────────────────────────────
-// Desktop: always on. Mobile: starts OFF, enables if FPS ≥ 55 for 2s,
-// disables permanently if FPS drops below 55 for 2s after enabling.
-// State resets on page reload.
-//   'probing'       — waiting to see if FPS is stable enough to enable
-//   'on'            — reflection enabled; watching for FPS drop
-//   'off_permanent' — disabled for this session; never retry
-let _reflectState = 'probing'; // mobile starts here; desktop never uses this
-let _reflectWindowStart = 0;   // timestamp (ms) when current window began
-const REFLECT_WINDOW_MS  = 2000; // 2s observation window
-const REFLECT_FPS_ON     = 55;   // min FPS to enable
-const REFLECT_FPS_OFF    = 55;   // FPS threshold to disable
-// Rolling FPS: average over last 60 frame deltas
-const _fpsDeltas = new Float32Array(60);
-let _fpsDeltaIdx = 0, _fpsPrev = 0;
-let _reflectEnabled = false; // actual gate used in render/capture
+async function initPixi(){
+  await app.init({
+    canvas:cv, width:W, height:H,
+    backgroundAlpha:0,
+    antialias:!isMobile,      // antialias+transparent canvas breaks on iOS Safari
+    resolution:dpr,
+    autoDensity:true,
+    powerPreference:'high-performance',
+  });
+  app.ticker.stop();
+  stage=app.stage; stage.label='root';
+  // __PIXI_DEVTOOLS__ is a getter defined at module level — no reassignment needed
+  cv.style.width='';cv.style.height=''; // let CSS width:100% win
 
-// Portrait next: img element (no canvas needed)
-const nc=document.getElementById('nc');
+  layerBg=new PIXI.Container();      layerBg.label='layer_bg';
+  layerUI=new PIXI.Container();      layerUI.label='layer_ui';
+  layerClaw=new PIXI.Container();    layerClaw.label='layer_claw';
+  layerPlushie=new PIXI.Container(); layerPlushie.label='layer_plushies'; layerPlushie.sortableChildren=true; layerPlushie.sortableChildren=true;
+  layerFx=new PIXI.Container();      layerFx.label='layer_fx';
+  stage.addChild(layerBg,layerUI,layerClaw,layerPlushie,layerFx);
 
-// Landscape next canvas (98×80)
-const ncls=document.getElementById('nc-ls'), nctxls=ncls.getContext('2d');
-ncls.width=98*dpr; ncls.height=80*dpr;
-ncls.style.width='98px'; ncls.style.height='80px';
-nctxls.scale(dpr,dpr);
-nctxls.imageSmoothingEnabled=true; nctxls.imageSmoothingQuality='high';
+  gfxUI  =new PIXI.Graphics(); gfxUI.label='ui_lines';   layerUI.addChild(gfxUI);
+  gfxClaw=new PIXI.Graphics(); gfxClaw.label='claw_guide';layerClaw.addChild(gfxClaw);
+  gfxFx  =new PIXI.Graphics(); gfxFx.label='fx_shapes';  layerFx.addChild(gfxFx);
 
-// ── PRE-CALCULATED PHYSICS TABLES ─────────────────────────────────────
-// physR per level: [30,41,52,62,66,80,91,105,116,125,129]
-// MASS = physR²  (used for impulse/position correction in collision)
-const MASS=[0,900,1681,2704,3844,4356,6400,8281,11025,13456,15625,16641];
-// INV_MASS = 1/MASS  (avoids division per collision)
-const INV_MASS=[0,...MASS.slice(1).map(m=>1/m)];
-// max merge distance (center-to-center) = 2*physR + 6 (X = lv1 r 30 * 20% = 6)
-// lv1:66  lv2:88  lv3:110  lv4:130  lv5:138  lv6:166  lv7:188  lv8:216  lv9:238  lv10:256  lv11:264
-const MERGE_DIST=[0,66,88,110,130,138,166,188,216,238,256,264];
-// MERGE_DIST² — used directly in distance check to avoid sqrt
-const MERGE_DIST_SQ=MERGE_DIST.map(d=>d*d);
-// DAMP_DT = DAMP^(1/SUBSTEPS) — constant per-substep damping factor, no Math.pow at runtime
-const DAMP_DT=Math.pow(0.994,1/6); // updated if DAMP or SUBSTEPS change
+  clawSprBack =new PIXI.Sprite(PIXI.Texture.EMPTY); clawSprBack.label='claw_back';  clawSprBack.visible=false;
+  clawSprFront=new PIXI.Sprite(PIXI.Texture.EMPTY); clawSprFront.label='claw_front';clawSprFront.visible=false;
+  clawHeldSpr =new PIXI.Sprite(PIXI.Texture.EMPTY); clawHeldSpr.label='claw_held';  clawHeldSpr.anchor.set(0.5,0.5);clawHeldSpr.visible=false;
+  layerClaw.addChild(clawSprBack,clawHeldSpr,clawSprFront);
 
-// ── POLYGON COLLIDERS ─────────────────────────────────────────────────
-// default: lv1=6-gon … lv11=12-gon | [ = -1 side, ] = +1 side | range offset -1…+18
-const NSIDES=[0,8,8,9,10,10,11,11,12,12,13,14];
-let sidesOffset=0;
-const SIDES_MIN=-1, SIDES_MAX=18; // lv1: 5–24, lv11: 11–30
-function getSides(lvl){return Math.max(3,NSIDES[lvl]+sidesOffset);}
+  // NineSliceSprite so the cap corners aren't stretched (capL=capR=90px from TD meta)
+  trapDoorSpr=new PIXI.NineSliceSprite({texture:PIXI.Texture.EMPTY,leftWidth:90,rightWidth:90,topHeight:0,bottomHeight:0});
+  trapDoorSpr.label='trap_door'; trapDoorSpr.visible=false;
+  layerBg.addChild(trapDoorSpr);
 
-function getVerts(p){
-  const n=getSides(p.level),v=[];
-  for(let k=0;k<n;k++){
-    const a=p.angle+2*Math.PI*k/n;
-    v.push([p.x+p.r*Math.cos(a), p.y+p.r*Math.sin(a)]);
-  }
-  return v;
+  _dangerText=new PIXI.Text({text:'DANGER',style:{fontFamily:"'Segoe UI',system-ui,sans-serif",fontSize:Math.round(11*FS),fill:'#D23737'}});
+  _dangerText.label='danger_label';_dangerText.x=W*0.1+5;_dangerText.y=DY-Math.round(14*FS);layerUI.addChild(_dangerText);
+
+  _versionText=new PIXI.Text({text:'v26',style:{fontFamily:"'Segoe UI',system-ui,sans-serif",fontSize:Math.round(9*FS),fill:'#5a3820'}});
+  _versionText.label='version_label';_versionText.anchor.set(1,1);_versionText.x=W-W*0.1-4;_versionText.y=DY-5;_versionText.alpha=0.45;layerUI.addChild(_versionText);
+
+  _tapText=new PIXI.Text({text:'TAP TO DROP',style:{fontFamily:"'Righteous','Segoe UI',system-ui,sans-serif",fontSize:Math.round(36*FS),fontWeight:'400',fill:'#5a3820',stroke:{color:'#5a3820',width:1}}});
+  // Note: dropShadow removed — causes white background on iOS mobile WebGL
+  _tapText.label='tap_hint';_tapText.anchor.set(0.5,0.5);_tapText.x=W/2;_tapText.y=H/2;_tapText.visible=false;layerUI.addChild(_tapText);
 }
 
+function makeShadow(){
+  const F=globalThis.PixiFilters||PIXI?.filters;
+  if(!F?.DropShadowFilter)return null;
+  return new F.DropShadowFilter({offset:{x:2,y:5},blur:4,alpha:0.28,color:0x000000,resolution:dpr});
+}
+function cssHex(css){
+  if(!css)return 0xffffff;
+  if(css.startsWith('#')){const h=css.slice(1);if(h.length===3)return parseInt(h[0]+h[0]+h[1]+h[1]+h[2]+h[2],16);return parseInt(h,16);}
+  return 0xffffff;
+}
+
+const nc=document.getElementById('nc');
+const ncls=document.getElementById('nc-ls'),nctxls=ncls.getContext('2d');
+ncls.width=98*dpr;ncls.height=80*dpr;ncls.style.width='98px';ncls.style.height='80px';
+nctxls.scale(dpr,dpr);nctxls.imageSmoothingEnabled=true;nctxls.imageSmoothingQuality='high';
+
+const MASS=[0,900,1681,2704,3844,4356,6400,8281,11025,13456,15625,16641];
+const INV_MASS=[0,...MASS.slice(1).map(m=>1/m)];
+const MERGE_DIST=[0,66,88,110,130,138,166,188,216,238,256,264];
+const MERGE_DIST_SQ=MERGE_DIST.map(d=>d*d);
+const DAMP_DT=Math.pow(0.994,1/6);
+const NSIDES=[0,8,8,9,10,10,11,11,12,12,13,14];
+let sidesOffset=0;
+const SIDES_MIN=-1,SIDES_MAX=18;
+function getSides(lvl){return Math.max(3,NSIDES[lvl]+sidesOffset);}
+function getVerts(p){const n=getSides(p.level),v=[];for(let k=0;k<n;k++){const a=p.angle+2*Math.PI*k/n;v.push([p.x+p.r*Math.cos(a),p.y+p.r*Math.sin(a)]);}return v;}
 function satTest(av,bv){
-  // SAT: returns {ov,nx,ny} (normal from A toward B) or null if separated
   let minOv=Infinity,bnx=0,bny=0;
-  for(let pass=0;pass<2;pass++){
-    const vs=pass?bv:av, n=vs.length;
-    for(let i=0;i<n;i++){
-      const v0=vs[i],v1=vs[(i+1)%n];
-      const ex=v1[0]-v0[0],ey=v1[1]-v0[1];
-      const len=Math.hypot(ex,ey); if(len<0.0001)continue;
-      const axX=-ey/len,axY=ex/len;
-      let minA=1e9,maxA=-1e9,minB=1e9,maxB=-1e9;
-      for(const v of av){const p=v[0]*axX+v[1]*axY;if(p<minA)minA=p;if(p>maxA)maxA=p;}
-      for(const v of bv){const p=v[0]*axX+v[1]*axY;if(p<minB)minB=p;if(p>maxB)maxB=p;}
-      const ov=Math.min(maxA,maxB)-Math.max(minA,minB);
-      if(ov<=0)return null; // separating axis found
-      if(ov<minOv){minOv=ov;bnx=axX;bny=axY;}
-    }
-  }
-  // orient normal: A centroid → B centroid
-  let cax=0,cay=0,cbx=0,cby=0;
-  for(const v of av){cax+=v[0];cay+=v[1];}
-  for(const v of bv){cbx+=v[0];cby+=v[1];}
+  for(let pass=0;pass<2;pass++){const vs=pass?bv:av,n=vs.length;for(let i=0;i<n;i++){const v0=vs[i],v1=vs[(i+1)%n];const ex=v1[0]-v0[0],ey=v1[1]-v0[1];const len=Math.hypot(ex,ey);if(len<0.0001)continue;const axX=-ey/len,axY=ex/len;let minA=1e9,maxA=-1e9,minB=1e9,maxB=-1e9;for(const v of av){const p=v[0]*axX+v[1]*axY;if(p<minA)minA=p;if(p>maxA)maxA=p;}for(const v of bv){const p=v[0]*axX+v[1]*axY;if(p<minB)minB=p;if(p>maxB)maxB=p;}const ov=Math.min(maxA,maxB)-Math.max(minA,minB);if(ov<=0)return null;if(ov<minOv){minOv=ov;bnx=axX;bny=axY;}}}
+  let cax=0,cay=0,cbx=0,cby=0;for(const v of av){cax+=v[0];cay+=v[1];}for(const v of bv){cbx+=v[0];cby+=v[1];}
   if((cbx/bv.length-cax/av.length)*bnx+(cby/bv.length-cay/av.length)*bny<0){bnx=-bnx;bny=-bny;}
   return{ov:minOv,nx:bnx,ny:bny};
 }
 
-// ── PHYSICS ───────────────────────────────────────────────────────────
-class Ball {
+class Ball{
   constructor(x,y,lvl){
-    this.x=x; this.y=y; this.r=PD[lvl].physR??PD[lvl].r;
-    this.vx=0; this.vy=0; this.angle=0; this.av=0;
-    this.level=lvl; this.mass=MASS[lvl]; this.invMass=INV_MASS[lvl]; this.born=Date.now();
-    this.px=x; this.py=y;
-    // 30-frame rolling movement average for rotation-kill
-    this.movH=new Float32Array(30); this.movI=0; this.movS=0;
+    this.x=x;this.y=y;this.r=PD[lvl].physR??PD[lvl].r;
+    this.vx=0;this.vy=0;this.angle=0;this.av=0;
+    this.level=lvl;this.mass=MASS[lvl];this.invMass=INV_MASS[lvl];this.born=Date.now();
+    this.px=x;this.py=y;this.movH=new Float32Array(30);this.movI=0;this.movS=0;
+    this.dxH=new Float32Array(30);this.dyH=new Float32Array(30);this.dxS=0;this.dyS=0;
+    this.landed=false; // true once plushie touches floor or another plushie
+    this.sprite=null;
+    if(plushieTextures[lvl]){this.sprite=new PIXI.Sprite(plushieTextures[lvl]);this.sprite.label=PD[lvl].name;this.sprite.zIndex=11-lvl;this.sprite.anchor.set(0.5,0.5);this.sprite.scale.set(PD[lvl].r/imgR(lvl));const sh=makeShadow();if(sh)this.sprite.filters=[sh];layerPlushie.addChild(this.sprite);}
   }
-  get speed(){ return Math.hypot(this.vx,this.vy); }
+  get speed(){return Math.hypot(this.vx,this.vy);}
 }
+function _destroyBall(b){if(!b)return;delete danger[b.born];if(b.sprite){b.sprite.destroy();b.sprite=null;}if(b._nameText){b._nameText.destroy();b._nameText=null;}if(b._polyText){b._polyText.destroy();b._polyText=null;}}
+function clearPlushies(){plushies.forEach(_destroyBall);plushies=[];}
 
 
 function step(){
   const dt=1/SUBSTEPS;
   for(let s=0;s<SUBSTEPS;s++){
-    // 1. integrate + clamp av (stronger 0.93 damping so spin dies fast)
-    for(const p of plushies){
-      p.vx+=GRAV*Math.sin(tiltAngle)*dt;
-      p.vy+=GRAV*Math.cos(tiltAngle)*dt;
-      p.vx*=DAMP_DT;
-      p.vy*=DAMP_DT;
-      // anti-tunneling: cap per-substep movement to < smallest plushie radius
-      const spd2=p.vx*p.vx+p.vy*p.vy;
-      if(spd2>196){const f=14/Math.sqrt(spd2);p.vx*=f;p.vy*=f;}
-      p.x+=p.vx; p.y+=p.vy;
-      p.av=Math.max(-AV_MAX,Math.min(AV_MAX,p.av))*0.93;
-      p.angle+=p.av;
-    }
-    // 2. walls + floor — bounce only, NO angular contribution
-    for(const p of plushies){
-      if(p.x-p.r<PAD){p.x=PAD+p.r; if(p.vx<0)p.vx=-p.vx*REST;}
-      if(p.x+p.r>W-PAD){p.x=W-PAD-p.r; if(p.vx>0)p.vx=-p.vx*REST;}
-      if(p.y-p.r<0&&p.vy<0)p.vy=0;
-      if(!trapDoorOpen){
-        if(p.y+p.r>H-WALL){p.y=H-WALL-p.r;p.vy=-Math.abs(p.vy)*REST;p.vx*=FRIC;}
+    const _damp=wipeOutActive?WIPEOUT_DAMP*DAMP_DT:DAMP_DT;
+    for(const p of plushies){p.vx+=GRAV*Math.sin(tiltAngle)*dt;p.vy+=GRAV*Math.cos(tiltAngle)*dt;p.vx*=_damp;p.vy*=_damp;const spd2=p.vx*p.vx+p.vy*p.vy;if(spd2>196){const f=14/Math.sqrt(spd2);p.vx*=f;p.vy*=f;}p.x+=p.vx;p.y+=p.vy;p.av=Math.max(-AV_MAX,Math.min(AV_MAX,p.av))*0.93;p.angle+=p.av;}
+    for(const p of plushies){if(p.x-p.r<PAD){p.x=PAD+p.r;if(p.vx<0)p.vx=-p.vx*REST;}if(p.x+p.r>W-PAD){p.x=W-PAD-p.r;if(p.vx>0)p.vx=-p.vx*REST;}if(p.y-p.r<0){p.y=p.r;if(p.vy<0)p.vy=-p.vy*REST;}
+      // Floor: active until door is FULLY open; removed once scale=1 so plushies fall through
+      if(trapDoorScale<1){if(p.y+p.r>H-WALL){p.y=H-WALL-p.r;p.vy=-Math.abs(p.vy)*REST;p.vx*=FRIC;p.landed=true;}}}
+    // SAT: off for entire wipeout duration; restored by _onTrapDoorClosed (wipeOutActive=false)
+    if(wipeOutActive) continue;
+    for(let it=0;it<ITERS;it++){for(let i=0;i<plushies.length;i++){for(let j=i+1;j<plushies.length;j++){const a=plushies[i],b=plushies[j];const dx=b.x-a.x,dy=b.y-a.y,md=a.r+b.r;if(dx*dx+dy*dy>md*md)continue;const col=satTest(getVerts(a),getVerts(b));if(!col)continue;const{ov,nx,ny}=col;const ma=a.mass,mb=b.mass,mT=ma+mb,invMT=1/mT;a.x-=nx*ov*(mb*invMT);a.y-=ny*ov*(mb*invMT);b.x+=nx*ov*(ma*invMT);b.y+=ny*ov*(ma*invMT);a.landed=true;b.landed=true;if(it===0){const dvx=b.vx-a.vx,dvy=b.vy-a.vy,rel=dvx*nx+dvy*ny;if(rel<0){const imp=-(1+REST)*rel*(ma*mb*invMT);a.vx-=imp*a.invMass*nx;a.vy-=imp*a.invMass*ny;b.vx+=imp*b.invMass*nx;b.vy+=imp*b.invMass*ny;if(rel<-1.2){const tv=dvx-rel*nx;a.av=Math.max(-AV_MAX,Math.min(AV_MAX,a.av+tv*0.006*(mb*invMT)));b.av=Math.max(-AV_MAX,Math.min(AV_MAX,b.av-tv*0.006*(ma*invMT)));}}}}}
       }
     }
-    // 3. polygon SAT collision — skipped while trap door is open so plushies fall freely
-    if(trapDoorOpen) continue;
-    for(let it=0;it<ITERS;it++){
-      for(let i=0;i<plushies.length;i++){
-        for(let j=i+1;j<plushies.length;j++){
-          const a=plushies[i],b=plushies[j];
-          const dx=b.x-a.x,dy=b.y-a.y,md=a.r+b.r;
-          if(dx*dx+dy*dy>md*md)continue; // circle broad-phase: skip if definitely separated
-          const col=satTest(getVerts(a),getVerts(b));
-          if(!col)continue;
-          const{ov,nx,ny}=col;
-          const ma=a.mass,mb=b.mass,mT=ma+mb,invMT=1/mT;
-          a.x-=nx*ov*(mb*invMT); a.y-=ny*ov*(mb*invMT);
-          b.x+=nx*ov*(ma*invMT); b.y+=ny*ov*(ma*invMT);
-          if(it===0){
-            const dvx=b.vx-a.vx,dvy=b.vy-a.vy,rel=dvx*nx+dvy*ny;
-            if(rel<0){
-              const imp=-(1+REST)*rel*(ma*mb*invMT);
-              a.vx-=imp*a.invMass*nx; a.vy-=imp*a.invMass*ny;
-              b.vx+=imp*b.invMass*nx; b.vy+=imp*b.invMass*ny;
-              if(rel<-1.2){
-                const tv=dvx-rel*nx;
-                a.av=Math.max(-AV_MAX,Math.min(AV_MAX,a.av+tv*0.006*(mb*invMT)));
-                b.av=Math.max(-AV_MAX,Math.min(AV_MAX,b.av-tv*0.006*(ma*invMT)));
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-  // post-step: epsilon + 30-frame rolling avg movement — kill rotation if object barely moved
-  for(const p of plushies){
-    if(Math.abs(p.vx)<V_EPS) p.vx=0;
-    if(Math.abs(p.vy)<V_EPS) p.vy=0;
-    const dx2=p.x-p.px,dy2=p.y-p.py,moved=dx2*dx2+dy2*dy2; // squared dist, no sqrt
-    p.movS-=p.movH[p.movI]; p.movH[p.movI]=moved; p.movS+=moved;
-    p.movI=(p.movI+1)%30;
-    if(p.movS/30<0.0625&&Math.abs(p.av)>0.002) p.av=0; // avg sq dist <0.0625 (=0.25²) → stop spin
-    if(Math.abs(p.av)<0.002) p.av=0;
-    p.px=p.x; p.py=p.y;
-  }
+  for(const p of plushies){if(Math.abs(p.vx)<V_EPS)p.vx=0;if(Math.abs(p.vy)<V_EPS)p.vy=0;const dx2=p.x-p.px,dy2=p.y-p.py,moved=dx2*dx2+dy2*dy2;p.movS-=p.movH[p.movI];p.movH[p.movI]=moved;p.movS+=moved;p.dxS-=p.dxH[p.movI];p.dxH[p.movI]=dx2;p.dxS+=dx2;p.dyS-=p.dyH[p.movI];p.dyH[p.movI]=dy2;p.dyS+=dy2;p.movI=(p.movI+1)%30;if(p.movS/30<0.0625&&Math.abs(p.av)>0.002)p.av=0;if(Math.abs(p.av)<0.002)p.av=0;p.px=p.x;p.py=p.y;}
 }
 
-// ── MERGE ─────────────────────────────────────────────────────────────
 function detectMerges(){
   if(wipeOutActive) return;
   const used=new Set();
-  for(let i=0;i<plushies.length;i++){
-    for(let j=i+1;j<plushies.length;j++){
-      if(used.has(i)||used.has(j)) continue;
-      const a=plushies[i],b=plushies[j];
-      if(a.level!==b.level) continue;
-      const dx=b.x-a.x,dy=b.y-a.y;
-      if(dx*dx+dy*dy<MERGE_DIST_SQ[a.level]){
-        mergeQ.push([i,j]); used.add(i); used.add(j);
-      }
-    }
-  }
+  for(let i=0;i<plushies.length;i++){for(let j=i+1;j<plushies.length;j++){if(used.has(i)||used.has(j))continue;const a=plushies[i],b=plushies[j];if(a.level!==b.level)continue;const dx=b.x-a.x,dy=b.y-a.y;if(dx*dx+dy*dy<MERGE_DIST_SQ[a.level]){mergeQ.push([i,j]);used.add(i);used.add(j);}}}
 }
 
 function processMerges(){
   if(!mergeQ.length) return;
   if(IS_DEBUG && noMerge){ mergeQ=[]; return; }
   const pairs=mergeQ.splice(0).sort((a,b)=>Math.max(b[0],b[1])-Math.max(a[0],a[1]));
-  const toRemove=new Set(), toAdd=[];
-  let wipeOutPos=null;
-  for(const [i,j] of pairs){
-    if(toRemove.has(i)||toRemove.has(j)) continue;
-    const a=plushies[i],b=plushies[j];
-    const px=(a.x+b.x)/2,py=(a.y+b.y)/2,nl=a.level+1;
-    toRemove.add(i); toRemove.add(j);
-    if(nl>11){
-      // WIPE OUT — two Racoons merged
-      wipeOutPos={x:px,y:py};
-      continue; // don't add level-12 ball
-    }
-    toAdd.push({x:px,y:py,lvl:nl});
-    const pts=PTS_M[nl];
-    score+=pts; if(score>best) best=score;
-    burst(px,py,PD[nl].body); updUI(); sfxMerge(nl);
-    if(showSpawnRate) updateEvoLabels();
-    popups.push({x:px,y:py,text:'+'+pts.toLocaleString(),color:PD[nl].body,life:1});
-    if(!firstMerged.has(nl)){ firstMerged.add(nl); spawnCelebration(px,py,nl,pts); updateEvoUnlocks(); }
-  }
+  const toRemove=new Set(),toAdd=[];let wipeOutPos=null;
+  for(const[i,j]of pairs){if(toRemove.has(i)||toRemove.has(j))continue;const a=plushies[i],b=plushies[j];const px=(a.x+b.x)/2,py=(a.y+b.y)/2,nl=a.level+1;toRemove.add(i);toRemove.add(j);if(nl>11){wipeOutPos={x:px,y:py};continue;}toAdd.push({x:px,y:py,lvl:nl});const pts=PTS_M[nl];score+=pts;if(score>best)best=score;burst(px,py,PD[nl].body);updUI();sfxMerge(nl);if(showSpawnRate)updateEvoLabels();popups.push({x:px,y:py,text:'+'+pts.toLocaleString(),color:PD[nl].body,life:1});if(!firstMerged.has(nl)){firstMerged.add(nl);spawnCelebration(px,py,nl,pts);updateEvoUnlocks();}}
+  plushies.filter((_,i)=>toRemove.has(i)).forEach(_destroyBall);
   plushies=plushies.filter((_,i)=>!toRemove.has(i));
-  for(const {x,y,lvl} of toAdd){
-    const b=new Ball(x,y,lvl); b.vx=(Math.random()-.5)*2; b.vy=-3;
-    b.av=(Math.random()-.5)*AV_MAX*0.4;
-    plushies.push(b);
-  }
-  if(wipeOutPos) triggerWipeOut(wipeOutPos.x,wipeOutPos.y);
+  for(const{x,y,lvl}of toAdd){const b=new Ball(x,y,lvl);b.vx=(Math.random()-.5)*2;b.vy=-3;b.av=(Math.random()-.5)*AV_MAX*0.4;plushies.push(b);}
+  if(wipeOutPos)triggerWipeOut(wipeOutPos.x,wipeOutPos.y);
 }
 
-// ── CLEAR sequence — triple glare, sparkles, wipeout SFX ─────────────
-// Called by both WIPE OUT and restart.
+// ── FRAME-EVENT SCHEDULER — keeps physics & graphics in sync with step mode ──
+let _gameFrame=0;
+let _frameEvents=[];
+function scheduleAt(delayFrames,fn){_frameEvents.push({at:_gameFrame+Math.max(1,Math.round(delayFrames)),fn});}
+function clearScheduled(){_frameEvents=[];}
+function tickScheduled(){
+  _gameFrame++;
+  _frameEvents=_frameEvents.filter(e=>{if(_gameFrame>=e.at){e.fn();return false;}return true;});
+}
+
+function triggerWipeOut(x,y){
+  wipeOutActive=true; trapDoorOpen=false;
+  // Force-drop anything the claw is holding, reset to rank 1–3
+  clawState='idle'; cooling=false; clawOpenTimer=0;
+  cur=rnd(); nxt=rnd(); updNext(); // rnd() always returns 1–3 when tank empties
+  clawX=W/2; clawLvl=cur;
+
+  // Frame-based timing (synced with P/. step mode)
+  // Phase 1: wait OPEN_F frames, then open door (SAT still ON during animation)
+  // Phase 2: tickTrapDoor auto-triggers scatter when scale reaches 1.0 (fully open)
+  // Phase 3: after plushies fall, close door — tickTrapDoor fires _onTrapDoorClosed when scale=0
+  const OPEN_F = Math.round(1/TRAP_ANIM_SPEED);         // ~15f — door starts opening
+  const fallF  = Math.ceil(Math.sqrt(2*(H+136)/(GRAV*SUBSTEPS))*1.5);
+  const CLOSE_F = OPEN_F + OPEN_F + fallF;               // wait for open anim + fall time
+
+  scheduleAt(OPEN_F,  ()=>{ trapDoorOpen=true;  }); // start opening — scatter fires in tickTrapDoor
+  scheduleAt(CLOSE_F, ()=>{
+    clearPlushies(); // destroy all remaining plushies before door closes
+    trapDoorOpen=false; // start closing — level-up fires in _onTrapDoorClosed
+  });
+
+  // Immediate: tally, confetti, WIPE OUT text, glare+sparkles+SFX
+  let totalPts=0;
+  for(const p of plushies){totalPts+=PTS_M[p.level];p.vy=Math.max(p.vy,1+Math.random()*2);}
+  danger={};mergeQ=[];_gyroMultiDangerSince=null;
+  score+=totalPts;if(score>best)best=score;updUI();
+
+  for(let i=0;i<160;i++){const fromTop=i<50;const cx=fromTop?Math.random()*W:x,cy=fromTop?-10:y;const a=fromTop?(Math.PI/2+Math.random()*.8-.4):(Math.random()*Math.PI*2);const spd=fromTop?(4+Math.random()*7):(5+Math.random()*10);confetti.push({x:cx,y:cy,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,r:4+Math.random()*5,rot:Math.random()*Math.PI*2,rv:(Math.random()-.5)*0.3,w:5+Math.random()*6,h:7+Math.random()*9,color:CONFETTI_COLORS[Math.floor(Math.random()*CONFETTI_COLORS.length)],life:1.2,shape:Math.random()<0.6?'rect':'circle'});}
+  celebrations.push({x:W/2,y:H/2-80,name:'WIPE OUT!',level:0,pts:totalPts,color:'#ff3030',stroke:'#800000',life:1,scale:0.1,phase:'in',isWipeOut:true});
+  if(totalPts>0)popups.push({x:W/2,y:H/2+60,text:'+'+totalPts.toLocaleString(),color:'#f0c500',life:1.8,big:true});
+  triggerClear();
+}
+
+// ── CLEAR sequence — triple glare + sparkles + SFX (all frame-scheduled) ──
 function triggerClear(){
   if(showClaw){
-    triggerGlare();
-    setTimeout(triggerGlare,300);
-    setTimeout(triggerGlare,620);
+    triggerGlare();           // glare #1 immediately
+    scheduleAt(18,triggerGlare); // glare #2 at ~300ms
+    scheduleAt(37,triggerGlare); // glare #3 at ~620ms
   }
   sfxWipeOut();
-  // Sparkle emitter: starts at 2nd glare (t=300), 10 particles/s for 2s = 20 particles
-  const SPARKLE_EMITTER_LIFETIME=2000; // ms
-  const SPARKLE_INTERVAL=100;          // 10/s
-  setTimeout(()=>{
-    const emitterEnd=Date.now()+SPARKLE_EMITTER_LIFETIME;
-    const emitOne=()=>{
-      if(Date.now()>=emitterEnd) return;
+  // Sparkle emitter: 20 sparkles, 1 every 6 frames starting at frame 18
+  for(let i=0;i<20;i++){
+    scheduleAt(18+i*6,()=>{
       const baseR=10+Math.random()*18;
-      sparkles.push({
-        x:PAD+Math.random()*(W-PAD*2),
-        y:Math.random()*H,
-        r:baseR, baseR,
-        rot:0,
-        color:'#ffffff',
-        life:1.2+Math.random()*0.8,
-        delay:0,
-        phase:Math.random()*Math.PI*2
-      });
-      setTimeout(emitOne, SPARKLE_INTERVAL);
-    };
-    emitOne();
-  },300);
+      sparkles.push({x:PAD+Math.random()*(W-PAD*2),y:Math.random()*H,r:baseR,baseR,rot:0,color:'#ffffff',life:1.2+Math.random()*0.8,delay:0,phase:Math.random()*Math.PI*2});
+    });
+  }
 }
 
-// ── WIPE OUT ──────────────────────────────────────────────────────────
-function triggerWipeOut(x,y){
-  wipeOutActive=true;
-  trapDoorOpen=false;
-  // Calculated time for all plushies to fall off canvas from worst case (top, at rest):
-  // frames = sqrt(2 * (H + maxR) / (GRAV * SUBSTEPS)); add 50% safety margin
-  const fallFrames=Math.sqrt(2*(H+136)/(GRAV*SUBSTEPS))*1.5;
-  const FALL_TIME_MS=Math.ceil(fallFrames/60*1000); // ≈ ~800ms
-  // 1. Open trap door (snap via trapDoorOpen flag)
-  setTimeout(()=>{
-    trapDoorOpen=true;
-    // apply spin + scatter now that SAT is disabled and plushies are free to rotate
-    for(const p of plushies){
-      p.av=(Math.random()-.5)*AV_MAX*10;
-      p.vx+=(Math.random()-.5)*3;
-    }
-  }, 250);
-  // 2. Close trap door once all plushies have had time to exit
-  const closeAt=250+FALL_TIME_MS;
-  // Tally bonus points and mark plushies to fall through the floor
-  let totalPts=0;
-  for(const p of plushies){
-    totalPts+=PTS_M[p.level];
-    p.vy=Math.max(p.vy, 1+Math.random()*2); // gentle downward nudge
-  }
-  danger={}; mergeQ=[]; _gyroMultiDangerSince=null;
-  score+=totalPts; if(score>best) best=score;
-  updUI();
-  // Massive confetti burst
-  for(let i=0;i<160;i++){
-    const fromTop=i<50;
-    const cx=fromTop?Math.random()*W:x, cy=fromTop?-10:y;
-    const a=fromTop?(Math.PI/2+Math.random()*.8-.4):(Math.random()*Math.PI*2);
-    const spd=fromTop?(4+Math.random()*7):(5+Math.random()*10);
-    confetti.push({x:cx,y:cy,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,r:4+Math.random()*5,
-      rot:Math.random()*Math.PI*2,rv:(Math.random()-.5)*0.3,
-      w:5+Math.random()*6,h:7+Math.random()*9,
-      color:CONFETTI_COLORS[Math.floor(Math.random()*CONFETTI_COLORS.length)],
-      life:1.2,shape:Math.random()<0.6?'rect':'circle'});
-  }
-  // WIPE OUT text
-  celebrations.push({x:W/2,y:H/2-80,name:'WIPE OUT!',level:0,pts:totalPts,
-    color:'#ff3030',stroke:'#800000',life:1,scale:0.1,phase:'in',isWipeOut:true});
-  // Big total points popup
-  if(totalPts>0)
-    popups.push({x:W/2,y:H/2+60,text:'+'+totalPts.toLocaleString(),color:'#f0c500',life:1.8,big:true});
-  // Triple glare + sparkles + SFX (shared with restart CLEAR sequence)
-  triggerClear();
-  // Level state updates at last glare (t=620), announcement delayed 500ms more (t=1120)
-  setTimeout(()=>{
-    gameLevel++;
-    scoreMultiplier=Math.pow(2,gameLevel-1);
-    rebuildPtsTable();
-    const glEl=document.getElementById('gl-ls'); if(glEl) glEl.textContent=gameLevel;
-    firstMerged=new Set();
-    updateEvoUnlocks();
-    wipeOutActive=false;
-    trapDoorOpen=false; // closes trap door, restores floor
-    plushies=plushies.filter(p=>p.y-p.r<H+80);
-    setTimeout(()=>{
-      celebrations.push({x:W/2,y:H/2-60,name:'LEVEL '+gameLevel,level:0,pts:0,
-        color:'#f0c500',stroke:'#8a6000',life:1,scale:0.1,phase:'in',isLevelUp:true});
-      sfxLevelUp();
-    },500);
-  },closeAt);
-}
-
-function sfxWipeOut(){
-  if(muted)return;
-  const a=getAC(),t=a.currentTime;
-  // Rising sweep
-  const o=a.createOscillator(),g=a.createGain();
-  o.connect(g);g.connect(a._sfxBus||a.destination);
-  o.type='sawtooth';
-  o.frequency.setValueAtTime(110,t);
-  o.frequency.exponentialRampToValueAtTime(880,t+0.8);
-  g.gain.setValueAtTime(0.4,t);
-  g.gain.exponentialRampToValueAtTime(0.001,t+1.0);
-  o.start(t);o.stop(t+1.1);
-  // Big chord
-  [523,659,784,1047].forEach((f,k)=>{
-    const o2=a.createOscillator(),g2=a.createGain();
-    o2.connect(g2);g2.connect(a._sfxBus||a.destination);
-    o2.type='triangle';o2.frequency.value=f;
-    g2.gain.setValueAtTime(0,t+0.3+k*0.06);
-    g2.gain.linearRampToValueAtTime(0.2,t+0.35+k*0.06);
-    g2.gain.exponentialRampToValueAtTime(0.001,t+1.4);
-    o2.start(t+0.3+k*0.06);o2.stop(t+1.5);
-  });
-}
+function sfxWipeOut(){if(muted)return;const a=getAC(),t=a.currentTime;const o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a._sfxBus||a.destination);o.type='sawtooth';o.frequency.setValueAtTime(110,t);o.frequency.exponentialRampToValueAtTime(880,t+0.8);g.gain.setValueAtTime(0.4,t);g.gain.exponentialRampToValueAtTime(0.001,t+1.0);o.start(t);o.stop(t+1.1);[523,659,784,1047].forEach((f,k)=>{const o2=a.createOscillator(),g2=a.createGain();o2.connect(g2);g2.connect(a._sfxBus||a.destination);o2.type='triangle';o2.frequency.value=f;g2.gain.setValueAtTime(0,t+0.3+k*0.06);g2.gain.linearRampToValueAtTime(0.2,t+0.35+k*0.06);g2.gain.exponentialRampToValueAtTime(0.001,t+1.4);o2.start(t+0.3+k*0.06);o2.stop(t+1.5);});}
 
 function sfxLevelUp(){
-  if(muted) return;
-  const a=getAC(), t=a.currentTime;
-  // bright ascending major arpeggio + shimmer
-  const notes=[523,659,784,1047,1319]; // C5 E5 G5 C6 E6
-  notes.forEach((f,k)=>{
-    const o=a.createOscillator(),g=a.createGain();
-    o.connect(g);g.connect(a._sfxBus||a.destination);
-    o.type='triangle'; o.frequency.value=f;
-    const on=t+k*0.08;
-    g.gain.setValueAtTime(0,on);
-    g.gain.linearRampToValueAtTime(0.22,on+0.04);
-    g.gain.exponentialRampToValueAtTime(0.001,on+0.5);
-    o.start(on); o.stop(on+0.55);
-  });
-  // high shimmer tail
-  const os=a.createOscillator(),gs=a.createGain();
-  os.connect(gs);gs.connect(a._sfxBus||a.destination);
-  os.type='sine'; os.frequency.value=2093; // C7
-  gs.gain.setValueAtTime(0,t+0.35);
-  gs.gain.linearRampToValueAtTime(0.1,t+0.4);
-  gs.gain.exponentialRampToValueAtTime(0.001,t+1.2);
-  os.start(t+0.35); os.stop(t+1.3);
+  if(muted)return;const a=getAC(),t=a.currentTime;
+  [523,659,784,1047,1319].forEach((f,k)=>{const o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a._sfxBus||a.destination);o.type='triangle';o.frequency.value=f;const on=t+k*0.08;g.gain.setValueAtTime(0,on);g.gain.linearRampToValueAtTime(0.22,on+0.04);g.gain.exponentialRampToValueAtTime(0.001,on+0.5);o.start(on);o.stop(on+0.55);});
+  const os=a.createOscillator(),gs=a.createGain();os.connect(gs);gs.connect(a._sfxBus||a.destination);os.type='sine';os.frequency.value=2093;gs.gain.setValueAtTime(0,t+0.35);gs.gain.linearRampToValueAtTime(0.1,t+0.4);gs.gain.exponentialRampToValueAtTime(0.001,t+1.2);os.start(t+0.35);os.stop(t+1.3);
 }
 
 // ── GAME OVER ─────────────────────────────────────────────────────────
-let _gyroMultiDangerSince = null; // timestamp when 3+ plushies first went above line (gyro mode)
+let _gyroMultiDangerSince=null;
+// ── 3-TIER DANGER SYSTEM ──────────────────────────────────────────────
+// Level 1: top  above DY  (p.y-p.r < DY)              → blink danger line
+// Level 2: center above DY, bottom below (p.y < DY && p.y+p.r >= DY) → slow pulse
+// Level 3: bottom above DY (p.y+p.r < DY)             → fast pulse + 1s → lose
 function checkDanger(){
   const now=Date.now();
-  let dangerCount=0;
   for(const p of plushies){
-    if(p.y<DY&&p.speed<1.4&&now-p.born>1000){
+    if(!p.landed){p._dangerLevel=0;delete danger[p.born];continue;} // still in free fall
+    const vr=PD[p.level].r; // visual radius (sprite size), not physics radius
+    const topAbove   =p.y-vr<DY;          // top crosses DY
+    const bottomNearLine=p.y+vr<DY+10;    // bottom within 10px of crossing DY
+    if(bottomNearLine&&now-p.born>500){
+      p._dangerLevel=3;
       danger[p.born]=danger[p.born]??now;
-      dangerCount++;
-      if(!gyroOn && now-danger[p.born]>1000){gameOver();return;} // normal: single plushie for 1s
-    } else delete danger[p.born];
-  }
-  if(gyroOn){
-    // gyro: lose only if 3+ plushies hold above the line for 1s continuously
-    if(dangerCount>=3){
-      _gyroMultiDangerSince = _gyroMultiDangerSince ?? now;
-      if(now - _gyroMultiDangerSince > 1000){ gameOver(); }
+      if(now-danger[p.born]>1000){gameOver();return;}
+    } else if(topAbove){
+      p._dangerLevel=2; delete danger[p.born];
     } else {
-      _gyroMultiDangerSince = null; // reset if count drops below 3
+      p._dangerLevel=0; delete danger[p.born];
     }
-  } else {
-    _gyroMultiDangerSince = null;
-    if(dangerCount>=3){gameOver();} // normal: 3+ simultaneously
   }
 }
-
-function gameOver(){
-  dead=true;
-  document.getElementById('fs').textContent=score.toLocaleString();
-  document.getElementById('ov').classList.add('show');
-}
-
+function gameOver(){dead=true;document.getElementById('fs').textContent=score.toLocaleString();document.getElementById('ov').classList.add('show');}
 function restart(){
-  dead=false; cooling=false; wipeOutActive=false; trapDoorOpen=false; gameLevel=1; scoreMultiplier=1; rebuildPtsTable();
-  const glEl=document.getElementById('gl-ls'); if(glEl) glEl.textContent=1;
-  plushies=[]; parts=[]; mergeQ=[]; popups=[]; confetti=[]; celebrations=[]; sparkles=[]; danger={}; firstMerged=new Set(); score=0; updUI();
+  dead=false;cooling=false;wipeOutActive=false;trapDoorOpen=false;trapDoorScale=0;trapDoorDir=0;gameLevel=1;scoreMultiplier=1;rebuildPtsTable();
+  const glEl=document.getElementById('gl-ls');if(glEl)glEl.textContent=1;
+  popups.forEach(p=>{if(p.pixiText)p.pixiText.destroy();});
+  celebrations.forEach(c=>{if(c.pixiText)c.pixiText.destroy();if(c.pixiSub)c.pixiSub.destroy();});
+  clearScheduled();
+  clearPlushies();
+  parts=[];mergeQ=[];popups=[];confetti=[];celebrations=[];sparkles=[];danger={};_gyroMultiDangerSince=null;firstMerged=new Set();score=0;updUI();
   document.getElementById('ov').classList.remove('show');
-  cur=rnd(); nxt=rnd(); updNext();
-  clawState='idle'; clawY=DROPY; clawLvl=cur;
-  resetClawForNewRound();
-  triggerClear(); // CLEAR animation on restart
-  resumeLoop(); // restart the paused animation loop
+  cur=rnd();nxt=rnd();updNext();clawState='idle';clawY=DROPY;clawLvl=cur;resetClawForNewRound();
+  triggerClear();resumeLoop();
 }
 
-// ── PARTICLES ─────────────────────────────────────────────────────────
-function burst(x,y,color){
-  for(let i=0;i<11;i++){
-    const a=Math.PI*2*i/11+Math.random()*.5,spd=2+Math.random()*4;
-    parts.push({x,y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,r:3+Math.random()*4,color,life:1});
+function burst(x,y,color){for(let i=0;i<11;i++){const a=Math.PI*2*i/11+Math.random()*.5,spd=2+Math.random()*4;parts.push({x,y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,r:3+Math.random()*4,color,life:1});}}
+function tickTrapDoor(){
+  const target=trapDoorOpen?1:0;
+  if(trapDoorScale===target) return;
+  const prev=trapDoorScale;
+  trapDoorScale=target>prev?Math.min(1,prev+TRAP_ANIM_SPEED):Math.max(0,prev-TRAP_ANIM_SPEED);
+  // Door just became FULLY OPEN → scatter forces (SAT now disabled via trapDoorScale>=1)
+  if(prev<1&&trapDoorScale>=1&&wipeOutActive){
+    for(const p of plushies){p.av=(Math.random()-.5)*AV_MAX*10;p.vx+=(Math.random()-.5)*3;}
   }
-}
-function tickParts(){
-  parts=parts.filter(p=>p.life>0);
-  parts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.18;p.life-=.044;p.r*=.93;});
-}
-function tickPopups(){
-  popups=popups.filter(p=>p.life>0);
-  popups.forEach(p=>{p.y-=(p.big?0.4:1.2);p.life-=0.022;}); // float up, fade ~1.5s (big popups slower)
+  // Door just became FULLY CLOSED → end wipeout, level up
+  if(prev>0&&trapDoorScale<=0&&wipeOutActive) _onTrapDoorClosed();
 }
 
-// ── FIRST-MERGE CELEBRATION ────────────────────────────────────────────
+function _onTrapDoorClosed(){
+  wipeOutActive=false;
+  gameLevel++;scoreMultiplier=Math.pow(2,gameLevel-1);rebuildPtsTable();
+  const glEl=document.getElementById('gl-ls');if(glEl)glEl.textContent=gameLevel;
+  firstMerged=new Set();updateEvoUnlocks();
+  // plushies already destroyed at CLOSE_F before door started closing
+  scheduleAt(30,()=>{ // ~500ms — LEVEL card + SFX
+    celebrations.push({x:W/2,y:H/2-60,name:'LEVEL '+gameLevel,level:0,pts:0,color:'#f0c500',stroke:'#8a6000',life:1,scale:0.1,phase:'in',isLevelUp:true});
+    sfxLevelUp();
+  });
+}
+function tickParts(){parts=parts.filter(p=>p.life>0);parts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.18;p.life-=.044;p.r*=.93;});}
+function tickPopups(){
+  popups.forEach(p=>{p.y-=(p.big?0.4:1.2);p.life-=0.022;if(!p.pixiText&&p.life>0){const sz=p.big?Math.round(68*FS):Math.round(36*FS);p.pixiText=new PIXI.Text({text:p.text,style:{fontFamily:"'Righteous','Segoe UI',system-ui,sans-serif",fontSize:sz,fontWeight:'700',fill:p.color,stroke:{color:'#000000',width:3}}});p.pixiText.label='score_popup';p.pixiText.anchor.set(0.5,0.5);layerFx.addChild(p.pixiText);}if(p.pixiText){const sz=p.big?Math.round((48+p.life*20)*FS):Math.round((22+p.life*14)*FS);p.pixiText.style.fontSize=sz;p.pixiText.x=p.x;p.pixiText.y=p.y;p.pixiText.alpha=Math.min(p.life,1)*0.92;}});
+  popups.filter(p=>p.life<=0).forEach(p=>{if(p.pixiText)p.pixiText.destroy();});
+  popups=popups.filter(p=>p.life>0);
+}
+
 const CONFETTI_COLORS=['#ff5a5a','#ffb830','#ffe234','#4ddc7a','#38c5f5','#c84dff','#ff6eb4','#ffffff'];
 function spawnCelebration(x,y,lvl,actualPts){
-  // celebration fires immediately after glare so text appears right away
-  if(showClaw) triggerGlare();
-  celebrations.push({
-    x:W/2,y:H/2-30,
-    name:PD[lvl].name,
-    level:lvl,
-    pts:actualPts??PTS[lvl],
-    color:PD[lvl].body,
-    stroke:PD[lvl].stroke,
-    life:1,scale:0.1,phase:'in'
-  });
-  // confetti after a tiny delay so text is already visible
-  setTimeout(()=>{
-    for(let i=0;i<60;i++){
-      const fromTop=i<20;
-      const cx=fromTop?Math.random()*W:x, cy=fromTop?-10:y;
-      const a=fromTop?(Math.PI/2+Math.random()*.8-.4):(Math.random()*Math.PI*2);
-      const spd=fromTop?(3+Math.random()*5):(4+Math.random()*7);
-      confetti.push({
-        x:cx,y:cy,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,
-        r:3+Math.random()*4,rot:Math.random()*Math.PI*2,rv:(Math.random()-.5)*0.25,
-        w:4+Math.random()*5,h:6+Math.random()*8,
-        color:CONFETTI_COLORS[Math.floor(Math.random()*CONFETTI_COLORS.length)],
-        life:1,shape:Math.random()<0.6?'rect':'circle'
-      });
-    }
-  }, 80);
+  if(showClaw)triggerGlare();
+  celebrations.push({x:W/2,y:H/2-30,name:PD[lvl].name,level:lvl,pts:actualPts??PTS[lvl],color:PD[lvl].body,stroke:PD[lvl].stroke,life:1,scale:0.1,phase:'in'});
+  setTimeout(()=>{for(let i=0;i<60;i++){const fromTop=i<20;const cx=fromTop?Math.random()*W:x,cy=fromTop?-10:y;const a=fromTop?(Math.PI/2+Math.random()*.8-.4):(Math.random()*Math.PI*2);const spd=fromTop?(3+Math.random()*5):(4+Math.random()*7);confetti.push({x:cx,y:cy,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,r:3+Math.random()*4,rot:Math.random()*Math.PI*2,rv:(Math.random()-.5)*0.25,w:4+Math.random()*5,h:6+Math.random()*8,color:CONFETTI_COLORS[Math.floor(Math.random()*CONFETTI_COLORS.length)],life:1,shape:Math.random()<0.6?'rect':'circle'});}},80);
 }
-function tickSparkles(){
-  sparkles=sparkles.filter(s=>s.life>0);
-  sparkles.forEach(s=>{
-    if(s.delay>0){s.delay-=16;return;}
-    s.phase+=0.12; // pulse speed
-    s.r=s.baseR*(0.7+0.3*Math.sin(s.phase)); // scale up/down in place
-    s.life-=0.018;
-  });
-}
-// draw a 4-point star centered at (0,0) with arm radius r
-function drawStar4(c,r){
-  const ir=r*0.3; // inner radius
-  c.beginPath();
-  for(let k=0;k<8;k++){
-    const a=Math.PI/4*k;
-    const cr2=k%2===0?r:ir;
-    k===0?c.moveTo(cr2*Math.cos(a),cr2*Math.sin(a)):c.lineTo(cr2*Math.cos(a),cr2*Math.sin(a));
-  }
-  c.closePath();
-}
-function tickConfetti(){
-  confetti=confetti.filter(p=>p.life>0);
-  confetti.forEach(p=>{
-    p.x+=p.vx; p.y+=p.vy;
-    p.vy+=0.22; // gravity
-    p.vx*=0.99;
-    p.rot+=p.rv;
-    p.life-=0.012;
-  });
-}
+function tickSparkles(){sparkles=sparkles.filter(s=>s.life>0);sparkles.forEach(s=>{if(s.delay>0){s.delay-=16;return;}s.phase+=0.12;s.r=s.baseR*(0.7+0.3*Math.sin(s.phase));s.life-=0.018;});}
+function tickConfetti(){confetti=confetti.filter(p=>p.life>0);confetti.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=0.22;p.vx*=0.99;p.rot+=p.rv;p.life-=0.012;});}
 function tickCelebrations(){
-  celebrations=celebrations.filter(c=>c.life>0);
   celebrations.forEach(c=>{
-    if(c.phase==='in'){
-      c.scale=Math.min(1, c.scale+0.12);
-      c.y-=0.4; // slow upward drift from the start
-      if(c.scale>=1){ c.phase='hold'; c.holdTimer=60; }
-    } else if(c.phase==='hold'){
-      c.holdTimer--;
-      c.y-=0.4; // continue drifting during hold
-      if(c.holdTimer<=0) c.phase='out';
-    } else {
-      c.life-=0.022;
-      c.y-=0.8; // faster drift while fading out
-    }
+    if(c.phase==='in'){c.scale=Math.min(1,c.scale+0.12);c.y-=0.4;if(c.scale>=1){c.phase='hold';c.holdTimer=60;}}
+    else if(c.phase==='hold'){c.holdTimer--;c.y-=0.4;if(c.holdTimer<=0)c.phase='out';}
+    else{c.life-=0.022;c.y-=0.8;}
+    if(!c.pixiText&&c.life>0){let sub='';if(c.isWipeOut){sub=c.pts>0?'+'+c.pts.toLocaleString()+' bonus pts':'';}else if(c.isLevelUp){sub='×'+Math.pow(2,gameLevel-1)+' points multiplier';}else{sub=`Rank ${c.level}  ·  +${c.pts.toLocaleString()} pts`;}c.pixiText=new PIXI.Text({text:c.name,style:{fontFamily:"'Righteous','Segoe UI',system-ui,sans-serif",fontSize:Math.round(52*FS),fontWeight:'400',fill:c.color,stroke:{color:c.stroke,width:8}}});c.pixiText.label='celebration_'+c.name;c.pixiText.anchor.set(0.5,0.5);layerFx.addChild(c.pixiText);if(sub){c.pixiSub=new PIXI.Text({text:sub,style:{fontFamily:"'Righteous','Segoe UI',system-ui,sans-serif",fontSize:Math.round(16*FS),fontWeight:'400',fill:'#ffffff',stroke:{color:'#000000',width:3}}});c.pixiSub.label='celebration_sub';c.pixiSub.anchor.set(0.5,0.5);layerFx.addChild(c.pixiSub);}}
+    if(c.pixiText){const alpha=c.phase==='out'?c.life*0.95:0.97;c.pixiText.x=c.x;c.pixiText.y=c.y;c.pixiText.scale.set(c.scale);c.pixiText.alpha=alpha;if(c.pixiSub){c.pixiSub.x=c.x;c.pixiSub.y=c.y+34*c.scale;c.pixiSub.scale.set(c.scale);c.pixiSub.alpha=alpha;}}
   });
+  celebrations.forEach(c=>{if(c.life<=0){if(c.pixiText){c.pixiText.destroy();c.pixiText=null;}if(c.pixiSub){c.pixiSub.destroy();c.pixiSub=null;}}});
+  celebrations=celebrations.filter(c=>c.life>0);
 }
 
-// ── PER-FRAME KEY INPUT ────────────────────────────────────────────────
-function processKeys(){
-  if(dead) return;
-  const hasL=keysDown.has('ArrowLeft'), hasR=keysDown.has('ArrowRight');
-  if(!hasL&&!hasR) return;
-  const speed=keysDown.has('Shift')?5:2;
-  const mn=WALL+PD[cur].r+1, mx2=W-WALL-PD[cur].r-1, range=mx2-mn;
-  if(range<=0) return;
-  const delta=hasL?-speed:speed;
-  mx=((mx+delta-mn)%range+range)%range+mn;
-}
+function processKeys(){if(dead)return;const hasL=keysDown.has('ArrowLeft'),hasR=keysDown.has('ArrowRight');if(!hasL&&!hasR)return;const speed=keysDown.has('Shift')?6.5:2.6;const mn=WALL+PD[cur].r+1,mx2=W-WALL-PD[cur].r-1,range=mx2-mn;if(range<=0)return;const delta=hasL?-speed:speed;mx=((mx+delta-mn)%range+range)%range+mn;}
 
 // ── GAMEPAD ───────────────────────────────────────────────────────────
-// Xbox standard layout: A=0, B=1, X=2, Y=3, LB=4, RB=5, LT=6, RT=7
-// Left stick X = axes[0]  (-1=left, +1=right)
-const GP_DEADZONE = 0.2;
-let _gpBtnPrev = {}; // debounce: track which buttons were down last frame
-
+const GP_DEADZONE=0.2;
+let _gpBtnPrev={};
 function processGamepad(){
-  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
-  let gp = null;
-  for(const p of pads){ if(p){ gp=p; break; } }
-  if(!gp) return;
-
-  const pressed = i => gp.buttons[i]?.pressed && !_gpBtnPrev[i];
-
-  // accept game over restart with A
-  if(dead){
-    if(pressed(0)){ setInputSource('gamepad'); restart(); }
-    for(let i=0;i<gp.buttons.length;i++) _gpBtnPrev[i]=gp.buttons[i]?.pressed;
-    return;
-  }
-
-  // speed modifier: LT (6) or RT (7) held
-  const fast = (gp.buttons[6]?.value??0)>0.3 || (gp.buttons[7]?.value??0)>0.3;
-  const speed = fast ? 5 : 2;
-
-  // left stick horizontal movement
-  const ax = gp.axes[0] ?? 0;
-  if(Math.abs(ax) > GP_DEADZONE){
-    setInputSource('gamepad');
-    const mn=WALL+PD[cur].r+1, mx2=W-WALL-PD[cur].r-1, range=mx2-mn;
-    if(range>0) mx = Math.max(mn, Math.min(mx2, mx + ax * speed));
-  }
-
-  // button press helpers (fires once on press, not held) — already defined above
-
-  // A = drop
-  if(pressed(0)){
-    setInputSource('gamepad');
-    if(!wipeOutActive&&!dead)(function tryDrop(){if(wipeOutActive||dead)return;if(cooling)requestAnimationFrame(tryDrop);else drop();})();
-  }
-  // B = toggle help popup (close if open, open if closed)
-  if(pressed(1)){ setInputSource('gamepad'); toggleHelp(); }
-  // LB (4) / RB (5) = switch help tab between keyboard / gamepad
-  if(pressed(4)||pressed(5)){ setInputSource('gamepad'); toggleHelpTab(); }
-
-  // store state for next frame
-  for(let i=0;i<gp.buttons.length;i++) _gpBtnPrev[i]=gp.buttons[i]?.pressed;
+  const pads=navigator.getGamepads?navigator.getGamepads():[];let gp=null;
+  for(const p of pads){if(p){gp=p;break;}}if(!gp)return;
+  const pressed=i=>gp.buttons[i]?.pressed&&!_gpBtnPrev[i];
+  if(dead){if(pressed(0)){setInputSource('gamepad');restart();}for(let i=0;i<gp.buttons.length;i++)_gpBtnPrev[i]=gp.buttons[i]?.pressed;return;}
+  const fast=(gp.buttons[6]?.value??0)>0.3||(gp.buttons[7]?.value??0)>0.3;const speed=fast?5:2;
+  const ax=gp.axes[0]??0;if(Math.abs(ax)>GP_DEADZONE){setInputSource('gamepad');const mn=WALL+PD[cur].r+1,mx2=W-WALL-PD[cur].r-1,range=mx2-mn;if(range>0)mx=Math.max(mn,Math.min(mx2,mx+ax*speed));}
+  if(pressed(0)){setInputSource('gamepad');if(!wipeOutActive&&!dead)(function tryDrop(){if(wipeOutActive||dead)return;if(cooling)requestAnimationFrame(tryDrop);else drop();})();}
+  if(pressed(1)){setInputSource('gamepad');toggleHelp();}
+  for(let i=0;i<gp.buttons.length;i++)_gpBtnPrev[i]=gp.buttons[i]?.pressed;
 }
-
-// ── INPUT SOURCE DETECTION ────────────────────────────────────────────
-let inputSource = 'keyboard'; // 'keyboard' | 'touch' | 'gamepad'
-function setInputSource(src){ if(inputSource!==src){ inputSource=src; onInputSourceChange(); } }
-function onInputSourceChange(){
-  // future hook: update UI hints based on input source
-}
+let inputSource='keyboard';
+function setInputSource(src){if(inputSource!==src){inputSource=src;}}
 let _gpConnected=false;
-function setGpConnected(v){
-  _gpConnected=v;
-  const btn=document.getElementById('help-tab-gp');
-  if(btn) btn.style.display=v?'':'none';
-  if(!v) showHelpTab('kb'); // fall back to keyboard tab
-}
-window.addEventListener('gamepadconnected',    ()=>{ setInputSource('gamepad'); setGpConnected(true); });
-window.addEventListener('gamepaddisconnected', ()=>{ inputSource='keyboard'; setGpConnected(false); });
-window.addEventListener('mousemove', ()=>setInputSource('keyboard'), {passive:true});
-window.addEventListener('keydown',   ()=>setInputSource('keyboard'), {passive:true, capture:true});
-window.addEventListener('touchstart',()=>setInputSource('touch'),    {passive:true, capture:true});
+function setGpConnected(v){_gpConnected=v;}
+window.addEventListener('gamepadconnected',()=>{setInputSource('gamepad');setGpConnected(true);});
+window.addEventListener('gamepaddisconnected',()=>{inputSource='keyboard';setGpConnected(false);});
+window.addEventListener('mousemove',()=>setInputSource('keyboard'),{passive:true});
+window.addEventListener('keydown',()=>setInputSource('keyboard'),{passive:true,capture:true});
+window.addEventListener('touchstart',()=>setInputSource('touch'),{passive:true,capture:true});
 
-// ── ADAPTIVE REFLECTION TICK ──────────────────────────────────────────
-function tickReflect(now){
-  if(!isMobile){ _reflectEnabled=true; return; }
-  if(_reflectState==='off_permanent'){ _reflectEnabled=false; return; }
-
-  // update rolling FPS average
-  if(_fpsPrev>0){
-    _fpsDeltas[_fpsDeltaIdx%60]= now - _fpsPrev;
-    _fpsDeltaIdx++;
-  }
-  _fpsPrev=now;
-  const samples=Math.min(_fpsDeltaIdx,60);
-  let avgDelta=0;
-  for(let i=0;i<samples;i++) avgDelta+=_fpsDeltas[i];
-  const fps = samples>0 ? 1000/(avgDelta/samples) : 60;
-
-  if(_reflectWindowStart===0) _reflectWindowStart=now;
-  const elapsed=now-_reflectWindowStart;
-
-  if(_reflectState==='probing'){
-    if(fps < REFLECT_FPS_ON){
-      _reflectWindowStart=now; // reset window — not stable yet
-    } else if(elapsed>=REFLECT_WINDOW_MS){
-      _reflectState='on'; _reflectEnabled=true; _reflectWindowStart=now;
-    }
-  } else if(_reflectState==='on'){
-    _reflectEnabled=true;
-    if(fps < REFLECT_FPS_OFF){
-      if(elapsed>=REFLECT_WINDOW_MS){
-        _reflectState='off_permanent'; _reflectEnabled=false;
-      }
-    } else {
-      _reflectWindowStart=now; // stable — keep resetting so drop window is fresh
-    }
-  }
-}
-
-// ── LOOP ──────────────────────────────────────────────────────────────
 function loop(){
-  tickReflect(performance.now());
+  tickScheduled();
   processGamepad();
-  // animate trap door scale
-  const trapTarget=trapDoorOpen?1:0;
-  if(trapDoorScale!==trapTarget)
-    trapDoorScale=trapTarget>trapDoorScale
-      ? Math.min(1,trapDoorScale+TRAP_ANIM_SPEED)
-      : Math.max(0,trapDoorScale-TRAP_ANIM_SPEED);
+  tickTrapDoor();
   processKeys();
   if(!dead){step();detectMerges();processMerges();}
   updateClaw();
-  // joystick: tilt only while movement is active (reset after 3 still frames)
-  if(showJoy){
-    const hasL=keysDown.has('ArrowLeft'), hasR=keysDown.has('ArrowRight');
-    if(hasL){ updateJoyDir('left'); _joyNoMovFrames=0; }
-    else if(hasR){ updateJoyDir('right'); _joyNoMovFrames=0; }
-    else {
-      const dMx=(_joyLastMx!==null)?mx-_joyLastMx:0;
-      if(Math.abs(dMx)>0.5){ _joyNoMovFrames=0; updateJoyDir(dMx<0?'left':'right'); }
-      else { _joyNoMovFrames++; if(_joyNoMovFrames>=3) updateJoyDir('none'); }
-    }
-    _joyLastMx=mx;
-  }
-  // remove fall-through plushies once fully below the canvas
-  if(wipeOutActive) plushies=plushies.filter(p=>p.y-p.r<H+80); // remove once fully off-screen
-  tickParts(); tickPopups(); tickConfetti(); tickSparkles(); tickCelebrations(); if(!dead) checkDanger(); if(showClaw) tickGlare(); tickShakeCooldown(); render();
-  if(!dead) requestAnimationFrame(loop); // pause loop on game-over to save battery
+  if(showJoy){const hasL=keysDown.has('ArrowLeft'),hasR=keysDown.has('ArrowRight');if(hasL){updateJoyDir('left');_joyNoMovFrames=0;}else if(hasR){updateJoyDir('right');_joyNoMovFrames=0;}else{const dMx=(_joyLastMx!==null)?mx-_joyLastMx:0;if(Math.abs(dMx)>0.5){_joyNoMovFrames=0;updateJoyDir(dMx<0?'left':'right');}else{_joyNoMovFrames++;if(_joyNoMovFrames>=3)updateJoyDir('none');}}_joyLastMx=mx;}
+  if(wipeOutActive){plushies.filter(p=>p.y-p.r>=H+80).forEach(_destroyBall);plushies=plushies.filter(p=>p.y-p.r<H+80);}
+  tickParts();tickPopups();tickConfetti();tickSparkles();tickCelebrations();
+  if(!dead)checkDanger();if(showClaw)tickGlare();if(typeof tickShakeCooldown==='function')tickShakeCooldown();render();
+  if(!dead&&!stepMode)requestAnimationFrame(loop);
 }
-function resumeLoop(){ requestAnimationFrame(loop); }
+function resumeLoop(){requestAnimationFrame(loop);}
 
-// ── DROP PREDICTION ───────────────────────────────────────────────────
-// Cast circle (radius r) straight down from x; return first contact Y
-function predictLanding(x, r){
-  let y = H - WALL - r; // default: floor
-  for(const p of plushies){
-    const dx = x - p.x;
-    const md = r + p.r;
-    if(Math.abs(dx) < md){
-      const dy = Math.sqrt(md*md - dx*dx);
-      const cy = p.y - dy; // centre Y when touching this plushie from above
-      if(cy > DROPY + r && cy < y) y = cy;
-    }
-  }
-  return y;
-}
+function predictLanding(x,r){let y=H-WALL-r;for(const p of plushies){const dx=x-p.x,md=r+p.r;if(Math.abs(dx)<md){const dy=Math.sqrt(md*md-dx*dx),cy=p.y-dy;if(cy>DROPY+r&&cy<y)y=cy;}}return y;}
 
-// ── 9-SLICE PANEL ────────────────────────────────────────────────────
-// Build a small 32×32 source sprite once; drawNineSlice stretches it to any size
-// without distorting corners.  Layout (PANEL_C = 8px slices):
-//
-//   TL | top  | TR        ← 8px tall
-//   ───+──────+───
-//   lft|center|rgt        ← stretches vertically
-//   ───+──────+───
-//   BL | bot  | BR        ← 8px tall
-//       ↑ 8px each end
-//
-const PANEL_SZ = 32;   // source sprite size (px)
-const PANEL_C  = 8;    // corner/slice thickness (matches WALL)
+function _dashLineH(g,x0,x1,y,dash,gap){for(let x=x0;x<x1;x+=dash+gap){g.moveTo(x,y);g.lineTo(Math.min(x+dash,x1),y);}}
+function _dashLineV(g,x,y0,y1,dash,gap){for(let y=y0;y<y1;y+=dash+gap){g.moveTo(x,y);g.lineTo(x,Math.min(y+dash,y1));}}
+function _dashCircle(g,cx,cy,r,dash,gap){const dashA=dash/r,gapA=gap/r;for(let a=0;a<2*Math.PI;a+=dashA+gapA){g.moveTo(cx+r*Math.cos(a),cy+r*Math.sin(a));const a2=Math.min(a+dashA,2*Math.PI);const steps=Math.max(2,Math.ceil(dashA/0.1));for(let k=1;k<=steps;k++){const aa=a+(a2-a)*k/steps;g.lineTo(cx+r*Math.cos(aa),cy+r*Math.sin(aa));}}}
+function _star4(g,x,y,r){const ir=r*0.3,pts=[];for(let k=0;k<8;k++){const a=Math.PI/4*k,cr=k%2===0?r:ir;pts.push(x+cr*Math.cos(a),y+cr*Math.sin(a));}g.poly(pts);} // caller applies .fill()
+function _setHeldSprite(x,y,lvl,alpha){if(!plushieTextures[lvl]){clawHeldSpr.visible=false;return;}if(clawHeldSpr.texture!==plushieTextures[lvl]){clawHeldSpr.texture=plushieTextures[lvl];clawHeldSpr.scale.set(PD[lvl].r/imgR(lvl));}clawHeldSpr.x=x;clawHeldSpr.y=y;clawHeldSpr.alpha=alpha;clawHeldSpr.visible=true;}
 
-const _panelSpr = (() => {
-  const oc = document.createElement('canvas');
-  oc.width = oc.height = PANEL_SZ;
-  const c = oc.getContext('2d');
-  const s = PANEL_SZ, cr = PANEL_C;
-
-  // ── interior (center region of 9-slice) ─────────────────────────────
-  c.fillStyle = '#f5f0e6';
-  c.fillRect(cr, cr, s - cr*2, s - cr*2);
-
-  // ── border fill (all 8 outer strips) ────────────────────────────────
-  c.fillStyle = '#c8a068';
-  c.fillRect(0,    0,    s,  cr);       // top bar
-  c.fillRect(0,    s-cr, s,  cr);       // bottom bar
-  c.fillRect(0,    cr,   cr, s-cr*2);   // left bar
-  c.fillRect(s-cr, cr,   cr, s-cr*2);   // right bar
-
-  // ── wood grain texture on border strips ─────────────────────────────
-  c.strokeStyle = 'rgba(100,58,12,0.28)';
-  c.lineWidth = 1;
-  for(let x = 1; x < cr; x += 2){
-    c.beginPath(); c.moveTo(x,   0); c.lineTo(x,   s); c.stroke();
-    c.beginPath(); c.moveTo(s-x, 0); c.lineTo(s-x, s); c.stroke();
-  }
-  for(let y = 1; y < cr; y += 2){
-    c.beginPath(); c.moveTo(0, y);   c.lineTo(s, y);   c.stroke();
-    c.beginPath(); c.moveTo(0, s-y); c.lineTo(s, s-y); c.stroke();
-  }
-
-  // ── inner bevel highlight ────────────────────────────────────────────
-  c.strokeStyle = 'rgba(255,228,185,0.65)';
-  c.lineWidth = 1;
-  c.strokeRect(cr-1.5, cr-1.5, s-(cr-1.5)*2, s-(cr-1.5)*2);
-
-  // ── outer dark edge ──────────────────────────────────────────────────
-  c.strokeStyle = 'rgba(70,35,8,0.65)';
-  c.lineWidth = 1;
-  c.strokeRect(0.5, 0.5, s-1, s-1);
-
-  return oc;
-})();
-
-// drawNineSlice(ctx, spriteCanvas, cornerSize, destX, destY, destW, destH)
-// ── WALL REFLECTIONS ──────────────────────────────────────────────────────
-// Two zones:
-//   SOURCE_W (orange) — objects here get sampled for reflection
-//   REFLECT_W (cyan)  — where the reflection is drawn (scaled+flipped from source)
-function drawReflections(){
-  const sw=SOURCE_W, rv=REFLECT_VIS, rw=REFLECT_W;
-  const bw=reflectBuf.width, bh=reflectBuf.height;
-  if(!bw||!bh) return;
-  // reflectBuf layout: left strip [0, bw/2), right strip [bw/2, bw)
-  const stripW=bw/2;
-
-  // LEFT — flip left strip into x∈[0,rv]
-  ctx.save();
-  ctx.beginPath(); ctx.rect(0,0,rv,H); ctx.clip();
-  ctx.globalAlpha=0.22;
-  ctx.translate(rv,0); ctx.scale(-rw/sw,1);
-  ctx.drawImage(reflectBuf, 0,0,stripW,bh, 0,0,sw,H);
-  ctx.restore();
-
-  // RIGHT — flip right strip; rightmost orange pixel → left edge of cyan (W-rv)
-  ctx.save();
-  ctx.beginPath(); ctx.rect(W-rv,0,rv,H); ctx.clip();
-  ctx.globalAlpha=0.22;
-  ctx.translate(2*(W-rv),0); ctx.scale(-1,1);
-  ctx.drawImage(reflectBuf, stripW,0,stripW,bh, W-rv-sw,0,sw,H);
-  ctx.restore();
-}
-
-
-// Draws a 9-sliced panel at any destination size without distorting corners.
-
-function drawCoverPatches(){
-  const t=coverImg.top, b=coverImg.bot;
-  if(!t.naturalWidth||!b.naturalWidth) return;
-  const tw=t.naturalWidth, th=t.naturalHeight;
-  const bw=b.naturalWidth, bh=b.naturalHeight;
-  ctx.drawImage(t, 0,0,tw,th);
-  ctx.save(); ctx.scale(-1,1); ctx.drawImage(t,-W,0,tw,th); ctx.restore();
-  ctx.drawImage(b, 0,H-bh,bw,bh);
-  ctx.save(); ctx.scale(-1,1); ctx.drawImage(b,-W,H-bh,bw,bh); ctx.restore();
-}
-
-// 3-part horizontal 9-slice: fixed left cap, tiled center, fixed right cap
-// meta: left=120, right=120, top=0, bottom=0, mode=TILE
-function drawFloorTile(img, dx, dy, dw, dh, capL=90, capR=90){
-  const sw=img.naturalWidth, sh=img.naturalHeight;
-  const centerSrcW=sw-capL-capR;
-  const centerDstW=dw-capL-capR;
-  if(centerDstW<=0||dh<=0) return;
-  ctx.drawImage(img, 0,0,capL,sh, dx,dy,capL,dh);
-  ctx.save();
-  ctx.beginPath(); ctx.rect(dx+capL, dy, centerDstW, dh); ctx.clip();
-  for(let x=0; x<centerDstW; x+=centerSrcW)
-    ctx.drawImage(img, capL,0,centerSrcW,sh, dx+capL+x,dy,Math.min(centerSrcW,centerDstW-x),dh);
-  ctx.restore();
-  ctx.drawImage(img, sw-capR,0,capR,sh, dx+dw-capR,dy,capR,dh);
-}
-
-// Trap door — bottom anchored at H-WALL, height scaled by trapDoorScale
-// Trap door draw params — override at runtime to adjust position/size:
-//   window.TD = { x:0, w:W, h:36, bottomY:H }
-// Trap door draw params — override at runtime to adjust:
-window.TD = {
-  x: -30,
-  w: 690,
-  h: 38,
-  bottomY: 1049,
-  capL: 90,
-  capR: 90
-};
-function drawTrapDoor(){
-  if(trapDoorScale<=0.001||!trapDoorImg.naturalWidth) return;
-  const {x,w,h,bottomY,capL,capR}=window.TD;
-  const sh=h*trapDoorScale;
-  drawFloorTile(trapDoorImg, x, bottomY-sh, w, sh, capL, capR);
-}
-
-function drawNineSlice(gctx, img, corner, dx, dy, dw, dh){
-  const s = img.width;          // source sprite side length (assumed square)
-  const c = corner;
-  const mSrc  = s  - c * 2;    // source centre/edge region size
-  const mDstW = dw - c * 2;    // dest horizontal stretch
-  const mDstH = dh - c * 2;    // dest vertical stretch
-
-  // [srcX, srcY, srcW, srcH,  dstX,       dstY,       dstW,   dstH  ]
-  const slices = [
-    // ── 4 corners (no stretching) ───────────────────────────────────────
-    [0,    0,    c,    c,    dx,         dy,         c,      c     ], // TL
-    [s-c,  0,    c,    c,    dx+dw-c,    dy,         c,      c     ], // TR
-    [0,    s-c,  c,    c,    dx,         dy+dh-c,    c,      c     ], // BL
-    [s-c,  s-c,  c,    c,    dx+dw-c,    dy+dh-c,    c,      c     ], // BR
-    // ── 4 edges (stretch along one axis) ────────────────────────────────
-    [c,    0,    mSrc, c,    dx+c,       dy,         mDstW,  c     ], // top
-    [c,    s-c,  mSrc, c,    dx+c,       dy+dh-c,    mDstW,  c     ], // bottom
-    [0,    c,    c,    mSrc, dx,         dy+c,       c,      mDstH ], // left
-    [s-c,  c,    c,    mSrc, dx+dw-c,    dy+c,       c,      mDstH ], // right
-    // ── center (stretch both axes) ──────────────────────────────────────
-    [c,    c,    mSrc, mSrc, dx+c,       dy+c,       mDstW,  mDstH ], // center
-  ];
-
-  for(const [sx,sy,sw,sh,ddx,ddy,ddw,ddh] of slices){
-    gctx.drawImage(img, sx, sy, sw, sh, ddx, ddy, ddw, ddh);
-  }
-}
-
-// ── RENDER ────────────────────────────────────────────────────────────
+// TD updated to match v25 values
+window.TD={x:-30,w:690,h:38,bottomY:H,capL:90,capR:90};
 function render(){
-  ctx.clearRect(0, 0, W, H); // transparent canvas — background comes from CSS tile
-  // danger line — blinks when any collider enters the warning zone
-  // warning blink uses display radius; buffer scaled to new H (60→112px)
-  const inWarning=!cooling&&plushies.some(p=>(p.y-PD[p.level].r)<(DY+112)&&p.speed<2);
-  const blink=inWarning&&(Date.now()%600)<300;
-  ctx.save(); ctx.setLineDash([7,5]);
-  ctx.strokeStyle=blink?'rgba(220,30,30,.95)':'rgba(210,55,55,.55)';
-  ctx.lineWidth=blink?2.5:1.5;
-  const dzPad=W*0.1;
-  ctx.beginPath(); ctx.moveTo(dzPad,DY); ctx.lineTo(W-dzPad,DY); ctx.stroke();
-  ctx.setLineDash([]); ctx.font=blink?`bold ${Math.round(11*FS)}px 'Segoe UI',system-ui,sans-serif`:`${Math.round(11*FS)}px 'Segoe UI',system-ui,sans-serif`;
-  ctx.fillStyle=blink?'rgba(220,30,30,.95)':'rgba(210,55,55,.65)'; ctx.textAlign='left';
-  ctx.fillText('DANGER',dzPad+5,DY-5);
-  // version — right-aligned, same y as DANGER
-  ctx.textAlign='right';
-  ctx.font=`${Math.round(9*FS)}px 'Segoe UI',system-ui,sans-serif`;
-  ctx.fillStyle='rgba(90,56,32,0.45)';
-  ctx.fillText('v25',W-dzPad-4,DY-5);
-  // TAP TO DROP hint — big, slowly blinking at tank center
-  if(tapHint && !dead && !wipeOutActive){
-    const pulse=0.4+0.6*Math.abs(Math.sin(Date.now()/700)); // 0.4–1.0, ~1.4s period
-    ctx.save();
-    ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.font=`400 ${Math.round(36*FS)}px 'Righteous','Segoe UI',system-ui,sans-serif`;
-    ctx.shadowColor='rgba(90,56,32,0.3)';ctx.shadowBlur=12;
-    ctx.fillStyle=`rgba(90,56,32,${(pulse*0.75).toFixed(2)})`;
-    ctx.fillText('TAP TO DROP',W/2,H/2);
-    ctx.restore();
-  }
-  ctx.restore();
-  // ── CLAW + held plushie ───────────────────────────────────────────────
-  if(!dead && !showClaw){
-    // claw off — show classic ghost preview
-    const gx=clamp(mx,cur), gr=PD[cur].r, gy=predictLanding(gx,gr);
-    ctx.save();
-    ctx.setLineDash([3,5]); ctx.strokeStyle='rgba(140,90,40,.18)'; ctx.lineWidth=1;
-    ctx.beginPath(); ctx.moveTo(gx,DROPY+gr); ctx.lineTo(gx,gy-gr); ctx.stroke();
-    ctx.setLineDash([]);
-    if(!cooling){
-      ctx.beginPath(); ctx.arc(gx,gy,gr,0,Math.PI*2);
-      ctx.setLineDash([5,4]); ctx.strokeStyle=PD[cur].stroke+'d0'; ctx.lineWidth=2; ctx.stroke();
-      ctx.setLineDash([]);
-    }
-    ctx.restore();
-    drawAt(ctx,gx,DROPY,cur,.6);
-  }
-  if(!dead && showClaw){
-    const lvl  = (clawState==='opening') ? clawLvl : cur;
-    const gr   = PD[lvl].r;
-    const cx   = clawX;
-    const cy   = DROPY;
-    // claw visual size scales with plushie radius
-    const cw   = Math.max(70, gr * 3.0);
-    const imgY = cy - cw * 0.78; // positions round body above plushie center
+  gfxUI.clear(); gfxClaw.clear(); gfxFx.clear();
 
-    // landing guide (idle only)
+  // ── danger line — blinks when any plushie's top crosses DY (level 1+) ──
+  const _now=Date.now();
+  const blink=plushies.some(p=>p.landed&&(p.y-PD[p.level].r<DY+100))&&(_now%600)<300;
+  const dzPad=W*0.1;
+  _dashLineH(gfxUI,dzPad,W-dzPad,DY,7,5);
+  gfxUI.stroke({width:blink?2.5:1.5,color:blink?0xDC1E1E:0xD23737,alpha:blink?0.95:0.55});
+  _dangerText.style.fill=blink?'#DC1E1E':'#D23737';
+  _dangerText.style.fontWeight=blink?'bold':'normal';
+  _dangerText.alpha=blink?0.95:0.65;
+
+  // ── tap hint ───────────────────────────────────────────────────────
+  if(tapHint&&!dead&&!wipeOutActive){
+    _tapText.visible=true; _tapText.alpha=(0.4+0.6*Math.abs(Math.sin(Date.now()/700)))*0.75;
+  } else { _tapText.visible=false; }
+
+  // ── claw ───────────────────────────────────────────────────────────
+  clawSprBack.visible=false; clawSprFront.visible=false; clawHeldSpr.visible=false;
+  if(!dead&&!showClaw){
+    const gx=clamp(mx,cur),gr=PD[cur].r,gy=predictLanding(gx,gr);
+    _dashLineV(gfxClaw,gx,DROPY+gr,gy-gr,3,5);
+    gfxClaw.stroke({width:1,color:0x8C5A28,alpha:0.18});
+    if(!cooling){ _dashCircle(gfxClaw,gx,gy,gr,5,4); gfxClaw.stroke({width:2,color:cssHex(PD[cur].stroke),alpha:0.82}); }
+    _setHeldSprite(gx,DROPY,cur,0.6);
+  }
+  if(!dead&&showClaw){
+    const lvl=(clawState==='opening')?clawLvl:cur;
+    const gr=PD[lvl].r,cx=clawX,cy=DROPY,cw=Math.max(70,gr*3.0),imgY=cy-cw*0.78;
     if(clawState==='idle'){
       const gy=predictLanding(cx,gr);
-      ctx.save();
-      ctx.setLineDash([3,5]);
-      ctx.strokeStyle='rgba(140,90,40,.18)'; ctx.lineWidth=1;
-      ctx.beginPath(); ctx.moveTo(cx,cy+gr); ctx.lineTo(cx,gy-gr); ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.beginPath(); ctx.arc(cx,gy,gr,0,Math.PI*2);
-      ctx.setLineDash([5,4]);
-      ctx.strokeStyle=PD[cur].stroke+'d0'; ctx.lineWidth=2; ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.restore();
+      _dashLineV(gfxClaw,cx,cy+gr,gy-gr,3,5); gfxClaw.stroke({width:1,color:0x8C5A28,alpha:0.18});
+      _dashCircle(gfxClaw,cx,gy,gr,5,4);       gfxClaw.stroke({width:2,color:cssHex(PD[cur].stroke),alpha:0.82});
     }
-
-    // wire from top of canvas to claw top-peg
-    ctx.save();
-    ctx.strokeStyle='#a09080'; ctx.lineWidth=2;
-    ctx.beginPath(); ctx.moveTo(cx,0); ctx.lineTo(cx, imgY + cw*0.06); ctx.stroke();
-    ctx.restore();
-
-    // claw_back (behind plushie)
-    if(clawImg.back.naturalWidth)
-      ctx.drawImage(clawImg.back,  cx-cw/2, imgY, cw, cw);
-
-    // plushie — held while idle; hidden once released (opening state after spawn)
-    if(clawState==='idle' || (clawState==='opening' && clawOpenTimer>CLAW_OPEN_FRAMES-2))
-      drawAt(ctx, cx, cy, lvl, 1);
-
-    // claw_front / claw_open on release (fallback to front if open not loaded)
-    const useOpen = clawState==='opening' && clawImg.open.naturalWidth;
-    const frontImg = useOpen ? clawImg.open : clawImg.front;
-    if(frontImg.naturalWidth)
-      ctx.drawImage(frontImg, cx-cw/2, imgY, cw, cw);
+    gfxClaw.moveTo(cx,0).lineTo(cx,imgY+cw*0.06);
+    gfxClaw.stroke({width:2,color:0xA09080,alpha:1});
+    if(_clawTexBack){clawSprBack.texture=_clawTexBack;clawSprBack.x=cx-cw/2;clawSprBack.y=imgY;clawSprBack.width=cw;clawSprBack.height=cw;clawSprBack.visible=true;}
+    if(clawState==='idle'||(clawState==='opening'&&clawOpenTimer>CLAW_OPEN_FRAMES-2)) _setHeldSprite(cx,cy,lvl,1.0);
+    const frontTex=(clawState==='opening'&&_clawTexOpen)?_clawTexOpen:_clawTexFront;
+    if(frontTex){clawSprFront.texture=frontTex;clawSprFront.x=cx-cw/2;clawSprFront.y=imgY;clawSprFront.width=cw;clawSprFront.height=cw;clawSprFront.visible=true;}
   }
-  // draw higher levels first (behind), lower levels on top
-  const byLevel=[...plushies].sort((a,b)=>b.level-a.level);
-  for(const p of byLevel){
-    ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.angle);
-    ctx.shadowColor='rgba(0,0,0,0.28)'; ctx.shadowBlur=10; ctx.shadowOffsetX=2; ctx.shadowOffsetY=5;
-    if(solidMode){
-      drawSolidNgon(ctx,p.level);
-    } else {
-      const rs=rendSprites[p.level];
-      if(rs) ctx.drawImage(rs.c,-rs.lw/2,-rs.lh/2,rs.lw,rs.lh);
+
+  // ── plushies (sortableChildren+zIndex handles draw order — no removeChildren needed) ──
+  for(const p of plushies){
+    if(!p.sprite&&plushieTextures[p.level]){
+      p.sprite=new PIXI.Sprite(plushieTextures[p.level]);
+      p.sprite.zIndex=11-p.level;
+      p.sprite.label=PD[p.level].name;
+      p.sprite.anchor.set(0.5,0.5); p.sprite.scale.set(PD[p.level].r/imgR(p.level));
+      const sh=makeShadow();if(sh)p.sprite.filters=[sh];
+      layerPlushie.addChild(p.sprite);
     }
-    ctx.restore();
+    if(p.sprite){
+      p.sprite.x=p.x; p.sprite.y=p.y; p.sprite.rotation=p.angle;
+      // Tint by danger level
+      const _lv=p._dangerLevel||0;
+      if(_lv===3){
+        // Fast pulse red — 0.15s period
+        const pulse=0.5+0.5*Math.sin(_now/24);
+        const gb=Math.round(255*(1-pulse));
+        p.sprite.tint=(0xFF<<16)|(gb<<8)|gb;
+      } else if(_lv===2){
+        // Slow pulse red — 0.5s period
+        const pulse=0.3+0.3*Math.sin(_now/80);
+        const gb=Math.round(255*(1-pulse));
+        p.sprite.tint=(0xFF<<16)|(gb<<8)|gb;
+      } else {
+        p.sprite.tint=0xFFFFFF;
+      }
+      if(solidMode){
+        p.sprite.visible=false;
+        const n=getSides(p.level),r=PD[p.level].physR??PD[p.level].r,pts=[];
+        for(let k=0;k<n;k++){const a=p.angle+2*Math.PI*k/n;pts.push(p.x+r*Math.cos(a),p.y+r*Math.sin(a));}
+        gfxFx.poly(pts).fill({color:cssHex(PD[p.level].body)}).stroke({width:2,color:cssHex(PD[p.level].stroke)});
+      } else { p.sprite.visible=true; if(!p.sprite.parent)layerPlushie.addChild(p.sprite); }
+    }
   }
-  for(const p of parts){
-    ctx.save(); ctx.globalAlpha=p.life*.85; ctx.fillStyle=p.color;
-    ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill(); ctx.restore();
-  }
-  // ── LAYERED BACKGROUND (destination-over = each draw goes behind existing content) ──
-  // order drawn: trap door → cover patches → reflections → (behind plushies already drawn)
-  ctx.globalCompositeOperation='destination-over';
-  drawTrapDoor();
-  drawCoverPatches();
-  if(_reflectEnabled) drawReflections();
-  ctx.globalCompositeOperation='source-over';
-  // score popups
-  ctx.save(); ctx.textAlign='center';
-  popups.forEach(p=>{
-    const sz=p.big?Math.round((48+p.life*20)*FS):Math.round((22+p.life*14)*FS);
-    ctx.font=`700 ${sz}px 'Righteous','Segoe UI',system-ui,sans-serif`;
-    ctx.globalAlpha=Math.min(p.life,1)*0.92;
-    // dark stroke for readability over any background
-    ctx.strokeStyle='rgba(0,0,0,0.45)'; ctx.lineWidth=3;
-    ctx.strokeText(p.text,p.x,p.y);
-    ctx.fillStyle=p.color; ctx.fillText(p.text,p.x,p.y);
-  });
-  ctx.globalAlpha=1; ctx.restore();
 
-  // ── Glass glare flash — sweeps horizontally left→right, no fade ─────────
+  // ── particles ────────────────────────────────────────────────────────
+  for(const p of parts) gfxFx.circle(p.x,p.y,p.r).fill({color:cssHex(p.color),alpha:p.life*0.85});
+
+  // ── trap door ────────────────────────────────────────────────────────
+  if(trapDoorSpr.texture&&trapDoorSpr.texture!==PIXI.Texture.EMPTY){
+    if(trapDoorScale<=0.001){ trapDoorSpr.visible=false; }
+    else { const{x,w,h,bottomY}=window.TD,sh=h*trapDoorScale; trapDoorSpr.x=x;trapDoorSpr.y=bottomY-sh;trapDoorSpr.width=w;trapDoorSpr.height=sh;trapDoorSpr.visible=true; }
+  }
+
+  // ── glare flash ─────────────────────────────────────────────────────
   if(showClaw&&_glareT>=0){
-    // two slanted streaks sweeping left → right (different widths)
-    const cx=(_glareT*1.6-0.3)*W;
-    ctx.save();
-    ctx.beginPath(); ctx.rect(0,0,W,H); ctx.clip();
-    ctx.translate(cx, H/2);
-    ctx.rotate(-Math.PI/7); // ~26° slant
-
-    // streak 1 — wider, brighter
-    const hw1=W*0.20;
-    const g1=ctx.createLinearGradient(-hw1,0,hw1,0);
-    g1.addColorStop(0,    'rgba(255,255,255,0)');
-    g1.addColorStop(0.35, 'rgba(255,255,255,0)');
-    g1.addColorStop(0.48, 'rgba(255,255,255,0.55)');
-    g1.addColorStop(0.50, 'rgba(255,255,255,0.75)');
-    g1.addColorStop(0.52, 'rgba(255,255,255,0.55)');
-    g1.addColorStop(0.65, 'rgba(255,255,255,0)');
-    g1.addColorStop(1,    'rgba(255,255,255,0)');
-    ctx.fillStyle=g1;
-    ctx.fillRect(-hw1,-H*1.5,hw1*2,H*3);
-
-    // streak 2 — narrower, softer, offset to the right
-    const hw2=W*0.09;
-    const off2=W*0.28; // offset from streak 1 center
-    const g2=ctx.createLinearGradient(off2-hw2,0,off2+hw2,0);
-    g2.addColorStop(0,    'rgba(255,255,255,0)');
-    g2.addColorStop(0.35, 'rgba(255,255,255,0)');
-    g2.addColorStop(0.48, 'rgba(255,255,255,0.30)');
-    g2.addColorStop(0.50, 'rgba(255,255,255,0.45)');
-    g2.addColorStop(0.52, 'rgba(255,255,255,0.30)');
-    g2.addColorStop(0.65, 'rgba(255,255,255,0)');
-    g2.addColorStop(1,    'rgba(255,255,255,0)');
-    ctx.fillStyle=g2;
-    ctx.fillRect(off2-hw2,-H*1.5,hw2*2,H*3);
-
-    ctx.restore();
+    const cx2=(_glareT*1.6-0.3)*W,angle=-Math.PI/7,cos=Math.cos(angle),sin=Math.sin(angle),hh=H*1.5;
+    const hw1=W*0.11; // reduced from 0.20
+    gfxFx.poly([[-hw1,-hh],[hw1,-hh],[hw1,hh],[-hw1,hh]].map(([px,py])=>[cx2+px*cos-py*sin,H/2+px*sin+py*cos]).flat())
+         .fill({color:0xFFFFFF,alpha:0.40});
+    const hw2=W*0.05,off2=W*0.28; // reduced from 0.09
+    gfxFx.poly([[-hw2+off2,-hh],[hw2+off2,-hh],[hw2+off2,hh],[-hw2+off2,hh]].map(([px,py])=>[cx2+px*cos-py*sin,H/2+px*sin+py*cos]).flat())
+         .fill({color:0xFFFFFF,alpha:0.25});
   }
 
-  // ── CONFETTI ──────────────────────────────────────────────────────────
-  ctx.save();
+  // ── confetti ─────────────────────────────────────────────────────────
   for(const p of confetti){
-    ctx.globalAlpha=p.life*0.9;
-    ctx.fillStyle=p.color;
-    ctx.save();
-    ctx.translate(p.x,p.y);
-    ctx.rotate(p.rot);
     if(p.shape==='rect'){
-      ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);
-    } else {
-      ctx.beginPath();ctx.arc(0,0,p.r,0,Math.PI*2);ctx.fill();
-    }
-    ctx.restore();
+      const cos=Math.cos(p.rot),sin=Math.sin(p.rot),hw=p.w/2,hh=p.h/2;
+      gfxFx.poly([[-hw,-hh],[hw,-hh],[hw,hh],[-hw,hh]].map(([px,py])=>[p.x+px*cos-py*sin,p.y+px*sin+py*cos]).flat())
+           .fill({color:cssHex(p.color),alpha:p.life*0.9});
+    } else { gfxFx.circle(p.x,p.y,p.r).fill({color:cssHex(p.color),alpha:p.life*0.9}); }
   }
-  ctx.globalAlpha=1;
-  ctx.restore();
 
-  // ── SPARKLES ──────────────────────────────────────────────────────────
-  ctx.save();
+  // ── sparkles ─────────────────────────────────────────────────────────
   for(const s of sparkles){
     if(s.delay>0) continue;
-    ctx.globalAlpha=Math.min(s.life,1)*0.92;
-    ctx.fillStyle=s.color;
-    ctx.shadowColor=s.color; ctx.shadowBlur=s.r*1.5;
-    ctx.save();
-    ctx.translate(s.x,s.y);
-    ctx.rotate(s.rot);
-    drawStar4(ctx,s.r);
-    ctx.fill();
-    ctx.restore();
+    _star4(gfxFx,s.x,s.y,s.r);
+    gfxFx.fill({color:0xFFFFFF,alpha:Math.min(s.life,1)*0.92});
   }
-  ctx.shadowBlur=0; ctx.globalAlpha=1;
-  ctx.restore();
 
-  // ── FIRST-MERGE CELEBRATION TEXT ──────────────────────────────────────
-  ctx.save();
-  ctx.textAlign='center';
-  for(const c of celebrations){
-    const alpha=c.phase==='out'?c.life*0.95:0.97;
-    ctx.globalAlpha=alpha;
-    ctx.save();
-    ctx.translate(c.x,c.y);
-    ctx.scale(c.scale,c.scale);
-    // shadow glow
-    ctx.shadowColor=c.stroke;
-    ctx.shadowBlur=22;
-    // outer stroke
-    ctx.font=`400 ${Math.round(52*FS)}px 'Righteous','Segoe UI',system-ui,sans-serif`;
-    ctx.lineWidth=8;
-    ctx.strokeStyle=c.stroke;
-    ctx.strokeText(c.name,0,0);
-    // fill
-    ctx.fillStyle=c.color;
-    ctx.fillText(c.name,0,0);
-    // white inner highlight
-    ctx.shadowBlur=0;
-    ctx.font=`400 ${Math.round(52*FS)}px 'Righteous','Segoe UI',system-ui,sans-serif`;
-    ctx.fillStyle='rgba(255,255,255,0.38)';
-    ctx.fillText(c.name,0,-2);
-    // sub-label
-    ctx.shadowBlur=8; ctx.shadowColor='rgba(0,0,0,0.5)';
-    ctx.font=`400 ${Math.round(16*FS)}px 'Righteous','Segoe UI',system-ui,sans-serif`;
-    ctx.fillStyle='#fff';
-    ctx.strokeStyle='rgba(0,0,0,0.6)'; ctx.lineWidth=3;
-    let sub='';
-    if(c.isWipeOut){ sub=c.pts>0?'+'+c.pts.toLocaleString()+' bonus pts':''; }
-    else if(c.isLevelUp){ const mult=Math.pow(2,gameLevel-1); sub='×'+mult+' points multiplier'; }
-    else { sub=`Lv ${gameLevel}  ·  Rank ${c.level}  ·  +${c.pts.toLocaleString()} pts`; }
-    if(sub){ ctx.strokeText(sub,0,34); ctx.fillText(sub,0,34); }
-    ctx.restore();
-  }
-  ctx.globalAlpha=1;
-  ctx.restore();
-
-  // (reflections + cover patches drawn earlier, before popups/confetti, via destination-over)
-
-  // ── DEBUG OVERLAY (press D) ──────────────────────────────────────────
+  // ── D: collider circles — dashed ring in character color, red tint if spinning ──
   if(dbg){
-    ctx.save();
-    ctx.font='bold 10px monospace';
-    ctx.textAlign='center';
     for(const p of plushies){
-      const spinning=Math.abs(p.av)>0.01;
-      // collider circle
-      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
-      ctx.strokeStyle=spinning?'rgba(255,50,50,.85)':'rgba(50,200,80,.75)';
-      ctx.lineWidth=1.8; ctx.setLineDash([4,3]); ctx.stroke(); ctx.setLineDash([]);
-      // center dot
-      ctx.beginPath(); ctx.arc(p.x,p.y,3,0,Math.PI*2);
-      ctx.fillStyle=spinning?'#f00':'#0c0'; ctx.fill();
-      // labels
-      ctx.fillStyle=spinning?'#d00':'#060';
-      ctx.fillText(`r=${p.r} lv${p.level}`,p.x,p.y-p.r-5);
-      ctx.fillStyle='rgba(0,0,0,.55)';
-      ctx.fillText(`av:${p.av.toFixed(3)}`,p.x,p.y-p.r-16);
+      const sp=Math.abs(p.av)>0.01;
+      const bc=cssHex(PD[p.level].body);
+      // dashed collider ring using character body color, red when spinning
+      _dashCircle(gfxFx,p.x,p.y,p.r,4,3);
+      gfxFx.stroke({width:2.5,color:sp?0xFF3232:bc,alpha:0.88});
+      // center dot: green=still, red=spinning
+      gfxFx.circle(p.x,p.y,3.5).fill({color:sp?0xFF2020:0x20CC20});
     }
-    // legend
-    ctx.textAlign='left'; ctx.fillStyle='rgba(0,0,0,.65)'; ctx.font='10px monospace';
-    ctx.fillText('D=debug | H=solid n-gon | red=spinning | av=angular vel | Δ=avg move/frame',WALL+4,H-WALL-4);
-    ctx.restore();
   }
-  // ── C: polygon collider shapes ─────────────────────────────────────
+  // ── C: polygon colliders — character colors, thick stroke, vertex dots, edge count ──
   if(dbgPoly){
-    ctx.save();
     for(const p of plushies){
       const verts=getVerts(p);
-      ctx.beginPath();
-      ctx.moveTo(verts[0][0],verts[0][1]);
-      for(let k=1;k<verts.length;k++) ctx.lineTo(verts[k][0],verts[k][1]);
-      ctx.closePath();
-      ctx.strokeStyle=PD[p.level].body+'e0';
-      ctx.lineWidth=2; ctx.stroke();
-      // vertex dots
-      ctx.fillStyle=PD[p.level].body;
-      verts.forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,2.5,0,Math.PI*2);ctx.fill();});
-      // label: sides count
-      ctx.fillStyle='rgba(0,0,0,.7)'; ctx.textAlign='center'; ctx.font='bold 10px monospace';
-      ctx.fillText(`${getSides(p.level)}-gon`,p.x,p.y+4);
+      const bc=cssHex(PD[p.level].body), sc=cssHex(PD[p.level].stroke);
+      // polygon outline
+      gfxFx.poly(verts.flat()).stroke({width:3,color:sc,alpha:0.92});
+      // vertex circles
+      for(const [vx,vy] of verts)
+        gfxFx.circle(vx,vy,3).fill({color:bc});
+      // edge count label — create once, update text every frame (sides can change with [/])
+      if(!p._polyText){
+        p._polyText=new PIXI.Text({text:'',style:{fontFamily:'monospace',fontSize:Math.max(12,Math.round(p.r*0.3)),fontWeight:'bold',fill:'rgba(0,0,0,0.7)'}});
+        p._polyText.anchor.set(0.5,0.5);
+        layerFx.addChild(p._polyText);
+      }
+      p._polyText.text=getSides(p.level)+'-gon';
+      p._polyText.x=p.x; p._polyText.y=p.y+4; p._polyText.visible=true;
     }
-    ctx.textAlign='left'; ctx.fillStyle='rgba(0,0,0,.65)'; ctx.font='10px monospace';
-    ctx.fillText(`C = polygon colliders | [ ] adjust sides | lv1=${getSides(1)}-gon lv11=${getSides(11)}-gon (offset ${sidesOffset>=0?'+':''}${sidesOffset})`,WALL+4,H-WALL-4);
-    ctx.restore();
+  } else {
+    for(const p of plushies) if(p._polyText) p._polyText.visible=false;
+  }
+  // ── H: solid n-gon with character name label ─────────────────────────
+  if(solidMode){
+    for(const p of plushies){
+      if(p.sprite&&!p.sprite.visible){
+        // name label drawn as PIXI.Text — create once, reuse
+        if(!p._nameText){
+          p._nameText=new PIXI.Text({text:PD[p.level].name,style:{fontFamily:'monospace',fontSize:Math.max(8,Math.round(p.r*.28)),fontWeight:'bold',fill:'rgba(0,0,0,0.65)'}});
+          p._nameText.anchor.set(0.5,0.5);
+          layerFx.addChild(p._nameText);
+        }
+        p._nameText.x=p.x; p._nameText.y=p.y; p._nameText.visible=true;
+      } else if(p._nameText){ p._nameText.visible=false; }
+    }
+  } else {
+    // hide all name texts when solidMode off
+    for(const p of plushies) if(p._nameText) p._nameText.visible=false;
   }
 
-  // ── CAPTURE REFLECTION BUFFER (last-frame strips, throttled to ~20fps) ──
-  // Read from cv into reflectBuf at half resolution every 3rd frame.
-  // This eliminates the GPU read-back stall in drawReflections (separate texture).
-  if(_reflectEnabled && (++_reflectFrame % 3 === 0)){
-    const sw=SOURCE_W, rv=REFLECT_VIS;
-    const bw=reflectBuf.width, bh=reflectBuf.height;
-    const stripW=bw/2;
-    const srcL_px=rv*dpr, srcR_px=(W-rv-sw)*dpr;
-    const sw_px=sw*dpr, H_px=H*dpr;
-    reflectCtx.clearRect(0,0,bw,bh);
-    // left strip
-    reflectCtx.drawImage(cv, srcL_px,0,sw_px,H_px, 0,0,stripW,bh);
-    // right strip
-    reflectCtx.drawImage(cv, srcR_px,0,sw_px,H_px, stripW,0,stripW,bh);
-  }
+  app.renderer.render(stage);
 }
 
-// ── PLUSHIE DRAWING ───────────────────────────────────────────────────
-// ── IMAGE SPRITES ─────────────────────────────────────────────────────
-// Image-space collider radius: lv1-8 = 130px, lv9-11 = 180px
 const imgSprites=new Array(12);
-const rendSprites=new Array(12); // pre-rendered at exact DPR size — zero upscaling at draw time
-function imgR(lvl){return lvl<=8?65:90;} // 130px dia (lv1-8), 180px dia (lv9-11)
-
+function imgR(lvl){return lvl<=8?65:90;}
+const _extraImgs={back:null,front:null,open:null,floor:null};
 function loadSprites(cb){
-  let done=0;
+  const total=11+4; let done=0;
+  const tick=()=>{ if(++done===total) _loadPixiAssets(cb); };
   for(let lvl=1;lvl<=11;lvl++){
-    const img=new Image();
-    img.onload=img.onerror=()=>{ if(++done===11){ prerenderSprites(); cb(); } };
-    img.src=`Sprites/characters/level_${lvl}.png`;
-    imgSprites[lvl]=img;
+    const img=new Image(); img.onload=img.onerror=tick;
+    img.src=`Sprites/characters/level_${lvl}.png`; imgSprites[lvl]=img;
   }
+  // Claw + trap door as raw images so _loadPixiAssets can create textures without PIXI.Assets
+  ['back','front','open'].forEach(k=>{
+    const img=new Image(); img.onload=img.onerror=tick;
+    img.src=`Sprites/claw/claw_${k}.png`; _extraImgs[k]=img;
+  });
+  const floor=new Image(); floor.onload=floor.onerror=tick;
+  floor.src='Sprites/machine/claw_machine_floor_tile.png'; _extraImgs.floor=floor;
 }
+function _loadPixiAssets(cb){
+  // All textures from already-loaded Image objects — no PIXI.Assets network calls
+  for(let i=1;i<=11;i++){
+    const img=imgSprites[i];
+    if(img&&img.naturalWidth) plushieTextures[i]=PIXI.Texture.from(img);
+  }
+  const mkTex=img=>img&&img.naturalWidth?PIXI.Texture.from(img):null;
+  _clawTexBack =mkTex(_extraImgs.back);
+  _clawTexFront=mkTex(_extraImgs.front);
+  _clawTexOpen =mkTex(_extraImgs.open);
+  if(_clawTexBack) clawSprBack.texture=_clawTexBack;
+  if(_clawTexFront)clawSprFront.texture=_clawTexFront;
+  const td=mkTex(_extraImgs.floor);
+  if(td){
+    const ns=new PIXI.NineSliceSprite({texture:td,leftWidth:90,rightWidth:90,topHeight:0,bottomHeight:0});
+    ns.label='trap_door'; ns.visible=false;
+    layerBg.removeChild(trapDoorSpr); trapDoorSpr.destroy();
+    trapDoorSpr=ns; layerBg.addChild(trapDoorSpr);
+  }
+  cb();
+}
+function drawAtFit(c,cW,cH,lvl,alpha=1){const img=imgSprites[lvl];if(!img||!img.naturalWidth)return;const sc=Math.min(cW/img.naturalWidth,cH/img.naturalHeight);const w=img.naturalWidth*sc,h=img.naturalHeight*sc;c.save();c.globalAlpha=alpha;c.drawImage(img,(cW-w)/2,(cH-h)/2,w,h);c.restore();}
 
-// Pre-render each sprite at (scale × DPR) physical pixels so drawImage is always 1:1
-function prerenderSprites(){
-  for(let lvl=1;lvl<=11;lvl++){
-    const img=imgSprites[lvl];
-    if(!img||!img.naturalWidth) continue;
-    const sc=PD[lvl].r/imgR(lvl);
-    const pw=Math.ceil(img.naturalWidth*sc*dpr);
-    const ph=Math.ceil(img.naturalHeight*sc*dpr);
-    const oc=document.createElement('canvas');
-    oc.width=pw; oc.height=ph;
-    const oc2=oc.getContext('2d');
-    oc2.imageSmoothingEnabled=true;
-    oc2.imageSmoothingQuality='high';
-    oc2.drawImage(img,0,0,pw,ph);
-    // logical size for drawImage (main ctx is already scaled by dpr)
-    rendSprites[lvl]={c:oc, lw:pw/dpr, lh:ph/dpr};
-  }
-}
+function updateClaw(){if(dead)return;if(clawState==='idle'){clawX=clamp(mx,cur);clawY=DROPY;}else if(clawState==='opening'){clawOpenTimer--;if(clawOpenTimer===CLAW_OPEN_FRAMES-2){sfxDrop();if(bgmOn&&!bgmRunning)startBGM();const b=new Ball(clawDropX,DROPY,clawLvl);b.av=(Math.random()-.5)*AV_MAX*0.3;plushies.push(b);cur=nxt;nxt=rnd();updNext();}if(clawOpenTimer<=0){clawState='idle';cooling=false;}}}
+
+// (canvas draw helpers removed — not needed in PixiJS port)
 
 // drawSolidNgon: draws filled n-gon centered at current ctx origin (already translated+rotated)
 function drawSolidNgon(c,lvl){
@@ -1800,18 +899,6 @@ function drawSolidNgon(c,lvl){
   c.fillText(PD[lvl].name,0,4);
 }
 
-// drawAt: centered at (x,y), 1:1 pixel — used in game loop
-function drawAt(c,x,y,lvl,alpha=1,angle=0){
-  c.save(); c.globalAlpha=alpha; c.translate(x,y);
-  if(angle) c.rotate(angle);
-  if(solidMode){
-    drawSolidNgon(c,lvl);
-  } else {
-    const rs=rendSprites[lvl];
-    if(rs) c.drawImage(rs.c,-rs.lw/2,-rs.lh/2,rs.lw,rs.lh);
-  }
-  c.restore();
-}
 
 // ── SHARED DRAW HELPERS ───────────────────────────────────────────────
 function wEyes(c,r,ex,ey,er,col='#111'){
@@ -1994,104 +1081,72 @@ function updateClaw(){
 
 // ── INPUT ─────────────────────────────────────────────────────────────
 function clamp(x,lvl){const r=PD[lvl].r;return Math.max(PAD+r+1,Math.min(W-PAD-r-1,x));}
-let dbg=false, dbgPoly=false, solidMode=false, noMerge=false;
-// joystick on by default on PC (non-touch), off on touch devices
+let dbg=false,dbgPoly=false,solidMode=false,noMerge=false;
+let stepMode=false; // P = pause physics, . = advance one frame
 let showJoy=!window.matchMedia('(pointer:coarse)').matches;
 const isMobile=window.matchMedia('(pointer:coarse)').matches;
-let _joyLastMx=null, _joyNoMovFrames=0; // joystick movement tracking
-
-// ── GLASS GLARE FLASH ─────────────────────────────────────────────────
-// sweeps horizontally across the canvas (no fade — full opacity, just moves)
-let _glareT=-1, _glareStart=0;
-const GLARE_DUR=480; // ms — sweep speed
+let _joyLastMx=null,_joyNoMovFrames=0;
+let _glareT=-1,_glareStart=0;
+const GLARE_DUR=480;
 let _glareNextAt=Date.now()+5000+Math.random()*5000;
-
-function triggerGlare(){
-  // fire glare immediately and reset the next-interval timer
-  _glareT=0; _glareStart=Date.now();
-  _glareNextAt=Date.now()+GLARE_DUR+5000+Math.random()*5000;
-}
-function tickGlare(){
-  const now=Date.now();
-  if(_glareT<0){
-    if(now>=_glareNextAt){ _glareT=0; _glareStart=now; }
-  } else {
-    _glareT=(now-_glareStart)/GLARE_DUR;
-    if(_glareT>=1){ _glareT=-1; _glareNextAt=now+5000+Math.random()*5000; }
-  }
-}
-
-// ── JOYSTICK / BUTTON VISUALS ─────────────────────────────────────────
+function triggerGlare(){_glareT=0;_glareStart=Date.now();_glareNextAt=Date.now()+GLARE_DUR+5000+Math.random()*5000;}
+function tickGlare(){const now=Date.now();if(_glareT<0){if(now>=_glareNextAt){_glareT=0;_glareStart=now;}}else{_glareT=(now-_glareStart)/GLARE_DUR;if(_glareT>=1){_glareT=-1;_glareNextAt=now+5000+Math.random()*5000;}}}
 const joyEl=()=>document.getElementById('joyctrl');
 const joyImg=()=>document.getElementById('joy-img');
 const dropBtn=()=>document.getElementById('drop-btn');
 let btnPressTO=null;
-
-function updateJoyDir(dir){ // dir: 'left'|'right'|'none'
-  const img=joyImg(); if(!img) return;
-  if(dir==='none'){ img.src='Sprites/ui/joystick_released.png'; img.classList.remove('flip'); }
-  else { img.src='Sprites/ui/joystick_tilted.png'; img.classList.toggle('flip', dir==='right'); }
-}
-function flashDropBtn(){
-  const btn=dropBtn(); if(!btn) return;
-  btn.src='Sprites/ui/button_pressed.png';
-  clearTimeout(btnPressTO);
-  btnPressTO=setTimeout(()=>{ btn.src='Sprites/ui/button_released.png'; }, 300);
-}
-function toggleJoy(){
-  showJoy=!showJoy;
-  const el=joyEl(); if(!el) return;
-  el.style.display=showJoy?'flex':'none';
-}
-const keysDown=new Set(); // tracks held keys for per-frame input polling
+function updateJoyDir(dir){const img=joyImg();if(!img)return;if(dir==='none'){img.src='Sprites/ui/joystick_released.png';img.classList.remove('flip');}else{img.src='Sprites/ui/joystick_tilted.png';img.classList.toggle('flip',dir==='right');}}
+function flashDropBtn(){const btn=dropBtn();if(!btn)return;btn.src='Sprites/ui/button_pressed.png';clearTimeout(btnPressTO);btnPressTO=setTimeout(()=>{btn.src='Sprites/ui/button_released.png';},300);}
+function toggleJoy(){showJoy=!showJoy;const el=joyEl();if(!el)return;el.style.display=showJoy?'flex':'none';}
+const keysDown=new Set();
 document.addEventListener('keyup',e=>keysDown.delete(e.key));
 window.addEventListener('blur',()=>keysDown.clear());
 document.addEventListener('keydown',e=>{
-  // accept game over restart with Enter or Space
-  if(dead && (e.key==='Enter'||e.key===' ')){ e.preventDefault(); restart(); return; }
-  if(e.key==='j'||e.key==='J'){ toggleJoy(); return; }
-  if(e.key==='a'||e.key==='A'){ cycleAp(); return; }
-  if(e.key==='?'||e.key==='/'){ toggleHelp(); return; }
-  if(e.key==='Escape'){ toggleHelp(false); return; }
-  // ── DEBUG only ─────────────────────────────────────
+  if(dead&&(e.key==='Enter'||e.key===' ')){e.preventDefault();restart();return;}
+  if(e.key==='j'||e.key==='J'){toggleJoy();return;}
+  if(e.key==='a'||e.key==='A'){cycleAp();return;}
+  if(e.key==='?'||e.key==='/'){toggleHelp();return;}
+  if(e.key==='Escape'){toggleHelp(false);return;}
   if(IS_DEBUG){
-    // Q/E: simulate gyro tilt left/right (±5° per press); R resets tilt
-    if(e.key==='q'||e.key==='Q'){ _simGyro(tiltAngle*180/Math.PI - 5); return; }
-    if(e.key==='e'||e.key==='E'){ _simGyro(tiltAngle*180/Math.PI + 5); return; }
-    if(e.key==='r'||e.key==='R'){ _simGyro(0); return; }
     if(e.key==='m'||e.key==='M'){
       noMerge=!noMerge;
-      const cb=document.getElementById('dbg-nomerge-cb'); if(cb) cb.checked=noMerge;
-      _gyroHud(noMerge ? '🚫 MERGE OFF' : '✅ MERGE ON');
-      setTimeout(()=>{ if(!_gKeyDown&&!_fKeyDown) _gyroHud(null); }, 1500);
+      const cb=document.getElementById('dbg-nomerge-cb');if(cb)cb.checked=noMerge;
+      _gyroHud(noMerge?'🚫 MERGE OFF':'✅ MERGE ON');
+      setTimeout(()=>_gyroHud(null),1500);
       return;
     }
-    if(e.key==='s'||e.key==='S'){ showSpawnRate=!showSpawnRate; updateEvoLabels(); return; }
-    if(e.key==='d'||e.key==='D'){ dbg=!dbg; if(dbg)dbgPoly=false; return; }
-    if(e.key==='c'||e.key==='C'){ dbgPoly=!dbgPoly; if(dbgPoly){dbg=false;solidMode=false;} return; }
-    if(e.key==='h'||e.key==='H'){ solidMode=!solidMode; if(solidMode)dbgPoly=false; return; }
-    if(e.key==='w'||e.key==='W'){ if(!dead&&!wipeOutActive){ for(let i=1;i<=11;i++) firstMerged.add(i); updateEvoUnlocks(); triggerWipeOut(W/2,H/2); } return; }
-    if(e.key==='['){ e.preventDefault(); sidesOffset=Math.max(SIDES_MIN,sidesOffset-1); if(!solidMode){dbg=false;dbgPoly=true;} return; }
-    if(e.key===']'){ e.preventDefault(); sidesOffset=Math.min(SIDES_MAX,sidesOffset+1); if(!solidMode){dbg=false;dbgPoly=true;} return; }
+    if(e.key==='p'||e.key==='P'){
+      stepMode=!stepMode;
+      _gyroHud(stepMode?'⏸ PAUSED  (. = next frame)':'▶ RUNNING');
+      setTimeout(()=>_gyroHud(null),1200);
+      if(!stepMode&&!dead) resumeLoop(); // unpause restarts loop
+      return;
+    }
+    if(e.key==='.'&&stepMode){
+      // advance exactly one frame — includes scheduler so wipeout events fire correctly
+      tickScheduled();
+      tickTrapDoor();
+      if(!dead){step();detectMerges();processMerges();}
+      updateClaw();
+      tickParts();tickPopups();tickConfetti();tickSparkles();tickCelebrations();
+      if(showClaw)tickGlare();if(typeof tickShakeCooldown==='function')tickShakeCooldown();
+      render();
+      return;
+    }
+    if(e.key==='s'||e.key==='S'){showSpawnRate=!showSpawnRate;updateEvoLabels();return;}
+    if(e.key==='d'||e.key==='D'){dbg=!dbg;if(dbg)dbgPoly=false;return;}
+    if(e.key==='c'||e.key==='C'){dbgPoly=!dbgPoly;if(dbgPoly){dbg=false;solidMode=false;}return;}
+    if(e.key==='h'||e.key==='H'){solidMode=!solidMode;if(solidMode)dbgPoly=false;return;}
+    if(e.key==='w'||e.key==='W'){if(!dead&&!wipeOutActive){for(let i=1;i<=11;i++)firstMerged.add(i);updateEvoUnlocks();triggerWipeOut(W/2,H/2);}return;}
+    if(e.key==='['){e.preventDefault();sidesOffset=Math.max(SIDES_MIN,sidesOffset-1);if(!solidMode){dbg=false;dbgPoly=true;}return;}
+    if(e.key===']'){e.preventDefault();sidesOffset=Math.min(SIDES_MAX,sidesOffset+1);if(!solidMode){dbg=false;dbgPoly=true;}return;}
   }
-  // ── keyboard gameplay ──────────────────────────────
-  if(e.key==='ArrowLeft'||e.key==='ArrowRight'||e.key==='Shift'){
-    e.preventDefault(); keysDown.add(e.key); return;
-  }
+  if(e.key==='ArrowLeft'||e.key==='ArrowRight'||e.key==='Shift'){e.preventDefault();keysDown.add(e.key);return;}
   if(e.key===' '||e.key==='ArrowDown'){e.preventDefault();drop();return;}
-
-  // debug spawn: 2-9 → lv2-9, 0 → lv10, 1 → lv11
-  if(!IS_DEBUG) return;
+  if(!IS_DEBUG)return;
   const lvMap={'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'0':10,'1':11};
-  const lvl=lvMap[e.key];
-  if(lvl&&!dead){
-    const b=new Ball(clamp(mx,lvl),DROPY,lvl);
-    b.av=(Math.random()-.5)*AV_MAX*0.3;
-    plushies.push(b);
-  }
+  const lvl=lvMap[e.key];if(lvl&&!dead){const b=new Ball(clamp(mx,lvl),DROPY,lvl);b.av=(Math.random()-.5)*AV_MAX*0.3;plushies.push(b);}
 });
-
-// ── AUTOPLAY fan-dial (0=off, 1=slow, 2=medium, 3=fast) ──
 let apSpeed=0;
 const AP_DELAYS=[0,1200,820,500]; // ms per speed level (0 = off)
 let _apTimer=null;
@@ -2259,15 +1314,6 @@ function updUI(){
   if(ll) ll.textContent='· LV '+gameLevel;
 }
 window.addEventListener('resize',()=>{ _lastScoreLen=0; fitScoreFont(); }); // force recheck on resize
-// drawAtFit: scale sprite to fill cW×cH preview, centered, no crop
-function drawAtFit(c,cW,cH,lvl,alpha=1){
-  const rs=rendSprites[lvl]; if(!rs) return;
-  const sc=Math.min(cW/rs.lw, cH/rs.lh);
-  const w=rs.lw*sc, h=rs.lh*sc;
-  c.save(); c.globalAlpha=alpha;
-  c.drawImage(rs.c,(cW-w)/2,(cH-h)/2,w,h);
-  c.restore();
-}
 function updNext(){
   const name=PD[nxt].name;
   nc.src=`Sprites/characters/level_${nxt}.png`;
@@ -2329,7 +1375,7 @@ function updateHelpMeta(){
   const meta=document.getElementById('help-meta');
   if(!meta) return;
   const vw=window.innerWidth,vh=window.innerHeight;
-  meta.textContent=`v25  ·  ${vw}×${vh}  ar:${(vw/vh).toFixed(3)}`;
+  meta.textContent=`v26  ·  ${vw}×${vh}  ar:${(vw/vh).toFixed(3)}`;
 }
 let _helpTab='kb';
 function showHelpTab(tab){
@@ -2453,23 +1499,7 @@ const BGM=[[E4,1],[G4,1],[A4,1],[G4,1],[E4,1],[D4,1],[C4,2],
            [E4,1],[G4,1],[A4,1],[C5,1],[A4,1],[G4,1],[E4,2],
            [D4,1],[E4,1],[G4,1],[E4,1],[D4,1],[C4,1],[C4,2]];
 const BGM_DUR=BGM.reduce((s,[,b])=>s+b,0)*_B;
-
-function scheduleBGM(){
-  if(!bgmRunning||muted)return;
-  const a=getAC(); let t=a.currentTime;
-  for(const[freq,beats]of BGM){
-    const o=a.createOscillator(),g=a.createGain();
-    o.connect(g);g.connect(a._sfxBus||a.destination);
-    o.type='triangle';o.frequency.value=freq;
-    g.gain.setValueAtTime(0,t);
-    g.gain.linearRampToValueAtTime(0.07,t+0.03);
-    g.gain.setValueAtTime(0.07,t+beats*_B-0.06);
-    g.gain.linearRampToValueAtTime(0,t+beats*_B);
-    o.start(t);o.stop(t+beats*_B+0.05);
-    t+=beats*_B;
-  }
-  bgmTO=setTimeout(scheduleBGM,(BGM_DUR-0.08)*1000);
-}
+function scheduleBGM(){if(!bgmRunning||muted)return;const a=getAC();let t=a.currentTime;for(const[freq,beats]of BGM){const o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a._sfxBus||a.destination);o.type='triangle';o.frequency.value=freq;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(0.07,t+0.03);g.gain.setValueAtTime(0.07,t+beats*_B-0.06);g.gain.linearRampToValueAtTime(0,t+beats*_B);o.start(t);o.stop(t+beats*_B+0.05);t+=beats*_B;}bgmTO=setTimeout(scheduleBGM,(BGM_DUR-0.08)*1000);}
 function startBGM(){if(!bgmRunning){bgmRunning=true;scheduleBGM();}}
 function stopBGM(){bgmRunning=false;clearTimeout(bgmTO);bgmTO=null;}
 function toggleBGM(on){
@@ -2494,12 +1524,14 @@ function toggleBGMAll(v){
 // ── GYRO / TILT ───────────────────────────────────────────────────────
 let tiltAngle = 0;   // current effective tilt (radians), updated by deviceorientation
 let gyroOn = false;
+// No direction flip needed — both paths now use gamma-consistent convention
 
 function onDeviceOrientation(e){
   if(e.gamma === null) return;
-  // Fallback for devices without DeviceMotion: use gamma (capped at ±90°).
-  // onDeviceMotion will override tiltAngle when available (full ±180°).
-  if(!_motionAvailable){
+  // Only use gamma fallback on non-iOS devices (iOS requires explicit DeviceMotion permission;
+  // using gamma without it would apply tilt without the user granting access).
+  // On Android/desktop DeviceMotion fires automatically so _motionAvailable will be true soon.
+  if(!_motionAvailable && !isIOS){
     tiltAngle = e.gamma * Math.PI / 180;
     updateGyroArrow(e.gamma);
   }
@@ -2554,6 +1586,7 @@ function onDeviceMotion(e){
   if(g && g.x != null && g.y != null){
     // atan2(-gx, -gy): upright=0, right=+90°, upside-down=±180°
     // Low-pass filter to smooth sensor noise
+    // atan2(-gx, -gy): upright=0, right=+90°, upside-down=±180° — matches main branch
     const rawAngle = Math.atan2(-g.x, -g.y);
     tiltAngle = tiltAngle * 0.7 + rawAngle * 0.3;
     updateGyroArrow(tiltAngle * 180 / Math.PI);
@@ -2627,6 +1660,7 @@ if(IS_DEBUG){
   document.addEventListener('keyup', e=>{
     if(e.key==='g'||e.key==='G'){
       _gKeyDown=false; _tiltPrevX=null;
+      tiltAngle=0; // reset gravity to normal on release
       if(!_fKeyDown) showGyroArrow(false);
       _updateGyroHud();
     }
@@ -2727,57 +1761,18 @@ function fitToViewport(){
 window.addEventListener('resize', fitToViewport);
 
 // ── BOOT ──────────────────────────────────────────────────────────────
-// Disable right-click
 document.addEventListener('contextmenu',e=>e.preventDefault());
-// Prevent pinch-zoom (user-scalable=no handles double-tap)
 document.addEventListener('touchmove',e=>{if(e.touches.length>1)e.preventDefault();},{passive:false});
-// Re-fit on orientation change
 window.addEventListener('orientationchange',()=>setTimeout(fitToViewport,200));
-
 cur=rnd();nxt=rnd();clawLvl=cur;updUI();buildEvo();loadCbPrefs();setApSpeed(0);rebuildPtsTable();
-if(showJoy){ const el=joyEl(); if(el) el.style.display='flex'; }
-// force-download Righteous (just declaring the @font-face doesn't download it)
-// then start the game once all fonts are ready
-Promise.all([
-  document.fonts.load('400 16px Righteous'),
-  document.fonts.ready
-]).then(()=>{
-  loadSprites(()=>{ updNext(); fitToViewport(); resetClawForNewRound(); requestAnimationFrame(loop); });
-});
-if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
-
-// ── FULLSCREEN PROMPT (mobile) ────────────────────────────────────────
+if(showJoy){const el=joyEl();if(el)el.style.display='flex';}
+Promise.all([document.fonts.load('400 16px Righteous'),document.fonts.ready,initPixi()]).then(()=>{loadSprites(()=>{updNext();fitToViewport();resetClawForNewRound();requestAnimationFrame(loop);});});
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');
 const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
-const isStandalone=navigator.standalone===true; // PWA launched from home screen
-
-function enterFullscreen(){
-  const el=document.documentElement;
-  const req=el.requestFullscreen||el.webkitRequestFullscreen||el.mozRequestFullScreen;
-  if(req) req.call(el).catch(()=>{});
-  dismissFsPrompt();
-}
-function dismissFsPrompt(){
-  document.getElementById('fs-prompt').classList.remove('show');
-}
-(function(){
-  if(!isMobile) return;
-  if(isStandalone) return; // already fullscreen via home screen
-  if(!isIOS && (document.fullscreenElement||document.webkitFullscreenElement)) return;
-
-  const body=document.getElementById('fs-prompt-body');
-  const action=document.getElementById('fs-prompt-action');
-
-  if(isIOS){
-    // iOS doesn't support requestFullscreen — guide to Add to Home Screen
-    body.innerHTML='<div style="font-size:11px;color:#a09078;margin-bottom:16px">For full screen, add this page<br>to your Home Screen:<br><br><span style="color:#5a3820">Share → Add to Home Screen</span></div>';
-    action.innerHTML='<button onclick="dismissFsPrompt()">Got it</button>';
-  } else {
-    body.innerHTML='<div style="font-size:11px;color:#a09078;margin-bottom:16px">Tap for the best experience</div>';
-    action.innerHTML='<button onclick="enterFullscreen()">Enter Full Screen</button>';
-  }
-
-  document.getElementById('fs-prompt').classList.add('show');
-})();
+const isStandalone=navigator.standalone===true;
+function enterFullscreen(){const el=document.documentElement;const req=el.requestFullscreen||el.webkitRequestFullscreen||el.mozRequestFullScreen;if(req)req.call(el).catch(()=>{});dismissFsPrompt();}
+function dismissFsPrompt(){document.getElementById('fs-prompt').classList.remove('show');}
+(function(){if(!isMobile)return;if(isStandalone)return;if(!isIOS&&(document.fullscreenElement||document.webkitFullscreenElement))return;const body=document.getElementById('fs-prompt-body');const action=document.getElementById('fs-prompt-action');if(isIOS){body.innerHTML='<div style="font-size:11px;color:#a09078;margin-bottom:16px">For full screen, add this page<br>to your Home Screen:<br><br><span style="color:#5a3820">Share → Add to Home Screen</span></div>';action.innerHTML='<button onclick="dismissFsPrompt()">Got it</button>';}else{body.innerHTML='<div style="font-size:11px;color:#a09078;margin-bottom:16px">Tap for the best experience</div>';action.innerHTML='<button onclick="enterFullscreen()">Enter Full Screen</button>';}document.getElementById('fs-prompt').classList.add('show');})();
 </script>
 <div id="gyro-drag-hud"></div>
 </body>
