@@ -2,7 +2,14 @@
 
 ---
 
-## v21 (current)
+## v22 (current)
+- **Cover patch alignment fix** — canvas `.cw` top offset changed from fixed `11px` to proportional `calc(11/1280*100%)` so it scales with game-frame height; fixes cover patches appearing vertically offset on larger devices (iPhone XS Max / 15 Pro Max)
+- **Rename to BB Tower** — updated game title in `<title>`, `apple-mobile-web-app-title`, and `manifest.json`
+- **Remove TTS on merge** — reverted name announcement (`speechSynthesis`) from `sfxMerge`; merges now play only the arpeggio SFX
+
+---
+
+## v21
 - **Gamepad support** — Xbox/standard layout: left stick moves aim, A drops, LT/RT speed up, B toggles help popup, LB/RB switches help tab between keyboard and gamepad; gamepad tab hidden until controller connects
 - **Game over accept** — Enter/Space on keyboard or A on gamepad restarts from game over screen
 - **DEBUG/RELEASE switch** — `IS_DEBUG=true` on `main`, `false` on `release` branch; debug keyboard shortcuts and help section hidden in release
