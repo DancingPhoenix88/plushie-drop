@@ -1455,7 +1455,7 @@ function render(){
   ctx.textAlign='right';
   ctx.font=`${Math.round(9*FS)}px 'Segoe UI',system-ui,sans-serif`;
   ctx.fillStyle='rgba(90,56,32,0.45)';
-  ctx.fillText('v22',W-dzPad-4,DY-5);
+  ctx.fillText('v23',W-dzPad-4,DY-5);
   // TAP TO DROP hint — big, slowly blinking at tank center
   if(tapHint && !dead && !wipeOutActive){
     const pulse=0.4+0.6*Math.abs(Math.sin(Date.now()/700)); // 0.4–1.0, ~1.4s period
@@ -2176,8 +2176,19 @@ cv.addEventListener('touchstart',e=>{
   e.preventDefault();
   if(dead||wipeOutActive) return;
   const r=cv.getBoundingClientRect();
-  const tx=(e.touches[0].clientX-r.left)*(W/r.width);
-  tweenClawTo(Math.max(PAD,Math.min(W-PAD,tx)), 300);
+  const tx=Math.max(PAD,Math.min(W-PAD,(e.touches[0].clientX-r.left)*(W/r.width)));
+  const dist=Math.abs(tx-mx);
+  const pct=dist/W; // distance as fraction of game width
+  if(pct<0.05){
+    // close enough — snap immediately
+    cancelTween(); mx=tx;
+  } else if(pct<0.30){
+    // interpolate duration linearly: 5%→0ms, 30%→300ms
+    const dur=((pct-0.05)/(0.30-0.05))*300;
+    tweenClawTo(tx, dur);
+  } else {
+    tweenClawTo(tx, 300);
+  }
 },{passive:false});
 
 cv.addEventListener('touchmove',e=>{
@@ -2304,14 +2315,19 @@ function loadCbPrefs(){
   try{
     const p=JSON.parse(localStorage.getItem(CB_KEY)||'{}');
     if(p.bgm!=null){ toggleBGM(p.bgm); ['bgm-cb','bgm-ls'].forEach(id=>{ const el=document.getElementById(id); if(el) el.checked=p.bgm; }); }
-    if(p.gyro&&p.gyro===true){ toggleGyro(); }
+    if(p.gyro&&p.gyro===true){
+      // On iOS, DeviceOrientation permission requires a direct user gesture —
+      // can't call requestPermission() on page load. Just pre-check the box;
+      // the user tapping it will trigger toggleGyro() and the permission prompt.
+      ['gyro-cb','gyro-ls'].forEach(id=>{ const el=document.getElementById(id); if(el) el.checked=true; });
+    }
   }catch(e){}
 }
 function updateHelpMeta(){
   const meta=document.getElementById('help-meta');
   if(!meta) return;
   const vw=window.innerWidth,vh=window.innerHeight;
-  meta.textContent=`v22  ·  ${vw}×${vh}  ar:${(vw/vh).toFixed(3)}`;
+  meta.textContent=`v23  ·  ${vw}×${vh}  ar:${(vw/vh).toFixed(3)}`;
 }
 let _helpTab='kb';
 function showHelpTab(tab){
@@ -2479,10 +2495,14 @@ let gyroOn = false;
 
 function onDeviceOrientation(e){
   if(e.gamma === null) return;
-  // gamma: left(-) / right(+), degrees. Portrait mode is the natural frame.
-  tiltAngle = e.gamma * Math.PI / 180;  // unclamped — full ±90° range
-  updateGyroArrow(e.gamma);
+  // Fallback for devices without DeviceMotion: use gamma (capped at ±90°).
+  // onDeviceMotion will override tiltAngle when available (full ±180°).
+  if(!_motionAvailable){
+    tiltAngle = e.gamma * Math.PI / 180;
+    updateGyroArrow(e.gamma);
+  }
 }
+let _motionAvailable = false;
 
 // ── GYRO ARROW ────────────────────────────────────────────────────────
 function updateGyroArrow(gammaDeg){
@@ -2516,22 +2536,33 @@ function showGyroArrow(v){
 // ── SHAKE / PUSH FORCE ────────────────────────────────────────────────
 // applyShakeForce(fx, fy): push all plushies with a directional force.
 // fx/fy are already in game-units/frame — caller is responsible for scaling.
-const SHAKE_FORCE_SCALE = 0.06; // tuning knob
+const SHAKE_FORCE_SCALE = 0.025; // tuning knob
 function applyShakeForce(fx, fy){
   plushies.forEach(p=>{ p.vx += fx; p.vy += fy; });
 }
 
-// DeviceMotion: use acceleration directly as a directional force each event.
-// acceleration (without gravity) gives the net movement vector in m/s².
-// We map it: right=+x, down=+y in screen space (portrait: ax→vx, -ay→vy).
+// DeviceMotion: dual purpose —
+//   accelerationIncludingGravity → derive tilt angle (full ±180°, beyond gamma's ±90° limit)
+//   acceleration (no gravity)    → directional shake force
 let _prevAccel = null;
 function onDeviceMotion(e){
-  const a = e.acceleration; // without gravity — cleaner than includingGravity
-  if(!a || a.x==null) return;
-  // portrait screen: phone x-axis = screen x, phone y-axis = screen y (inverted)
-  const fx = a.x  * SHAKE_FORCE_SCALE;
-  const fy = -a.y * SHAKE_FORCE_SCALE; // phone +y = up, screen +y = down
-  if(Math.abs(fx) > 0.05 || Math.abs(fy) > 0.05) applyShakeForce(fx, fy);
+  // ── tilt from gravity vector (full rotation) ──
+  _motionAvailable = true;
+  const g = e.accelerationIncludingGravity;
+  if(g && g.x != null && g.y != null){
+    // atan2(-gx, -gy): upright=0, right=+90°, upside-down=±180°
+    // Low-pass filter to smooth sensor noise
+    const rawAngle = Math.atan2(-g.x, -g.y);
+    tiltAngle = tiltAngle * 0.7 + rawAngle * 0.3;
+    updateGyroArrow(tiltAngle * 180 / Math.PI);
+  }
+  // ── shake force from linear acceleration ──
+  const a = e.acceleration;
+  if(a && a.x != null){
+    const fx =  a.x * SHAKE_FORCE_SCALE;
+    const fy = -a.y * SHAKE_FORCE_SCALE;
+    if(Math.abs(fx) > 0.05 || Math.abs(fy) > 0.05) applyShakeForce(fx, fy);
+  }
 }
 
 // legacy no-arg shake kept for Q/E keyboard path
@@ -2676,7 +2707,7 @@ function enableGyro(){
 function disableGyro(){
   window.removeEventListener('deviceorientation', onDeviceOrientation);
   window.removeEventListener('devicemotion', onDeviceMotion);
-  gyroOn = false; tiltAngle = 0; _prevAccel=null;
+  gyroOn = false; tiltAngle = 0; _prevAccel=null; _motionAvailable=false;
   _syncGyroBoth(false);
   showGyroArrow(false);
 }
