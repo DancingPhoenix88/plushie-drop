@@ -275,7 +275,7 @@ async function initPixi(){
   layerBg=new PIXI.Container();      layerBg.label='layer_bg';
   layerUI=new PIXI.Container();      layerUI.label='layer_ui';
   layerClaw=new PIXI.Container();    layerClaw.label='layer_claw';
-  layerPlushie=new PIXI.Container(); layerPlushie.label='layer_plushies'; layerPlushie.sortableChildren=true;
+  layerPlushie=new PIXI.Container(); layerPlushie.label='layer_plushies'; layerPlushie.sortableChildren=true; layerPlushie.sortableChildren=true;
   layerFx=new PIXI.Container();      layerFx.label='layer_fx';
   stage.addChild(layerBg,layerUI,layerClaw,layerPlushie,layerFx);
 
@@ -501,8 +501,10 @@ function render(){
   for(const p of byLevel){
     if(!p.sprite&&plushieTextures[p.level]){
       p.sprite=new PIXI.Sprite(plushieTextures[p.level]);
+      p.sprite.zIndex=11-p.level;
       p.sprite.label=PD[p.level].name;
       p.sprite.anchor.set(0.5,0.5); p.sprite.scale.set(PD[p.level].r/imgR(p.level));
+      layerPlushie.addChild(p.sprite);
     }
     if(p.sprite){
       p.sprite.x=p.x; p.sprite.y=p.y; p.sprite.rotation=p.angle;
@@ -511,7 +513,7 @@ function render(){
         const n=getSides(p.level),r=PD[p.level].physR??PD[p.level].r,pts=[];
         for(let k=0;k<n;k++){const a=p.angle+2*Math.PI*k/n;pts.push(p.x+r*Math.cos(a),p.y+r*Math.sin(a));}
         gfxFx.poly(pts).fill({color:cssHex(PD[p.level].body)}).stroke({width:2,color:cssHex(PD[p.level].stroke)});
-      } else { p.sprite.visible=true; layerPlushie.addChild(p.sprite); }
+      } else { p.sprite.visible=true; }
     }
   }
 
