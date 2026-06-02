@@ -12,8 +12,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Plushie Drop">
 <link rel="apple-touch-icon" href="Sprites/icons/app_icon.png">
-<!-- PixiJS v7 -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.4.2/pixi.min.js"></script>
+<!-- PixiJS v8 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/8.9.1/pixi.min.js"></script>
 <style>
 :root{color-scheme:light}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;}
@@ -253,41 +253,53 @@ let clawState='idle',clawOpenTimer=0;
 const CLAW_OPEN_FRAMES=18;
 const dpr=window.devicePixelRatio||1;
 
-// ── PIXI SETUP ────────────────────────────────────────────────────────
+// ── PIXI SETUP (v8 — async init) ──────────────────────────────────────
 const cv=document.getElementById('gc');
-const app=new PIXI.Application({view:cv,width:W,height:H,backgroundAlpha:0,antialias:true,resolution:dpr,autoDensity:true});
-app.ticker.stop();
-const stage=app.stage;
-globalThis.__PIXI_APP__=app; // PixiJS DevTools hook
+const app=new PIXI.Application();
 
-const layerBg=new PIXI.Container(),layerUI=new PIXI.Container(),layerClaw=new PIXI.Container();
-const layerPlushie=new PIXI.Container(),layerFx=new PIXI.Container();
-stage.addChild(layerBg,layerUI,layerClaw,layerPlushie,layerFx);
-
-const gfxUI=new PIXI.Graphics();layerUI.addChild(gfxUI);
-const gfxClaw=new PIXI.Graphics();layerClaw.addChild(gfxClaw);
-const gfxFx=new PIXI.Graphics();layerFx.addChild(gfxFx);
-
-const clawSprBack=new PIXI.Sprite();clawSprBack.visible=false;
-const clawSprFront=new PIXI.Sprite();clawSprFront.visible=false;
-const clawHeldSpr=new PIXI.Sprite();clawHeldSpr.anchor.set(0.5,0.5);clawHeldSpr.visible=false;
-layerClaw.addChild(clawSprBack,clawHeldSpr,clawSprFront);
-
-const trapDoorSpr=new PIXI.Sprite();trapDoorSpr.visible=false;
-layerBg.addChild(trapDoorSpr);
-
+// Populated by initPixi() before loop starts
+let stage,layerBg,layerUI,layerClaw,layerPlushie,layerFx;
+let gfxUI,gfxClaw,gfxFx;
+let clawSprBack,clawSprFront,clawHeldSpr,trapDoorSpr;
+let _dangerText,_versionText,_tapText;
 const plushieTextures=new Array(12);
 let _clawTexBack,_clawTexFront,_clawTexOpen;
 
-const _dangerText=new PIXI.Text('DANGER',new PIXI.TextStyle({fontFamily:"'Segoe UI',system-ui,sans-serif",fontSize:Math.round(11*FS),fill:'#D23737'}));
-_dangerText.x=W*0.1+5;_dangerText.y=DY-Math.round(14*FS);layerUI.addChild(_dangerText);
+async function initPixi(){
+  await app.init({canvas:cv,width:W,height:H,backgroundAlpha:0,antialias:true,resolution:dpr,autoDensity:true});
+  app.ticker.stop();
+  stage=app.stage; stage.label='root';
+  window.__PIXI_DEVTOOLS__={app};
+  cv.style.width='';cv.style.height=''; // let CSS width:100% win
 
-const _versionText=new PIXI.Text('v19',new PIXI.TextStyle({fontFamily:"'Segoe UI',system-ui,sans-serif",fontSize:Math.round(9*FS),fill:'#5a3820'}));
-_versionText.anchor.set(1,1);_versionText.x=W-W*0.1-4;_versionText.y=DY-5;_versionText.alpha=0.45;layerUI.addChild(_versionText);
+  layerBg=new PIXI.Container();      layerBg.label='layer_bg';
+  layerUI=new PIXI.Container();      layerUI.label='layer_ui';
+  layerClaw=new PIXI.Container();    layerClaw.label='layer_claw';
+  layerPlushie=new PIXI.Container(); layerPlushie.label='layer_plushies';
+  layerFx=new PIXI.Container();      layerFx.label='layer_fx';
+  stage.addChild(layerBg,layerUI,layerClaw,layerPlushie,layerFx);
 
-const _tapStyle=new PIXI.TextStyle({fontFamily:"'Righteous','Segoe UI',system-ui,sans-serif",fontSize:Math.round(36*FS),fontWeight:'400',fill:'#5a3820',dropShadow:true,dropShadowColor:'#5a3820',dropShadowBlur:12,dropShadowAlpha:0.3});
-const _tapText=new PIXI.Text('TAP TO DROP',_tapStyle);
-_tapText.anchor.set(0.5,0.5);_tapText.x=W/2;_tapText.y=H/2;_tapText.visible=false;layerUI.addChild(_tapText);
+  gfxUI  =new PIXI.Graphics(); gfxUI.label='ui_lines';   layerUI.addChild(gfxUI);
+  gfxClaw=new PIXI.Graphics(); gfxClaw.label='claw_guide';layerClaw.addChild(gfxClaw);
+  gfxFx  =new PIXI.Graphics(); gfxFx.label='fx_shapes';  layerFx.addChild(gfxFx);
+
+  clawSprBack =new PIXI.Sprite(PIXI.Texture.EMPTY); clawSprBack.label='claw_back';  clawSprBack.visible=false;
+  clawSprFront=new PIXI.Sprite(PIXI.Texture.EMPTY); clawSprFront.label='claw_front';clawSprFront.visible=false;
+  clawHeldSpr =new PIXI.Sprite(PIXI.Texture.EMPTY); clawHeldSpr.label='claw_held';  clawHeldSpr.anchor.set(0.5,0.5);clawHeldSpr.visible=false;
+  layerClaw.addChild(clawSprBack,clawHeldSpr,clawSprFront);
+
+  trapDoorSpr=new PIXI.Sprite(PIXI.Texture.EMPTY); trapDoorSpr.label='trap_door'; trapDoorSpr.visible=false;
+  layerBg.addChild(trapDoorSpr);
+
+  _dangerText=new PIXI.Text({text:'DANGER',style:{fontFamily:"'Segoe UI',system-ui,sans-serif",fontSize:Math.round(11*FS),fill:'#D23737'}});
+  _dangerText.label='danger_label';_dangerText.x=W*0.1+5;_dangerText.y=DY-Math.round(14*FS);layerUI.addChild(_dangerText);
+
+  _versionText=new PIXI.Text({text:'v19',style:{fontFamily:"'Segoe UI',system-ui,sans-serif",fontSize:Math.round(9*FS),fill:'#5a3820'}});
+  _versionText.label='version_label';_versionText.anchor.set(1,1);_versionText.x=W-W*0.1-4;_versionText.y=DY-5;_versionText.alpha=0.45;layerUI.addChild(_versionText);
+
+  _tapText=new PIXI.Text({text:'TAP TO DROP',style:{fontFamily:"'Righteous','Segoe UI',system-ui,sans-serif",fontSize:Math.round(36*FS),fontWeight:'400',fill:'#5a3820',dropShadow:{color:'#5a3820',blur:12,alpha:0.3}}});
+  _tapText.label='tap_hint';_tapText.anchor.set(0.5,0.5);_tapText.x=W/2;_tapText.y=H/2;_tapText.visible=false;layerUI.addChild(_tapText);
+}
 
 function cssHex(css){
   if(!css)return 0xffffff;
@@ -325,7 +337,7 @@ class Ball{
     this.level=lvl;this.mass=MASS[lvl];this.invMass=INV_MASS[lvl];this.born=Date.now();
     this.px=x;this.py=y;this.movH=new Float32Array(30);this.movI=0;this.movS=0;
     this.sprite=null;
-    if(plushieTextures[lvl]){this.sprite=new PIXI.Sprite(plushieTextures[lvl]);this.sprite.anchor.set(0.5,0.5);this.sprite.scale.set(PD[lvl].r/imgR(lvl));layerPlushie.addChild(this.sprite);}
+    if(plushieTextures[lvl]){this.sprite=new PIXI.Sprite(plushieTextures[lvl]);this.sprite.label=PD[lvl].name;this.sprite.anchor.set(0.5,0.5);this.sprite.scale.set(PD[lvl].r/imgR(lvl));layerPlushie.addChild(this.sprite);}
   }
   get speed(){return Math.hypot(this.vx,this.vy);}
 }
@@ -392,7 +404,7 @@ function restart(){
 function burst(x,y,color){for(let i=0;i<11;i++){const a=Math.PI*2*i/11+Math.random()*.5,spd=2+Math.random()*4;parts.push({x,y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,r:3+Math.random()*4,color,life:1});}}
 function tickParts(){parts=parts.filter(p=>p.life>0);parts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.18;p.life-=.044;p.r*=.93;});}
 function tickPopups(){
-  popups.forEach(p=>{p.y-=(p.big?0.4:1.2);p.life-=0.022;if(!p.pixiText&&p.life>0){const sz=p.big?Math.round(68*FS):Math.round(36*FS);p.pixiText=new PIXI.Text(p.text,new PIXI.TextStyle({fontFamily:"'Righteous','Segoe UI',system-ui,sans-serif",fontSize:sz,fontWeight:'700',fill:p.color,stroke:'#000000',strokeThickness:3}));p.pixiText.anchor.set(0.5,0.5);layerFx.addChild(p.pixiText);}if(p.pixiText){const sz=p.big?Math.round((48+p.life*20)*FS):Math.round((22+p.life*14)*FS);p.pixiText.style.fontSize=sz;p.pixiText.x=p.x;p.pixiText.y=p.y;p.pixiText.alpha=Math.min(p.life,1)*0.92;}});
+  popups.forEach(p=>{p.y-=(p.big?0.4:1.2);p.life-=0.022;if(!p.pixiText&&p.life>0){const sz=p.big?Math.round(68*FS):Math.round(36*FS);p.pixiText=new PIXI.Text({text:p.text,style:{fontFamily:"'Righteous','Segoe UI',system-ui,sans-serif",fontSize:sz,fontWeight:'700',fill:p.color,stroke:{color:'#000000',width:3}}});p.pixiText.label='score_popup';p.pixiText.anchor.set(0.5,0.5);layerFx.addChild(p.pixiText);}if(p.pixiText){const sz=p.big?Math.round((48+p.life*20)*FS):Math.round((22+p.life*14)*FS);p.pixiText.style.fontSize=sz;p.pixiText.x=p.x;p.pixiText.y=p.y;p.pixiText.alpha=Math.min(p.life,1)*0.92;}});
   popups.filter(p=>p.life<=0).forEach(p=>{if(p.pixiText)p.pixiText.destroy();});
   popups=popups.filter(p=>p.life>0);
 }
@@ -410,7 +422,7 @@ function tickCelebrations(){
     if(c.phase==='in'){c.scale=Math.min(1,c.scale+0.12);c.y-=0.4;if(c.scale>=1){c.phase='hold';c.holdTimer=60;}}
     else if(c.phase==='hold'){c.holdTimer--;c.y-=0.4;if(c.holdTimer<=0)c.phase='out';}
     else{c.life-=0.022;c.y-=0.8;}
-    if(!c.pixiText&&c.life>0){let sub='';if(c.isWipeOut){sub=c.pts>0?'+'+c.pts.toLocaleString()+' bonus pts':'';}else if(c.isLevelUp){sub='×'+Math.pow(2,gameLevel-1)+' points multiplier';}else{sub=`Rank ${c.level}  ·  +${c.pts.toLocaleString()} pts`;}c.pixiText=new PIXI.Text(c.name,new PIXI.TextStyle({fontFamily:"'Righteous','Segoe UI',system-ui,sans-serif",fontSize:Math.round(52*FS),fontWeight:'400',fill:c.color,stroke:c.stroke,strokeThickness:8,dropShadow:true,dropShadowColor:c.stroke,dropShadowBlur:22}));c.pixiText.anchor.set(0.5,0.5);layerFx.addChild(c.pixiText);if(sub){c.pixiSub=new PIXI.Text(sub,new PIXI.TextStyle({fontFamily:"'Righteous','Segoe UI',system-ui,sans-serif",fontSize:Math.round(16*FS),fontWeight:'400',fill:'#ffffff',stroke:'#000000',strokeThickness:3,dropShadow:true,dropShadowColor:'#000000',dropShadowBlur:8,dropShadowAlpha:0.5}));c.pixiSub.anchor.set(0.5,0.5);layerFx.addChild(c.pixiSub);}}
+    if(!c.pixiText&&c.life>0){let sub='';if(c.isWipeOut){sub=c.pts>0?'+'+c.pts.toLocaleString()+' bonus pts':'';}else if(c.isLevelUp){sub='×'+Math.pow(2,gameLevel-1)+' points multiplier';}else{sub=`Rank ${c.level}  ·  +${c.pts.toLocaleString()} pts`;}c.pixiText=new PIXI.Text({text:c.name,style:{fontFamily:"'Righteous','Segoe UI',system-ui,sans-serif",fontSize:Math.round(52*FS),fontWeight:'400',fill:c.color,stroke:{color:c.stroke,width:8},dropShadow:{color:c.stroke,blur:22,alpha:0.8}}});c.pixiText.label='celebration_'+c.name;c.pixiText.anchor.set(0.5,0.5);layerFx.addChild(c.pixiText);if(sub){c.pixiSub=new PIXI.Text({text:sub,style:{fontFamily:"'Righteous','Segoe UI',system-ui,sans-serif",fontSize:Math.round(16*FS),fontWeight:'400',fill:'#ffffff',stroke:{color:'#000000',width:3},dropShadow:{color:'#000000',blur:8,alpha:0.5}}});c.pixiSub.label='celebration_sub';c.pixiSub.anchor.set(0.5,0.5);layerFx.addChild(c.pixiSub);}}
     if(c.pixiText){const alpha=c.phase==='out'?c.life*0.95:0.97;c.pixiText.x=c.x;c.pixiText.y=c.y;c.pixiText.scale.set(c.scale);c.pixiText.alpha=alpha;if(c.pixiSub){c.pixiSub.x=c.x;c.pixiSub.y=c.y+34*c.scale;c.pixiSub.scale.set(c.scale);c.pixiSub.alpha=alpha;}}
   });
   celebrations.forEach(c=>{if(c.life<=0){if(c.pixiText){c.pixiText.destroy();c.pixiText=null;}if(c.pixiSub){c.pixiSub.destroy();c.pixiSub=null;}}});
@@ -437,31 +449,123 @@ function predictLanding(x,r){let y=H-WALL-r;for(const p of plushies){const dx=x-
 function _dashLineH(g,x0,x1,y,dash,gap){for(let x=x0;x<x1;x+=dash+gap){g.moveTo(x,y);g.lineTo(Math.min(x+dash,x1),y);}}
 function _dashLineV(g,x,y0,y1,dash,gap){for(let y=y0;y<y1;y+=dash+gap){g.moveTo(x,y);g.lineTo(x,Math.min(y+dash,y1));}}
 function _dashCircle(g,cx,cy,r,dash,gap){const dashA=dash/r,gapA=gap/r;for(let a=0;a<2*Math.PI;a+=dashA+gapA){g.moveTo(cx+r*Math.cos(a),cy+r*Math.sin(a));const a2=Math.min(a+dashA,2*Math.PI);const steps=Math.max(2,Math.ceil(dashA/0.1));for(let k=1;k<=steps;k++){const aa=a+(a2-a)*k/steps;g.lineTo(cx+r*Math.cos(aa),cy+r*Math.sin(aa));}}}
-function _star4(g,x,y,r){const ir=r*0.3,pts=[];for(let k=0;k<8;k++){const a=Math.PI/4*k,cr=k%2===0?r:ir;pts.push(x+cr*Math.cos(a),y+cr*Math.sin(a));}g.drawPolygon(pts);}
+function _star4(g,x,y,r){const ir=r*0.3,pts=[];for(let k=0;k<8;k++){const a=Math.PI/4*k,cr=k%2===0?r:ir;pts.push(x+cr*Math.cos(a),y+cr*Math.sin(a));}g.poly(pts);} // caller applies .fill()
 function _setHeldSprite(x,y,lvl,alpha){if(!plushieTextures[lvl]){clawHeldSpr.visible=false;return;}if(clawHeldSpr.texture!==plushieTextures[lvl]){clawHeldSpr.texture=plushieTextures[lvl];clawHeldSpr.scale.set(PD[lvl].r/imgR(lvl));}clawHeldSpr.x=x;clawHeldSpr.y=y;clawHeldSpr.alpha=alpha;clawHeldSpr.visible=true;}
 
 function render(){
-  gfxUI.clear();gfxClaw.clear();gfxFx.clear();
+  gfxUI.clear(); gfxClaw.clear(); gfxFx.clear();
+
+  // ── danger line (v8: draw path first, apply stroke after) ──────────
   const inWarning=!cooling&&plushies.some(p=>(p.y-PD[p.level].r)<(DY+112)&&p.speed<2);
   const blink=inWarning&&(Date.now()%600)<300;
   const dzPad=W*0.1;
-  gfxUI.lineStyle(blink?2.5:1.5,blink?0xDC1E1E:0xD23737,blink?0.95:0.55);
   _dashLineH(gfxUI,dzPad,W-dzPad,DY,7,5);
-  _dangerText.style.fill=blink?'#DC1E1E':'#D23737';_dangerText.style.fontWeight=blink?'bold':'normal';_dangerText.alpha=blink?0.95:0.65;
-  if(tapHint&&!dead&&!wipeOutActive){const pulse=0.4+0.6*Math.abs(Math.sin(Date.now()/700));_tapText.visible=true;_tapText.alpha=pulse*0.75;}else{_tapText.visible=false;}
-  clawSprBack.visible=false;clawSprFront.visible=false;clawHeldSpr.visible=false;
-  if(!dead&&!showClaw){const gx=clamp(mx,cur),gr=PD[cur].r,gy=predictLanding(gx,gr);gfxClaw.lineStyle(1,0x8C5A28,0.18);_dashLineV(gfxClaw,gx,DROPY+gr,gy-gr,3,5);if(!cooling){gfxClaw.lineStyle(2,cssHex(PD[cur].stroke),0.82);_dashCircle(gfxClaw,gx,gy,gr,5,4);}_setHeldSprite(gx,DROPY,cur,0.6);}
-  if(!dead&&showClaw){const lvl=(clawState==='opening')?clawLvl:cur;const gr=PD[lvl].r,cx=clawX,cy=DROPY,cw=Math.max(70,gr*3.0),imgY=cy-cw*0.78;if(clawState==='idle'){const gy=predictLanding(cx,gr);gfxClaw.lineStyle(1,0x8C5A28,0.18);_dashLineV(gfxClaw,cx,cy+gr,gy-gr,3,5);gfxClaw.lineStyle(2,cssHex(PD[cur].stroke),0.82);_dashCircle(gfxClaw,cx,gy,gr,5,4);}gfxClaw.lineStyle(2,0xA09080,1);gfxClaw.moveTo(cx,0);gfxClaw.lineTo(cx,imgY+cw*0.06);if(_clawTexBack){clawSprBack.texture=_clawTexBack;clawSprBack.x=cx-cw/2;clawSprBack.y=imgY;clawSprBack.width=cw;clawSprBack.height=cw;clawSprBack.visible=true;}if(clawState==='idle'||(clawState==='opening'&&clawOpenTimer>CLAW_OPEN_FRAMES-2))_setHeldSprite(cx,cy,lvl,1.0);const useOpen=clawState==='opening'&&_clawTexOpen;const frontTex=useOpen?_clawTexOpen:_clawTexFront;if(frontTex){clawSprFront.texture=frontTex;clawSprFront.x=cx-cw/2;clawSprFront.y=imgY;clawSprFront.width=cw;clawSprFront.height=cw;clawSprFront.visible=true;}}
+  gfxUI.stroke({width:blink?2.5:1.5,color:blink?0xDC1E1E:0xD23737,alpha:blink?0.95:0.55});
+  _dangerText.style.fill=blink?'#DC1E1E':'#D23737';
+  _dangerText.style.fontWeight=blink?'bold':'normal';
+  _dangerText.alpha=blink?0.95:0.65;
+
+  // ── tap hint ───────────────────────────────────────────────────────
+  if(tapHint&&!dead&&!wipeOutActive){
+    _tapText.visible=true; _tapText.alpha=(0.4+0.6*Math.abs(Math.sin(Date.now()/700)))*0.75;
+  } else { _tapText.visible=false; }
+
+  // ── claw ───────────────────────────────────────────────────────────
+  clawSprBack.visible=false; clawSprFront.visible=false; clawHeldSpr.visible=false;
+  if(!dead&&!showClaw){
+    const gx=clamp(mx,cur),gr=PD[cur].r,gy=predictLanding(gx,gr);
+    _dashLineV(gfxClaw,gx,DROPY+gr,gy-gr,3,5);
+    gfxClaw.stroke({width:1,color:0x8C5A28,alpha:0.18});
+    if(!cooling){ _dashCircle(gfxClaw,gx,gy,gr,5,4); gfxClaw.stroke({width:2,color:cssHex(PD[cur].stroke),alpha:0.82}); }
+    _setHeldSprite(gx,DROPY,cur,0.6);
+  }
+  if(!dead&&showClaw){
+    const lvl=(clawState==='opening')?clawLvl:cur;
+    const gr=PD[lvl].r,cx=clawX,cy=DROPY,cw=Math.max(70,gr*3.0),imgY=cy-cw*0.78;
+    if(clawState==='idle'){
+      const gy=predictLanding(cx,gr);
+      _dashLineV(gfxClaw,cx,cy+gr,gy-gr,3,5); gfxClaw.stroke({width:1,color:0x8C5A28,alpha:0.18});
+      _dashCircle(gfxClaw,cx,gy,gr,5,4);       gfxClaw.stroke({width:2,color:cssHex(PD[cur].stroke),alpha:0.82});
+    }
+    gfxClaw.moveTo(cx,0).lineTo(cx,imgY+cw*0.06);
+    gfxClaw.stroke({width:2,color:0xA09080,alpha:1});
+    if(_clawTexBack){clawSprBack.texture=_clawTexBack;clawSprBack.x=cx-cw/2;clawSprBack.y=imgY;clawSprBack.width=cw;clawSprBack.height=cw;clawSprBack.visible=true;}
+    if(clawState==='idle'||(clawState==='opening'&&clawOpenTimer>CLAW_OPEN_FRAMES-2)) _setHeldSprite(cx,cy,lvl,1.0);
+    const frontTex=(clawState==='opening'&&_clawTexOpen)?_clawTexOpen:_clawTexFront;
+    if(frontTex){clawSprFront.texture=frontTex;clawSprFront.x=cx-cw/2;clawSprFront.y=imgY;clawSprFront.width=cw;clawSprFront.height=cw;clawSprFront.visible=true;}
+  }
+
+  // ── plushies ────────────────────────────────────────────────────────
   layerPlushie.removeChildren();
   const byLevel=[...plushies].sort((a,b)=>b.level-a.level);
-  for(const p of byLevel){if(!p.sprite&&plushieTextures[p.level]){p.sprite=new PIXI.Sprite(plushieTextures[p.level]);p.sprite.anchor.set(0.5,0.5);p.sprite.scale.set(PD[p.level].r/imgR(p.level));}if(p.sprite){p.sprite.x=p.x;p.sprite.y=p.y;p.sprite.rotation=p.angle;if(solidMode){p.sprite.visible=false;const n=getSides(p.level),r=PD[p.level].physR??PD[p.level].r;gfxFx.beginFill(cssHex(PD[p.level].body));gfxFx.lineStyle(2,cssHex(PD[p.level].stroke));const pts=[];for(let k=0;k<n;k++){const a=p.angle+2*Math.PI*k/n;pts.push(p.x+r*Math.cos(a),p.y+r*Math.sin(a));}gfxFx.drawPolygon(pts);gfxFx.endFill();}else{p.sprite.visible=true;layerPlushie.addChild(p.sprite);}}}
-  for(const p of parts){gfxFx.beginFill(cssHex(p.color),p.life*0.85);gfxFx.drawCircle(p.x,p.y,p.r);gfxFx.endFill();}
-  if(trapDoorSpr.texture&&trapDoorSpr.texture!==PIXI.Texture.EMPTY){if(trapDoorScale<=0.001){trapDoorSpr.visible=false;}else{const{x,w,h,bottomY}=window.TD;const sh=h*trapDoorScale;trapDoorSpr.x=x;trapDoorSpr.y=bottomY-sh;trapDoorSpr.width=w;trapDoorSpr.height=sh;trapDoorSpr.visible=true;}}
-  if(showClaw&&_glareT>=0){const cx2=(_glareT*1.6-0.3)*W;const angle=-Math.PI/7;const cos=Math.cos(angle),sin=Math.sin(angle);const hw1=W*0.20,hh=H*1.5;const p1=[[-hw1,-hh],[hw1,-hh],[hw1,hh],[-hw1,hh]].map(([px,py])=>[cx2+px*cos-py*sin,H/2+px*sin+py*cos]);gfxFx.beginFill(0xFFFFFF,0.40);gfxFx.drawPolygon(p1.flat());gfxFx.endFill();const hw2=W*0.09,off2=W*0.28;const p2=[[-hw2+off2,-hh],[hw2+off2,-hh],[hw2+off2,hh],[-hw2+off2,hh]].map(([px,py])=>[cx2+px*cos-py*sin,H/2+px*sin+py*cos]);gfxFx.beginFill(0xFFFFFF,0.25);gfxFx.drawPolygon(p2.flat());gfxFx.endFill();}
-  for(const p of confetti){gfxFx.beginFill(cssHex(p.color),p.life*0.9);if(p.shape==='rect'){const cos=Math.cos(p.rot),sin=Math.sin(p.rot);const hw=p.w/2,hh=p.h/2;const pts=[[-hw,-hh],[hw,-hh],[hw,hh],[-hw,hh]].map(([px,py])=>[p.x+px*cos-py*sin,p.y+px*sin+py*cos]);gfxFx.drawPolygon(pts.flat());}else{gfxFx.drawCircle(p.x,p.y,p.r);}gfxFx.endFill();}
-  for(const s of sparkles){if(s.delay>0)continue;gfxFx.beginFill(0xFFFFFF,Math.min(s.life,1)*0.92);_star4(gfxFx,s.x,s.y,s.r);gfxFx.endFill();}
-  if(dbg){for(const p of plushies){const spinning=Math.abs(p.av)>0.01;gfxFx.lineStyle(1.8,spinning?0xFF3232:0x32C850,spinning?0.85:0.75);gfxFx.drawCircle(p.x,p.y,p.r);gfxFx.lineStyle(0);gfxFx.beginFill(spinning?0xFF0000:0x00CC00);gfxFx.drawCircle(p.x,p.y,3);gfxFx.endFill();}}
-  if(dbgPoly){for(const p of plushies){const verts=getVerts(p);gfxFx.lineStyle(2,cssHex(PD[p.level].body),0.88);gfxFx.moveTo(verts[0][0],verts[0][1]);for(let k=1;k<verts.length;k++)gfxFx.lineTo(verts[k][0],verts[k][1]);gfxFx.closePath();}}
+  for(const p of byLevel){
+    if(!p.sprite&&plushieTextures[p.level]){
+      p.sprite=new PIXI.Sprite(plushieTextures[p.level]);
+      p.sprite.label=PD[p.level].name;
+      p.sprite.anchor.set(0.5,0.5); p.sprite.scale.set(PD[p.level].r/imgR(p.level));
+    }
+    if(p.sprite){
+      p.sprite.x=p.x; p.sprite.y=p.y; p.sprite.rotation=p.angle;
+      if(solidMode){
+        p.sprite.visible=false;
+        const n=getSides(p.level),r=PD[p.level].physR??PD[p.level].r,pts=[];
+        for(let k=0;k<n;k++){const a=p.angle+2*Math.PI*k/n;pts.push(p.x+r*Math.cos(a),p.y+r*Math.sin(a));}
+        gfxFx.poly(pts).fill({color:cssHex(PD[p.level].body)}).stroke({width:2,color:cssHex(PD[p.level].stroke)});
+      } else { p.sprite.visible=true; layerPlushie.addChild(p.sprite); }
+    }
+  }
+
+  // ── particles ────────────────────────────────────────────────────────
+  for(const p of parts) gfxFx.circle(p.x,p.y,p.r).fill({color:cssHex(p.color),alpha:p.life*0.85});
+
+  // ── trap door ────────────────────────────────────────────────────────
+  if(trapDoorSpr.texture&&trapDoorSpr.texture!==PIXI.Texture.EMPTY){
+    if(trapDoorScale<=0.001){ trapDoorSpr.visible=false; }
+    else { const{x,w,h,bottomY}=window.TD,sh=h*trapDoorScale; trapDoorSpr.x=x;trapDoorSpr.y=bottomY-sh;trapDoorSpr.width=w;trapDoorSpr.height=sh;trapDoorSpr.visible=true; }
+  }
+
+  // ── glare flash ─────────────────────────────────────────────────────
+  if(showClaw&&_glareT>=0){
+    const cx2=(_glareT*1.6-0.3)*W,angle=-Math.PI/7,cos=Math.cos(angle),sin=Math.sin(angle),hh=H*1.5;
+    const hw1=W*0.20;
+    gfxFx.poly([[-hw1,-hh],[hw1,-hh],[hw1,hh],[-hw1,hh]].map(([px,py])=>[cx2+px*cos-py*sin,H/2+px*sin+py*cos]).flat())
+         .fill({color:0xFFFFFF,alpha:0.40});
+    const hw2=W*0.09,off2=W*0.28;
+    gfxFx.poly([[-hw2+off2,-hh],[hw2+off2,-hh],[hw2+off2,hh],[-hw2+off2,hh]].map(([px,py])=>[cx2+px*cos-py*sin,H/2+px*sin+py*cos]).flat())
+         .fill({color:0xFFFFFF,alpha:0.25});
+  }
+
+  // ── confetti ─────────────────────────────────────────────────────────
+  for(const p of confetti){
+    if(p.shape==='rect'){
+      const cos=Math.cos(p.rot),sin=Math.sin(p.rot),hw=p.w/2,hh=p.h/2;
+      gfxFx.poly([[-hw,-hh],[hw,-hh],[hw,hh],[-hw,hh]].map(([px,py])=>[p.x+px*cos-py*sin,p.y+px*sin+py*cos]).flat())
+           .fill({color:cssHex(p.color),alpha:p.life*0.9});
+    } else { gfxFx.circle(p.x,p.y,p.r).fill({color:cssHex(p.color),alpha:p.life*0.9}); }
+  }
+
+  // ── sparkles ─────────────────────────────────────────────────────────
+  for(const s of sparkles){
+    if(s.delay>0) continue;
+    _star4(gfxFx,s.x,s.y,s.r);
+    gfxFx.fill({color:0xFFFFFF,alpha:Math.min(s.life,1)*0.92});
+  }
+
+  // ── debug overlays ───────────────────────────────────────────────────
+  if(dbg){
+    for(const p of plushies){
+      const sp=Math.abs(p.av)>0.01;
+      gfxFx.circle(p.x,p.y,p.r).stroke({width:1.8,color:sp?0xFF3232:0x32C850,alpha:sp?0.85:0.75});
+      gfxFx.circle(p.x,p.y,3).fill({color:sp?0xFF0000:0x00CC00});
+    }
+  }
+  if(dbgPoly){
+    for(const p of plushies){
+      const verts=getVerts(p);
+      gfxFx.poly(verts.flat()).stroke({width:2,color:cssHex(PD[p.level].body),alpha:0.88});
+    }
+  }
+
   app.renderer.render(stage);
 }
 
@@ -472,16 +576,30 @@ function loadSprites(cb){
   for(let lvl=1;lvl<=11;lvl++){const img=new Image();img.onload=img.onerror=()=>{if(++done===11)_loadPixiAssets(cb);};img.src=`Sprites/characters/level_${lvl}.png`;imgSprites[lvl]=img;}
 }
 function _loadPixiAssets(cb){
-  const assetMap={};
-  for(let i=1;i<=11;i++)assetMap[`level_${i}`]=`Sprites/characters/level_${i}.png`;
-  assetMap['claw_back']='Sprites/claw/claw_back.png';assetMap['claw_front']='Sprites/claw/claw_front.png';assetMap['claw_open']='Sprites/claw/claw_open.png';assetMap['trap_door']='Sprites/machine/claw_machine_floor_tile.png';
-  Object.entries(assetMap).forEach(([alias,url])=>{PIXI.Assets.add(alias,url);});
-  PIXI.Assets.load(Object.keys(assetMap)).then(textures=>{
-    for(let i=1;i<=11;i++)plushieTextures[i]=textures[`level_${i}`];
-    _clawTexBack=textures['claw_back'];_clawTexFront=textures['claw_front'];_clawTexOpen=textures['claw_open'];
-    clawSprBack.texture=_clawTexBack;clawSprFront.texture=_clawTexFront;
-    const tdTex=textures['trap_door'];if(tdTex){trapDoorSpr.texture=tdTex;trapDoorSpr.visible=true;}
+  // v8: load directly by URL (Assets.add(alias,url) two-arg form removed in v8)
+  const urls=[];
+  for(let i=1;i<=11;i++)urls.push(`Sprites/characters/level_${i}.png`);
+  urls.push('Sprites/claw/claw_back.png','Sprites/claw/claw_front.png','Sprites/claw/claw_open.png');
+  urls.push('Sprites/machine/claw_machine_floor_tile.png');
+
+  const results={};
+  let pending=urls.length;
+  function done(){
+    if(--pending>0)return;
+    for(let i=1;i<=11;i++)plushieTextures[i]=results[`Sprites/characters/level_${i}.png`]||null;
+    _clawTexBack =results['Sprites/claw/claw_back.png']||null;
+    _clawTexFront=results['Sprites/claw/claw_front.png']||null;
+    _clawTexOpen =results['Sprites/claw/claw_open.png']||null;
+    if(_clawTexBack) clawSprBack.texture=_clawTexBack;
+    if(_clawTexFront)clawSprFront.texture=_clawTexFront;
+    const td=results['Sprites/machine/claw_machine_floor_tile.png'];
+    if(td){trapDoorSpr.texture=td;trapDoorSpr.visible=true;}
     cb();
+  }
+  urls.forEach(url=>{
+    PIXI.Assets.load(url)
+      .then(tex=>{results[url]=tex;done();})
+      .catch(()=>{console.warn('[PixiJS] asset missing:',url);done();});
   });
 }
 function drawAtFit(c,cW,cH,lvl,alpha=1){const img=imgSprites[lvl];if(!img||!img.naturalWidth)return;const sc=Math.min(cW/img.naturalWidth,cH/img.naturalHeight);const w=img.naturalWidth*sc,h=img.naturalHeight*sc;c.save();c.globalAlpha=alpha;c.drawImage(img,(cW-w)/2,(cH-h)/2,w,h);c.restore();}
@@ -578,7 +696,7 @@ document.addEventListener('touchmove',e=>{if(e.touches.length>1)e.preventDefault
 window.addEventListener('orientationchange',()=>setTimeout(fitToViewport,200));
 cur=rnd();nxt=rnd();clawLvl=cur;updUI();buildEvo();loadCbPrefs();setApSpeed(0);rebuildPtsTable();
 if(showJoy){const el=joyEl();if(el)el.style.display='flex';}
-Promise.all([document.fonts.load('400 16px Righteous'),document.fonts.ready]).then(()=>{loadSprites(()=>{updNext();fitToViewport();resetClawForNewRound();requestAnimationFrame(loop);});});
+Promise.all([document.fonts.load('400 16px Righteous'),document.fonts.ready,initPixi()]).then(()=>{loadSprites(()=>{updNext();fitToViewport();resetClawForNewRound();requestAnimationFrame(loop);});});
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');
 const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
 const isStandalone=navigator.standalone===true;
