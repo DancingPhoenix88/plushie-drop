@@ -2,7 +2,17 @@
 
 ---
 
-## v19 (current)
+## v20 (current)
+- **WIPE OUT trap door** — floor tile sprite drawn on canvas; opens when plushies start falling, closes after all plushies exit; 9-slice horizontal tile (capL/R=90px from meta); plushie-plushie SAT disabled while door is open so plushies spin and scatter freely
+- **WIPE OUT physics** — merging disabled during wipeout; spin+scatter forces applied at door-open time; close timing calculated from physics (worst-case fall distance)
+- **Cover patches moved to canvas** — reflection corner sprites drawn via `destination-over` compositing (behind plushies, above background)
+- **Sidebar reordered** — Next above Level
+- **Floor zone NEXT label** — shows `NEXT (LvX)` with current game level
+- **Celebration sub-label** — shows `Lv X · Rank N · +pts`
+
+---
+
+## v19
 - **Floor zone redesign** — 3 independently absolute-positioned panels (score+next left, joystick center, checkboxes right); all scale with floor-zone height via `aspect-ratio` + `%` sizing; no flex interference between panels
 - **Portrait layout locked to viewport** — `height:100dvh; overflow:hidden` in portrait mode; `justify-content:flex-end` sticks game to bottom; no page scroll
 - **Mid-range ar [0.6–0.667] offset** — top-bar and main-content shift down by evo zone height (11.25vw) to hide evo strip when screen is borderline portrait/wide

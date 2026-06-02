@@ -87,6 +87,7 @@ html,body{width:100vw;height:100dvh;overflow:hidden;position:relative;font-famil
 }
 #game-frame canvas{display:block;width:100%;height:auto;aspect-ratio:632/1049;}
 
+/* cover patches + trap door drawn on canvas — no CSS proxies */
 /* floor-zone — left/right aligned with canvas (45/720 and 43/720) */
 #floor-zone{
   position:absolute;
@@ -170,7 +171,7 @@ input.sprite-cb:checked{background-image:url('Sprites/checkbox_tick.png');}
 .ap-dial .ap-seg{
   display:none;
   font-family:'Righteous','Share Tech Mono','Courier New',monospace;
-  font-size:28px;font-weight:400;line-height:1;
+  font-size:20px;font-weight:400;line-height:1;
   transform:translateX(-2px) skew(6deg, 0deg);
 }
 .ap-dial .ap-seg.active{
@@ -310,6 +311,8 @@ img.evo-locked{filter:brightness(0);opacity:0.45;}
   <div id="main-content">
     <div id="game-frame">
 
+      <!-- cover patches + trap door drawn on canvas -->
+
       <!-- Canvas — fills .cw area -->
       <div class="cw">
         <canvas id="gc" width="870" height="1046"></canvas>
@@ -325,7 +328,7 @@ img.evo-locked{filter:brightness(0);opacity:0.45;}
               <span id="sc-p">0</span>
             </div>
             <div id="fz-next">
-              <span class="fz-label">NEXT</span>
+              <span class="fz-label" id="fz-next-label">NEXT</span>
               <img id="nc" src="" alt="next">
             </div>
           </div>
@@ -368,11 +371,11 @@ img.evo-locked{filter:brightness(0);opacity:0.45;}
   <div id="evo-panel">
     <div class="lbl">Score</div><div class="val" id="sc">0</div>
     <hr class="sep">
-    <div class="lbl">Level</div><div class="val" id="gl-ls">1</div>
-    <hr class="sep">
     <div class="lbl">Next</div>
     <canvas id="nc-ls" width="98" height="80" style="display:block;margin:4px auto 0;"></canvas>
     <div style="font-size:10px;color:#b09878;text-align:center;margin-top:3px;" id="nl-ls">—</div>
+    <hr class="sep">
+    <div class="lbl">Level</div><div class="val" id="gl-ls">1</div>
     <hr class="sep">
     <div class="lbl" style="margin-bottom:6px">Evolution</div>
     <div id="ev"></div>
@@ -493,6 +496,9 @@ let tapHint=false; // show "TAP TO DROP" until first drop when auto is off
 let danger={};
 let firstMerged=new Set(); // tracks levels merged for the first time this game
 let gameLevel=1, wipeOutActive=false, scoreMultiplier=1;
+let trapDoorOpen=false;    // true only while plushies should fall through
+let trapDoorScale=0;      // driven by trapDoorOpen: 1=visible, 0=hidden
+// trap door size/position read from #trap-door-ref DOM rect at render time
 // Pre-computed points table per rank — rebuilt once on WIPE OUT via rebuildPtsTable()
 const PTS_M=new Array(12); // PTS_M[rank] = PTS[rank] * scoreMultiplier
 function rebuildPtsTable(){ for(let i=1;i<=11;i++) PTS_M[i]=PTS[i]*scoreMultiplier; }
@@ -514,10 +520,13 @@ clawImg.back.src ='Sprites/claw_back.png';
 clawImg.front.src='Sprites/claw_front.png';
 clawImg.open.src ='Sprites/claw_open.png';
 
-// Reflection corner covers (left variants; right = horizontal flip)
+// Reflection corner cover sprites
 const coverImg={ top:new Image(), bot:new Image() };
 coverImg.top.src='Sprites/claw_machine_top_left_reflection_cover.png';
 coverImg.bot.src='Sprites/claw_machine_bottom_left_reflection_cover.png';
+// Trap door sprite
+const trapDoorImg=new Image();
+trapDoorImg.src='Sprites/claw_machine_floor_tile.png';
 
 const dpr=window.devicePixelRatio||1;
 
@@ -634,6 +643,7 @@ class Ball {
   get speed(){ return Math.hypot(this.vx,this.vy); }
 }
 
+
 function step(){
   const dt=1/SUBSTEPS;
   for(let s=0;s<SUBSTEPS;s++){
@@ -650,15 +660,17 @@ function step(){
       p.av=Math.max(-AV_MAX,Math.min(AV_MAX,p.av))*0.93;
       p.angle+=p.av;
     }
-    // 2. walls — bounce only, NO angular contribution
+    // 2. walls + floor — bounce only, NO angular contribution
     for(const p of plushies){
       if(p.x-p.r<PAD){p.x=PAD+p.r; if(p.vx<0)p.vx=-p.vx*REST;}
       if(p.x+p.r>W-PAD){p.x=W-PAD-p.r; if(p.vx>0)p.vx=-p.vx*REST;}
-      if(p.y+p.r>H-WALL){p.y=H-WALL-p.r;p.vy=-Math.abs(p.vy)*REST;p.vx*=FRIC;}
       if(p.y-p.r<0&&p.vy<0)p.vy=0;
+      if(!trapDoorOpen){
+        if(p.y+p.r>H-WALL){p.y=H-WALL-p.r;p.vy=-Math.abs(p.vy)*REST;p.vx*=FRIC;}
+      }
     }
-    // 3. polygon SAT collision — circle broad-phase first, then SAT for exact normal
-    // mass = r²: heavier ball pushed less, absorbs less impulse
+    // 3. polygon SAT collision — skipped while trap door is open so plushies fall freely
+    if(trapDoorOpen) continue;
     for(let it=0;it<ITERS;it++){
       for(let i=0;i<plushies.length;i++){
         for(let j=i+1;j<plushies.length;j++){
@@ -703,6 +715,7 @@ function step(){
 
 // ── MERGE ─────────────────────────────────────────────────────────────
 function detectMerges(){
+  if(wipeOutActive) return;
   const used=new Set();
   for(let i=0;i<plushies.length;i++){
     for(let j=i+1;j<plushies.length;j++){
@@ -752,19 +765,29 @@ function processMerges(){
 // ── WIPE OUT ──────────────────────────────────────────────────────────
 function triggerWipeOut(x,y){
   wipeOutActive=true;
-  // Pop all remaining plushies and tally bonus points
+  trapDoorOpen=false;
+  // Calculated time for all plushies to fall off canvas from worst case (top, at rest):
+  // frames = sqrt(2 * (H + maxR) / (GRAV * SUBSTEPS)); add 50% safety margin
+  const fallFrames=Math.sqrt(2*(H+136)/(GRAV*SUBSTEPS))*1.5;
+  const FALL_TIME_MS=Math.ceil(fallFrames/60*1000); // ≈ ~800ms
+  // 1. Open trap door (snap via trapDoorOpen flag)
+  setTimeout(()=>{
+    trapDoorOpen=true;
+    // apply spin + scatter now that SAT is disabled and plushies are free to rotate
+    for(const p of plushies){
+      p.av=(Math.random()-.5)*AV_MAX*10;
+      p.vx+=(Math.random()-.5)*3;
+    }
+  }, 250);
+  // 2. Close trap door once all plushies have had time to exit
+  const closeAt=250+FALL_TIME_MS;
+  // Tally bonus points and mark plushies to fall through the floor
   let totalPts=0;
   for(const p of plushies){
-    const pts=PTS_M[p.level];
-    totalPts+=pts;
-    burst(p.x,p.y,PD[p.level].body);
-    // extra big burst at each pop
-    for(let k=0;k<8;k++){
-      const a=Math.PI*2*k/8+Math.random()*.5,spd=3+Math.random()*5;
-      parts.push({x:p.x,y:p.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,r:4+Math.random()*6,color:PD[p.level].body,life:1});
-    }
+    totalPts+=PTS_M[p.level];
+    p.vy=Math.max(p.vy, 1+Math.random()*2); // gentle downward nudge
   }
-  plushies=[]; danger={}; mergeQ=[];
+  danger={}; mergeQ=[];
   score+=totalPts; if(score>best) best=score;
   updUI();
   // Massive confetti burst
@@ -823,11 +846,13 @@ function triggerWipeOut(x,y){
     firstMerged=new Set();
     updateEvoUnlocks();
     wipeOutActive=false;
+    trapDoorOpen=false; // closes trap door, restores floor
+    plushies=plushies.filter(p=>p.y-p.r<H+80);
     setTimeout(()=>{
       celebrations.push({x:W/2,y:H/2-60,name:'LEVEL '+gameLevel,level:0,pts:0,
         color:'#f0c500',stroke:'#8a6000',life:1,scale:0.1,phase:'in',isLevelUp:true});
     },500);
-  },620);
+  },closeAt);
 }
 
 function sfxWipeOut(){
@@ -875,7 +900,7 @@ function gameOver(){
 }
 
 function restart(){
-  dead=false; cooling=false; wipeOutActive=false; gameLevel=1; scoreMultiplier=1; rebuildPtsTable();
+  dead=false; cooling=false; wipeOutActive=false; trapDoorOpen=false; gameLevel=1; scoreMultiplier=1; rebuildPtsTable();
   const glEl=document.getElementById('gl-ls'); if(glEl) glEl.textContent=1;
   plushies=[]; parts=[]; mergeQ=[]; popups=[]; confetti=[]; celebrations=[]; sparkles=[]; danger={}; firstMerged=new Set(); score=0; updUI();
   document.getElementById('ov').classList.remove('show');
@@ -1032,6 +1057,8 @@ function tickReflect(now){
 // ── LOOP ──────────────────────────────────────────────────────────────
 function loop(){
   tickReflect(performance.now());
+  // animate trap door scale
+  trapDoorScale=trapDoorOpen?1:0;
   processKeys();
   if(!dead){step();detectMerges();processMerges();}
   updateClaw();
@@ -1047,6 +1074,8 @@ function loop(){
     }
     _joyLastMx=mx;
   }
+  // remove fall-through plushies once fully below the canvas
+  if(wipeOutActive) plushies=plushies.filter(p=>p.y-p.r<H+80); // remove once fully off-screen
   tickParts(); tickPopups(); tickConfetti(); tickSparkles(); tickCelebrations(); if(!dead) checkDanger(); if(showClaw) tickGlare(); render();
   if(!dead) requestAnimationFrame(loop); // pause loop on game-over to save battery
 }
@@ -1153,22 +1182,55 @@ function drawReflections(){
   ctx.restore();
 }
 
+
+// Draws a 9-sliced panel at any destination size without distorting corners.
+
 function drawCoverPatches(){
   const t=coverImg.top, b=coverImg.bot;
   if(!t.naturalWidth||!b.naturalWidth) return;
   const tw=t.naturalWidth, th=t.naturalHeight;
   const bw=b.naturalWidth, bh=b.naturalHeight;
-  // top-left
   ctx.drawImage(t, 0,0,tw,th);
-  // top-right (flip horizontal)
   ctx.save(); ctx.scale(-1,1); ctx.drawImage(t,-W,0,tw,th); ctx.restore();
-  // bottom-left
   ctx.drawImage(b, 0,H-bh,bw,bh);
-  // bottom-right (flip horizontal)
   ctx.save(); ctx.scale(-1,1); ctx.drawImage(b,-W,H-bh,bw,bh); ctx.restore();
 }
 
-// Draws a 9-sliced panel at any destination size without distorting corners.
+// 3-part horizontal 9-slice: fixed left cap, tiled center, fixed right cap
+// meta: left=120, right=120, top=0, bottom=0, mode=TILE
+function drawFloorTile(img, dx, dy, dw, dh, capL=90, capR=90){
+  const sw=img.naturalWidth, sh=img.naturalHeight;
+  const centerSrcW=sw-capL-capR;
+  const centerDstW=dw-capL-capR;
+  if(centerDstW<=0||dh<=0) return;
+  ctx.drawImage(img, 0,0,capL,sh, dx,dy,capL,dh);
+  ctx.save();
+  ctx.beginPath(); ctx.rect(dx+capL, dy, centerDstW, dh); ctx.clip();
+  for(let x=0; x<centerDstW; x+=centerSrcW)
+    ctx.drawImage(img, capL,0,centerSrcW,sh, dx+capL+x,dy,Math.min(centerSrcW,centerDstW-x),dh);
+  ctx.restore();
+  ctx.drawImage(img, sw-capR,0,capR,sh, dx+dw-capR,dy,capR,dh);
+}
+
+// Trap door — bottom anchored at H-WALL, height scaled by trapDoorScale
+// Trap door draw params — override at runtime to adjust position/size:
+//   window.TD = { x:0, w:W, h:36, bottomY:H }
+// Trap door draw params — override at runtime to adjust:
+window.TD = {
+  x: -30,
+  w: 690,
+  h: 38,
+  bottomY: 1049,
+  capL: 90,
+  capR: 90
+};
+function drawTrapDoor(){
+  if(trapDoorScale<=0.001||!trapDoorImg.naturalWidth) return;
+  const {x,w,h,bottomY,capL,capR}=window.TD;
+  const sh=h*trapDoorScale;
+  drawFloorTile(trapDoorImg, x, bottomY-sh, w, sh, capL, capR);
+}
+
 function drawNineSlice(gctx, img, corner, dx, dy, dw, dh){
   const s = img.width;          // source sprite side length (assumed square)
   const c = corner;
@@ -1216,7 +1278,7 @@ function render(){
   ctx.textAlign='right';
   ctx.font=`${Math.round(9*FS)}px 'Segoe UI',system-ui,sans-serif`;
   ctx.fillStyle='rgba(90,56,32,0.45)';
-  ctx.fillText('v19',W-dzPad-4,DY-5);
+  ctx.fillText('v20',W-dzPad-4,DY-5);
   // TAP TO DROP hint — big, slowly blinking at tank center
   if(tapHint && !dead && !wipeOutActive){
     const pulse=0.4+0.6*Math.abs(Math.sin(Date.now()/700)); // 0.4–1.0, ~1.4s period
@@ -1306,13 +1368,13 @@ function render(){
     ctx.save(); ctx.globalAlpha=p.life*.85; ctx.fillStyle=p.color;
     ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill(); ctx.restore();
   }
-  // ── REFLECTIONS here: canvas has plushies+claw but NOT popups/confetti ──
-  if(_reflectEnabled){
-    ctx.globalCompositeOperation='destination-over';
-    drawCoverPatches();
-    drawReflections();
-    ctx.globalCompositeOperation='source-over';
-  }
+  // ── LAYERED BACKGROUND (destination-over = each draw goes behind existing content) ──
+  // order drawn: trap door → cover patches → reflections → (behind plushies already drawn)
+  ctx.globalCompositeOperation='destination-over';
+  drawTrapDoor();
+  drawCoverPatches();
+  if(_reflectEnabled) drawReflections();
+  ctx.globalCompositeOperation='source-over';
   // score popups
   ctx.save(); ctx.textAlign='center';
   popups.forEach(p=>{
@@ -1433,7 +1495,7 @@ function render(){
     let sub='';
     if(c.isWipeOut){ sub=c.pts>0?'+'+c.pts.toLocaleString()+' bonus pts':''; }
     else if(c.isLevelUp){ const mult=Math.pow(2,gameLevel-1); sub='×'+mult+' points multiplier'; }
-    else { sub=`Rank ${c.level}  ·  +${c.pts.toLocaleString()} pts`; }
+    else { sub=`Lv ${gameLevel}  ·  Rank ${c.level}  ·  +${c.pts.toLocaleString()} pts`; }
     if(sub){ ctx.strokeText(sub,0,34); ctx.fillText(sub,0,34); }
     ctx.restore();
   }
@@ -1855,7 +1917,7 @@ function setApSpeed(spd){
     const schedule=()=>{
       _apTimer=setTimeout(()=>{
         if(!apSpeed){ _apTimer=null; return; } // turned off
-        (function waitCool(){ if(cooling){ requestAnimationFrame(waitCool); } else { if(!dead) drop(); schedule(); } })();
+        (function waitCool(){ if(wipeOutActive||dead){ schedule(); return; } if(cooling){ requestAnimationFrame(waitCool); } else { drop(); schedule(); } })();
       }, AP_DELAYS[apSpeed]);
     };
     schedule();
@@ -1881,9 +1943,8 @@ cv.addEventListener('mousemove',e=>{
   setMx((e.clientX-r.left)*(W/r.width));
 });
 cv.addEventListener('click',e=>{
-  if(dead) return;
-  // retry each frame until cooling clears, same as touch
-  (function tryDrop(){if(cooling) requestAnimationFrame(tryDrop); else drop();})();
+  if(dead||wipeOutActive) return;
+  (function tryDrop(){if(wipeOutActive||dead) return; if(cooling) requestAnimationFrame(tryDrop); else drop();})();
 });
 // ── TOUCH: tween claw on tap, drop on tween completion ──────────────────
 let _touchTween=null; // {raf, cancelled, dropOnDone}
@@ -1911,7 +1972,7 @@ function tweenClawTo(targetX, duration){
       _touchTween=null;
       if(tween.dropOnDone){
         // retry until cooling clears (handles rare case tween finishes just before cooldown ends)
-        (function tryDrop(){if(cooling) requestAnimationFrame(tryDrop); else drop();})();
+        (function tryDrop(){if(wipeOutActive||dead) return; if(cooling) requestAnimationFrame(tryDrop); else drop();})();
       }
     }
   }
@@ -1920,16 +1981,15 @@ function tweenClawTo(targetX, duration){
 
 cv.addEventListener('touchstart',e=>{
   e.preventDefault();
-  if(dead) return;
+  if(dead||wipeOutActive) return;
   const r=cv.getBoundingClientRect();
   const tx=(e.touches[0].clientX-r.left)*(W/r.width);
-  // allow tween to start during cooldown — it takes ~300ms, same as cooldown
   tweenClawTo(Math.max(PAD,Math.min(W-PAD,tx)), 300);
 },{passive:false});
 
 cv.addEventListener('touchmove',e=>{
   e.preventDefault();
-  if(dead) return;
+  if(dead||wipeOutActive) return;
   const r=cv.getBoundingClientRect();
   const tx=(e.touches[0].clientX-r.left)*(W/r.width);
   cancelTween(); // drag: cancel tween, follow finger directly
@@ -1938,7 +1998,7 @@ cv.addEventListener('touchmove',e=>{
 
 cv.addEventListener('touchend',e=>{
   e.preventDefault();
-  if(dead) return;
+  if(dead||wipeOutActive) return;
   if(_touchTween){
     _touchTween.dropOnDone=true; // drop when tween finishes (cooling will have cleared)
   } else {
@@ -2004,11 +2064,11 @@ function drawAtFit(c,cW,cH,lvl,alpha=1){
 }
 function updNext(){
   const name=PD[nxt].name;
-  // portrait: img tag — just set src
   nc.src=`Sprites/level_${nxt}.png`;
-  // landscape (98×80) canvas
   nctxls.clearRect(0,0,98,80); drawAtFit(nctxls,98,80,nxt);
   document.getElementById('nl-ls').textContent=name;
+  const lbl=document.getElementById('fz-next-label');
+  if(lbl) lbl.textContent=`NEXT (Lv${gameLevel})`;
 }
 function buildEvo(){
   const el=document.getElementById('ev'); el.innerHTML='';
@@ -2058,7 +2118,7 @@ function updateHelpMeta(){
   const meta=document.getElementById('help-meta');
   if(!meta) return;
   const vw=window.innerWidth,vh=window.innerHeight;
-  meta.textContent=`v19  ·  ${vw}×${vh}  ar:${(vw/vh).toFixed(3)}`;
+  meta.textContent=`v20  ·  ${vw}×${vh}  ar:${(vw/vh).toFixed(3)}`;
 }
 function toggleHelp(force){
   const el=document.getElementById('help-popup');
