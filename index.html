@@ -497,7 +497,8 @@ let danger={};
 let firstMerged=new Set(); // tracks levels merged for the first time this game
 let gameLevel=1, wipeOutActive=false, scoreMultiplier=1;
 let trapDoorOpen=false;    // true only while plushies should fall through
-let trapDoorScale=0;      // driven by trapDoorOpen: 1=visible, 0=hidden
+let trapDoorScale=0;      // animated toward target (1=visible, 0=hidden)
+const TRAP_ANIM_SPEED=1/(60*0.25); // 0.25s at 60fps
 // trap door size/position read from #trap-door-ref DOM rect at render time
 // Pre-computed points table per rank — rebuilt once on WIPE OUT via rebuildPtsTable()
 const PTS_M=new Array(12); // PTS_M[rank] = PTS[rank] * scoreMultiplier
@@ -851,6 +852,7 @@ function triggerWipeOut(x,y){
     setTimeout(()=>{
       celebrations.push({x:W/2,y:H/2-60,name:'LEVEL '+gameLevel,level:0,pts:0,
         color:'#f0c500',stroke:'#8a6000',life:1,scale:0.1,phase:'in',isLevelUp:true});
+      sfxLevelUp();
     },500);
   },closeAt);
 }
@@ -877,6 +879,31 @@ function sfxWipeOut(){
     g2.gain.exponentialRampToValueAtTime(0.001,t+1.4);
     o2.start(t+0.3+k*0.06);o2.stop(t+1.5);
   });
+}
+
+function sfxLevelUp(){
+  if(muted) return;
+  const a=getAC(), t=a.currentTime;
+  // bright ascending major arpeggio + shimmer
+  const notes=[523,659,784,1047,1319]; // C5 E5 G5 C6 E6
+  notes.forEach((f,k)=>{
+    const o=a.createOscillator(),g=a.createGain();
+    o.connect(g);g.connect(a._sfxBus||a.destination);
+    o.type='triangle'; o.frequency.value=f;
+    const on=t+k*0.08;
+    g.gain.setValueAtTime(0,on);
+    g.gain.linearRampToValueAtTime(0.22,on+0.04);
+    g.gain.exponentialRampToValueAtTime(0.001,on+0.5);
+    o.start(on); o.stop(on+0.55);
+  });
+  // high shimmer tail
+  const os=a.createOscillator(),gs=a.createGain();
+  os.connect(gs);gs.connect(a._sfxBus||a.destination);
+  os.type='sine'; os.frequency.value=2093; // C7
+  gs.gain.setValueAtTime(0,t+0.35);
+  gs.gain.linearRampToValueAtTime(0.1,t+0.4);
+  gs.gain.exponentialRampToValueAtTime(0.001,t+1.2);
+  os.start(t+0.35); os.stop(t+1.3);
 }
 
 // ── GAME OVER ─────────────────────────────────────────────────────────
@@ -1058,7 +1085,11 @@ function tickReflect(now){
 function loop(){
   tickReflect(performance.now());
   // animate trap door scale
-  trapDoorScale=trapDoorOpen?1:0;
+  const trapTarget=trapDoorOpen?1:0;
+  if(trapDoorScale!==trapTarget)
+    trapDoorScale=trapTarget>trapDoorScale
+      ? Math.min(1,trapDoorScale+TRAP_ANIM_SPEED)
+      : Math.max(0,trapDoorScale-TRAP_ANIM_SPEED);
   processKeys();
   if(!dead){step();detectMerges();processMerges();}
   updateClaw();
