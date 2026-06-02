@@ -365,7 +365,7 @@ async function initPixi(){
   _dangerText=new PIXI.Text({text:'DANGER',style:{fontFamily:"'Segoe UI',system-ui,sans-serif",fontSize:Math.round(11*FS),fill:'#D23737'}});
   _dangerText.label='danger_label';_dangerText.x=W*0.1+5;_dangerText.y=DY-Math.round(14*FS);layerUI.addChild(_dangerText);
 
-  _versionText=new PIXI.Text({text:'v25-pixi',style:{fontFamily:"'Segoe UI',system-ui,sans-serif",fontSize:Math.round(9*FS),fill:'#5a3820'}});
+  _versionText=new PIXI.Text({text:'v26',style:{fontFamily:"'Segoe UI',system-ui,sans-serif",fontSize:Math.round(9*FS),fill:'#5a3820'}});
   _versionText.label='version_label';_versionText.anchor.set(1,1);_versionText.x=W-W*0.1-4;_versionText.y=DY-5;_versionText.alpha=0.45;layerUI.addChild(_versionText);
 
   _tapText=new PIXI.Text({text:'TAP TO DROP',style:{fontFamily:"'Righteous','Segoe UI',system-ui,sans-serif",fontSize:Math.round(36*FS),fontWeight:'400',fill:'#5a3820',stroke:{color:'#5a3820',width:1}}});
@@ -1375,7 +1375,7 @@ function updateHelpMeta(){
   const meta=document.getElementById('help-meta');
   if(!meta) return;
   const vw=window.innerWidth,vh=window.innerHeight;
-  meta.textContent=`v25  ·  ${vw}×${vh}  ar:${(vw/vh).toFixed(3)}`;
+  meta.textContent=`v26  ·  ${vw}×${vh}  ar:${(vw/vh).toFixed(3)}`;
 }
 let _helpTab='kb';
 function showHelpTab(tab){
@@ -1586,8 +1586,8 @@ function onDeviceMotion(e){
   if(g && g.x != null && g.y != null){
     // atan2(-gx, -gy): upright=0, right=+90°, upside-down=±180°
     // Low-pass filter to smooth sensor noise
-    // Derive tilt from gamma equivalent of gravity vector — consistent with DeviceOrientation path
-    const rawAngle = Math.atan2(g.x, g.y); // positive when tilting right on W3C-compliant devices
+    // atan2(-gx, -gy): upright=0, right=+90°, upside-down=±180° — matches main branch
+    const rawAngle = Math.atan2(-g.x, -g.y);
     tiltAngle = tiltAngle * 0.7 + rawAngle * 0.3;
     updateGyroArrow(tiltAngle * 180 / Math.PI);
   }
