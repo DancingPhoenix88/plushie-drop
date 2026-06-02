@@ -2,7 +2,17 @@
 
 ---
 
-## v22 (current)
+## v23 (current)
+- **Gyro / tilt controls** — GYRO checkbox enables device orientation; gravity direction follows phone tilt with full ±180° range via accelerometer gravity vector; unclamped (removed 15° cap)
+- **Gyro arrow** — rotating ▼ indicator in floor zone shows true gravity direction when GYRO is on; hidden on desktop (pointer:fine) except in debug mode
+- **Shake to push** — `DeviceMotionEvent` applies directional force to all plushies proportional to physical movement speed/direction
+- **Gyro losing condition** — in GYRO mode, game over only triggers when 3+ plushies stay above danger line for 1 continuous second
+- **Touch tween revamp** — tap distance <5% snaps instantly; 5–30% interpolates duration 0→300ms; ≥30% fixed 300ms
+- **Debug gyro sim** — hold G + mouse to tilt, hold F + mouse to shake (IS_DEBUG only); arrow swaps in for joystick while held
+- **Debug no-merge** — M key toggles merge on/off (IS_DEBUG only, release-safe)
+- **iOS gyro permission fix** — saved gyro pref no longer auto-calls `requestPermission` on load
+
+## v22
 - **Cover patch alignment fix** — canvas `.cw` top offset changed from fixed `11px` to proportional `calc(11/1280*100%)` so it scales with game-frame height; fixes cover patches appearing vertically offset on larger devices (iPhone XS Max / 15 Pro Max)
 - **Rename to BB Tower** — updated game title in `<title>`, `apple-mobile-web-app-title`, and `manifest.json`
 - **Remove TTS on merge** — reverted name announcement (`speechSynthesis`) from `sfxMerge`; merges now play only the arpeggio SFX
