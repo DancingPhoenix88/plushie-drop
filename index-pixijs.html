@@ -365,7 +365,7 @@ async function initPixi(){
   _dangerText=new PIXI.Text({text:'DANGER',style:{fontFamily:"'Segoe UI',system-ui,sans-serif",fontSize:Math.round(11*FS),fill:'#D23737'}});
   _dangerText.label='danger_label';_dangerText.x=W*0.1+5;_dangerText.y=DY-Math.round(14*FS);layerUI.addChild(_dangerText);
 
-  _versionText=new PIXI.Text({text:'v25',style:{fontFamily:"'Segoe UI',system-ui,sans-serif",fontSize:Math.round(9*FS),fill:'#5a3820'}});
+  _versionText=new PIXI.Text({text:'v25-pixi',style:{fontFamily:"'Segoe UI',system-ui,sans-serif",fontSize:Math.round(9*FS),fill:'#5a3820'}});
   _versionText.label='version_label';_versionText.anchor.set(1,1);_versionText.x=W-W*0.1-4;_versionText.y=DY-5;_versionText.alpha=0.45;layerUI.addChild(_versionText);
 
   _tapText=new PIXI.Text({text:'TAP TO DROP',style:{fontFamily:"'Righteous','Segoe UI',system-ui,sans-serif",fontSize:Math.round(36*FS),fontWeight:'400',fill:'#5a3820',stroke:{color:'#5a3820',width:1}}});
@@ -844,15 +844,19 @@ function loadSprites(cb){
   for(let lvl=1;lvl<=11;lvl++){const img=new Image();img.onload=img.onerror=()=>{if(++done===11)_loadPixiAssets(cb);};img.src=`Sprites/characters/level_${lvl}.png`;imgSprites[lvl]=img;}
 }
 function _loadPixiAssets(cb){
-  const urls=[];
-  for(let i=1;i<=11;i++)urls.push(`Sprites/characters/level_${i}.png`);
-  urls.push('Sprites/claw/claw_back.png','Sprites/claw/claw_front.png','Sprites/claw/claw_open.png');
-  urls.push('Sprites/machine/claw_machine_floor_tile.png');
+  // Character textures: create directly from already-loaded imgSprites (no extra network)
+  for(let i=1;i<=11;i++){
+    const img=imgSprites[i];
+    if(img&&img.naturalWidth) plushieTextures[i]=PIXI.Texture.from(img);
+  }
+  // Claw + trap door: still need PIXI.Assets.load
+  const urls=['Sprites/claw/claw_back.png','Sprites/claw/claw_front.png','Sprites/claw/claw_open.png','Sprites/machine/claw_machine_floor_tile.png'];
   const results={};let pending=urls.length;
   function done(){
     if(--pending>0)return;
-    for(let i=1;i<=11;i++)plushieTextures[i]=results[`Sprites/characters/level_${i}.png`]||null;
-    _clawTexBack=results['Sprites/claw/claw_back.png']||null;_clawTexFront=results['Sprites/claw/claw_front.png']||null;_clawTexOpen=results['Sprites/claw/claw_open.png']||null;
+    _clawTexBack =results['Sprites/claw/claw_back.png']||null;
+    _clawTexFront=results['Sprites/claw/claw_front.png']||null;
+    _clawTexOpen =results['Sprites/claw/claw_open.png']||null;
     if(_clawTexBack)clawSprBack.texture=_clawTexBack;if(_clawTexFront)clawSprFront.texture=_clawTexFront;
     const td=results['Sprites/machine/claw_machine_floor_tile.png'];
     if(td){
