@@ -2,7 +2,23 @@
 
 ---
 
-## v25 (current)
+## v26 (current)
+- **PixiJS v8 renderer** — Canvas 2D replaced with WebGL via PixiJS v8; all plushie/claw sprites rendered as `PIXI.Sprite`; 5 named render layers (`bg`, `ui`, `claw`, `plushies`, `fx`)
+- **Trap door NineSliceSprite** — `claw_machine_floor_tile.png` rendered with `NineSliceSprite` (capL/R=90px) for correct cap stretching
+- **3-tier danger system** — buffer zone blinks line / top-crosses slow red pulse / bottom-near fast red pulse + 1s lose; uses 30-frame net-delta settle check (neutralises oscillation)
+- **Ceiling bounce** — plushies bounce off canvas top edge with `REST` restitution (previously just killed upward velocity)
+- **WIPE OUT sync** — full sequence (door open→scatter→fall→close→level-up) driven by frame-event scheduler; fully compatible with P/. step mode
+- **P = pause, . = step** — frame-by-frame debugging; physics, trap door, scheduled events all advance in sync
+- **Drop shadows removed** — pixi-filters CDN removed; no visual regression
+- **All textures via `PIXI.Texture.from(img)`** — no PIXI.Assets network calls; reliable on mobile
+- **Mobile fixes** — `antialias:false` on mobile (iOS blank canvas fix); `powerPreference:'high-performance'`; Text `dropShadow` removed (white background bug)
+- **Gyro fix** — iOS tilt only when DeviceMotion permission explicitly granted; G keyup resets tiltAngle
+- **Frame-event scheduler** — `scheduleAt(frames, fn)` replaces all `setTimeout` in WIPE OUT / CLEAR sequences
+- **Debug improvements** — D overlay uses character body color + dashed ring; C shows vertex dots + edge count label + character stroke color; H shows character name; M = no-merge toast via `_gyroHud`
+
+---
+
+## v25
 - **Reflection buffer at quarter-res** — `REFLECT_SCALE` reduced from 0.5 to 0.25 (4× smaller buffer) for better performance; visually imperceptible at 0.22 opacity
 
 ---
