@@ -2,7 +2,12 @@
 
 ---
 
-## v24 (current)
+## v25 (current)
+- **Reflection buffer at quarter-res** — `REFLECT_SCALE` reduced from 0.5 to 0.25 (4× smaller buffer) for better performance; visually imperceptible at 0.22 opacity
+
+---
+
+## v24
 - **Rename to BB Tower** — updated title in `<title>`, `apple-mobile-web-app-title`, and `manifest.json`
 - **Claw tracks mouse during cooldown** — claw now follows mouse/finger during the open animation instead of freezing at drop position, eliminating the hiccup when moving quickly
 - **`#fz-next-label` CSS** — width 70%, margin-left 32%
