@@ -428,8 +428,13 @@ img.evo-locked{filter:brightness(0);opacity:0.45;}
 
 <div id="help-popup">
   <div id="help-box">
-    <h3>⌨️ Keyboard Shortcuts</h3>
-    <table>
+    <!-- tab buttons — gamepad tab only shown when gamepad connected -->
+    <div id="help-tabs" style="display:flex;gap:6px;margin-bottom:10px;">
+      <button id="help-tab-kb"  onclick="showHelpTab('kb')"  style="flex:1;padding:4px 0;font-size:10px;font-family:inherit;border:1px solid #dfc8b0;border-radius:6px;cursor:pointer;background:#f0e4d4;color:#5a3820;font-weight:600;">⌨️ Keyboard</button>
+      <button id="help-tab-gp"  onclick="showHelpTab('gp')"  style="flex:1;padding:4px 0;font-size:10px;font-family:inherit;border:1px solid #dfc8b0;border-radius:6px;cursor:pointer;background:#fff8f2;color:#b09878;display:none;">🎮 Gamepad</button>
+    </div>
+    <!-- keyboard tab -->
+    <table id="help-content-kb">
       <tr><td colspan="2" style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#b09878;padding:6px 6px 2px;font-weight:600;">Gameplay</td></tr>
       <tr><td>← / →</td><td>Move aim (hold Shift for fast)</td></tr>
       <tr><td>Space / ↓</td><td>Drop plushie</td></tr>
@@ -446,6 +451,15 @@ img.evo-locked{filter:brightness(0);opacity:0.45;}
       <tr><td>S</td><td>Toggle spawn rate display</td></tr>
       <tr><td>2–9, 0, 1</td><td>Spawn rank 2–11</td></tr>
       </tbody>
+    </table>
+    <!-- gamepad tab -->
+    <table id="help-content-gp" style="display:none;">
+      <tr><td colspan="2" style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#b09878;padding:6px 6px 2px;font-weight:600;">🎮 Xbox / Standard</td></tr>
+      <tr><td>Left Stick</td><td>Move aim</td></tr>
+      <tr><td>LT / RT</td><td>Speed up (hold)</td></tr>
+      <tr><td>A</td><td>Drop plushie</td></tr>
+      <tr><td>B</td><td>Show this help</td></tr>
+      <tr><td>LB / RB</td><td>Switch keyboard ↔ gamepad tab</td></tr>
     </table>
     <div id="help-meta" style="font-size:10px;color:#b09878;text-align:center;margin-top:10px;"></div>
     <button class="close-btn" onclick="toggleHelp(false)">Close</button>
@@ -1051,6 +1065,74 @@ function processKeys(){
   mx=((mx+delta-mn)%range+range)%range+mn;
 }
 
+// ── GAMEPAD ───────────────────────────────────────────────────────────
+// Xbox standard layout: A=0, B=1, X=2, Y=3, LB=4, RB=5, LT=6, RT=7
+// Left stick X = axes[0]  (-1=left, +1=right)
+const GP_DEADZONE = 0.2;
+let _gpBtnPrev = {}; // debounce: track which buttons were down last frame
+
+function processGamepad(){
+  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+  let gp = null;
+  for(const p of pads){ if(p){ gp=p; break; } }
+  if(!gp) return;
+
+  const pressed = i => gp.buttons[i]?.pressed && !_gpBtnPrev[i];
+
+  // accept game over restart with A
+  if(dead){
+    if(pressed(0)){ setInputSource('gamepad'); restart(); }
+    for(let i=0;i<gp.buttons.length;i++) _gpBtnPrev[i]=gp.buttons[i]?.pressed;
+    return;
+  }
+
+  // speed modifier: LT (6) or RT (7) held
+  const fast = (gp.buttons[6]?.value??0)>0.3 || (gp.buttons[7]?.value??0)>0.3;
+  const speed = fast ? 5 : 2;
+
+  // left stick horizontal movement
+  const ax = gp.axes[0] ?? 0;
+  if(Math.abs(ax) > GP_DEADZONE){
+    setInputSource('gamepad');
+    const mn=WALL+PD[cur].r+1, mx2=W-WALL-PD[cur].r-1, range=mx2-mn;
+    if(range>0) mx = Math.max(mn, Math.min(mx2, mx + ax * speed));
+  }
+
+  // button press helpers (fires once on press, not held) — already defined above
+
+  // A = drop
+  if(pressed(0)){
+    setInputSource('gamepad');
+    if(!wipeOutActive&&!dead)(function tryDrop(){if(wipeOutActive||dead)return;if(cooling)requestAnimationFrame(tryDrop);else drop();})();
+  }
+  // B = toggle help popup (close if open, open if closed)
+  if(pressed(1)){ setInputSource('gamepad'); toggleHelp(); }
+  // LB (4) / RB (5) = switch help tab between keyboard / gamepad
+  if(pressed(4)||pressed(5)){ setInputSource('gamepad'); toggleHelpTab(); }
+
+  // store state for next frame
+  for(let i=0;i<gp.buttons.length;i++) _gpBtnPrev[i]=gp.buttons[i]?.pressed;
+}
+
+// ── INPUT SOURCE DETECTION ────────────────────────────────────────────
+let inputSource = 'keyboard'; // 'keyboard' | 'touch' | 'gamepad'
+function setInputSource(src){ if(inputSource!==src){ inputSource=src; onInputSourceChange(); } }
+function onInputSourceChange(){
+  // future hook: update UI hints based on input source
+}
+let _gpConnected=false;
+function setGpConnected(v){
+  _gpConnected=v;
+  const btn=document.getElementById('help-tab-gp');
+  if(btn) btn.style.display=v?'':'none';
+  if(!v) showHelpTab('kb'); // fall back to keyboard tab
+}
+window.addEventListener('gamepadconnected',    ()=>{ setInputSource('gamepad'); setGpConnected(true); });
+window.addEventListener('gamepaddisconnected', ()=>{ inputSource='keyboard'; setGpConnected(false); });
+window.addEventListener('mousemove', ()=>setInputSource('keyboard'), {passive:true});
+window.addEventListener('keydown',   ()=>setInputSource('keyboard'), {passive:true, capture:true});
+window.addEventListener('touchstart',()=>setInputSource('touch'),    {passive:true, capture:true});
+
 // ── ADAPTIVE REFLECTION TICK ──────────────────────────────────────────
 function tickReflect(now){
   if(!isMobile){ _reflectEnabled=true; return; }
@@ -1091,6 +1173,7 @@ function tickReflect(now){
 // ── LOOP ──────────────────────────────────────────────────────────────
 function loop(){
   tickReflect(performance.now());
+  processGamepad();
   // animate trap door scale
   const trapTarget=trapDoorOpen?1:0;
   if(trapDoorScale!==trapTarget)
@@ -1316,7 +1399,7 @@ function render(){
   ctx.textAlign='right';
   ctx.font=`${Math.round(9*FS)}px 'Segoe UI',system-ui,sans-serif`;
   ctx.fillStyle='rgba(90,56,32,0.45)';
-  ctx.fillText('v20',W-dzPad-4,DY-5);
+  ctx.fillText('v21',W-dzPad-4,DY-5);
   // TAP TO DROP hint — big, slowly blinking at tank center
   if(tapHint && !dead && !wipeOutActive){
     const pulse=0.4+0.6*Math.abs(Math.sin(Date.now()/700)); // 0.4–1.0, ~1.4s period
@@ -1906,6 +1989,8 @@ const keysDown=new Set(); // tracks held keys for per-frame input polling
 document.addEventListener('keyup',e=>keysDown.delete(e.key));
 window.addEventListener('blur',()=>keysDown.clear());
 document.addEventListener('keydown',e=>{
+  // accept game over restart with Enter or Space
+  if(dead && (e.key==='Enter'||e.key===' ')){ e.preventDefault(); restart(); return; }
   if(e.key==='j'||e.key==='J'){ toggleJoy(); return; }
   if(e.key==='a'||e.key==='A'){ cycleAp(); return; }
   if(e.key==='?'||e.key==='/'){ toggleHelp(); return; }
@@ -2158,7 +2243,21 @@ function updateHelpMeta(){
   const meta=document.getElementById('help-meta');
   if(!meta) return;
   const vw=window.innerWidth,vh=window.innerHeight;
-  meta.textContent=`v20  ·  ${vw}×${vh}  ar:${(vw/vh).toFixed(3)}`;
+  meta.textContent=`v21  ·  ${vw}×${vh}  ar:${(vw/vh).toFixed(3)}`;
+}
+let _helpTab='kb';
+function showHelpTab(tab){
+  _helpTab=tab;
+  document.getElementById('help-content-kb').style.display=tab==='kb'?'':'none';
+  document.getElementById('help-content-gp').style.display=tab==='gp'?'':'none';
+  document.getElementById('help-tab-kb').style.background=tab==='kb'?'#f0e4d4':'#fff8f2';
+  document.getElementById('help-tab-kb').style.color=tab==='kb'?'#5a3820':'#b09878';
+  document.getElementById('help-tab-gp').style.background=tab==='gp'?'#f0e4d4':'#fff8f2';
+  document.getElementById('help-tab-gp').style.color=tab==='gp'?'#5a3820':'#b09878';
+}
+function toggleHelpTab(){
+  if(!_gpConnected) return;
+  showHelpTab(_helpTab==='kb'?'gp':'kb');
 }
 function toggleHelp(force){
   const el=document.getElementById('help-popup');
