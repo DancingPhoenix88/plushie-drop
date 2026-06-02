@@ -576,35 +576,30 @@ function loadSprites(cb){
   for(let lvl=1;lvl<=11;lvl++){const img=new Image();img.onload=img.onerror=()=>{if(++done===11)_loadPixiAssets(cb);};img.src=`Sprites/level_${lvl}.png`;imgSprites[lvl]=img;}
 }
 function _loadPixiAssets(cb){
-  // Load each asset individually so a single 404 can't block the whole game
-  const assetMap={};
-  for(let i=1;i<=11;i++)assetMap[`level_${i}`]=`Sprites/level_${i}.png`;
-  assetMap['claw_back']='Sprites/claw_back.png';
-  assetMap['claw_front']='Sprites/claw_front.png';
-  assetMap['claw_open']='Sprites/claw_open.png';
-  assetMap['trap_door']='Sprites/claw_machine_floor_tile.png';
+  // v8: load directly by URL (Assets.add(alias,url) two-arg form removed in v8)
+  const urls=[];
+  for(let i=1;i<=11;i++)urls.push(`Sprites/level_${i}.png`);
+  urls.push('Sprites/claw_back.png','Sprites/claw_front.png','Sprites/claw_open.png');
+  urls.push('Sprites/claw_machine_floor_tile.png');
 
-  Object.entries(assetMap).forEach(([alias,url])=>{PIXI.Assets.add(alias,url);});
-
-  // Load each alias individually so one failure doesn't abort the rest
-  const aliases=Object.keys(assetMap);
   const results={};
-  let pending=aliases.length;
+  let pending=urls.length;
   function done(){
     if(--pending>0)return;
-    for(let i=1;i<=11;i++){if(results[`level_${i}`])plushieTextures[i]=results[`level_${i}`];}
-    _clawTexBack=results['claw_back']||null;
-    _clawTexFront=results['claw_front']||null;
-    _clawTexOpen=results['claw_open']||null;
-    if(_clawTexBack)clawSprBack.texture=_clawTexBack;
+    for(let i=1;i<=11;i++)plushieTextures[i]=results[`Sprites/level_${i}.png`]||null;
+    _clawTexBack =results['Sprites/claw_back.png']||null;
+    _clawTexFront=results['Sprites/claw_front.png']||null;
+    _clawTexOpen =results['Sprites/claw_open.png']||null;
+    if(_clawTexBack) clawSprBack.texture=_clawTexBack;
     if(_clawTexFront)clawSprFront.texture=_clawTexFront;
-    const tdTex=results['trap_door'];if(tdTex){trapDoorSpr.texture=tdTex;trapDoorSpr.visible=true;}
+    const td=results['Sprites/claw_machine_floor_tile.png'];
+    if(td){trapDoorSpr.texture=td;trapDoorSpr.visible=true;}
     cb();
   }
-  aliases.forEach(alias=>{
-    PIXI.Assets.load(alias)
-      .then(tex=>{results[alias]=tex;done();})
-      .catch(()=>{console.warn('[PixiJS] optional asset missing:',assetMap[alias]);done();});
+  urls.forEach(url=>{
+    PIXI.Assets.load(url)
+      .then(tex=>{results[url]=tex;done();})
+      .catch(()=>{console.warn('[PixiJS] asset missing:',url);done();});
   });
 }
 function drawAtFit(c,cW,cH,lvl,alpha=1){const img=imgSprites[lvl];if(!img||!img.naturalWidth)return;const sc=Math.min(cW/img.naturalWidth,cH/img.naturalHeight);const w=img.naturalWidth*sc,h=img.naturalHeight*sc;c.save();c.globalAlpha=alpha;c.drawImage(img,(cW-w)/2,(cH-h)/2,w,h);c.restore();}
