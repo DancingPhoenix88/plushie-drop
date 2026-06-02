@@ -436,6 +436,7 @@ img.evo-locked{filter:brightness(0);opacity:0.45;}
       <tr><td>A</td><td>Cycle auto-drop speed (0→1→2→3)</td></tr>
       <tr><td>? or /</td><td>Show this help</td></tr>
       <tr><td>J</td><td>Toggle joystick display</td></tr>
+      <tbody id="help-debug-section">
       <tr><td colspan="2" style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#b09878;padding:10px 6px 2px;font-weight:600;">Debug</td></tr>
       <tr><td>W</td><td>Force WIPE OUT</td></tr>
       <tr><td>[ / ]</td><td>Decrease / increase polygon sides</td></tr>
@@ -444,6 +445,7 @@ img.evo-locked{filter:brightness(0);opacity:0.45;}
       <tr><td>H</td><td>Toggle solid n-gon shapes</td></tr>
       <tr><td>S</td><td>Toggle spawn rate display</td></tr>
       <tr><td>2–9, 0, 1</td><td>Spawn rank 2–11</td></tr>
+      </tbody>
     </table>
     <div id="help-meta" style="font-size:10px;color:#b09878;text-align:center;margin-top:10px;"></div>
     <button class="close-btn" onclick="toggleHelp(false)">Close</button>
@@ -452,6 +454,11 @@ img.evo-locked{filter:brightness(0);opacity:0.45;}
 
 <script>
 'use strict';
+const IS_DEBUG = true; // set to false on release branch
+if(!IS_DEBUG){
+  const dbgSection=document.getElementById('help-debug-section');
+  if(dbgSection) dbgSection.style.display='none';
+}
 
 // ── DATA ──────────────────────────────────────────────────────────────
 // stroke = same hue but darker
@@ -1900,25 +1907,27 @@ document.addEventListener('keyup',e=>keysDown.delete(e.key));
 window.addEventListener('blur',()=>keysDown.clear());
 document.addEventListener('keydown',e=>{
   if(e.key==='j'||e.key==='J'){ toggleJoy(); return; }
-  if(e.key==='s'||e.key==='S'){ showSpawnRate=!showSpawnRate; updateEvoLabels(); return; }
-  if(e.key==='d'||e.key==='D'){ dbg=!dbg; if(dbg)dbgPoly=false; return; }
-  if(e.key==='c'||e.key==='C'){ dbgPoly=!dbgPoly; if(dbgPoly){dbg=false;solidMode=false;} return; }
-  if(e.key==='h'||e.key==='H'){ solidMode=!solidMode; if(solidMode)dbgPoly=false; return; }
   if(e.key==='a'||e.key==='A'){ cycleAp(); return; }
-  if(e.key==='w'||e.key==='W'){ if(!dead&&!wipeOutActive){ for(let i=1;i<=11;i++) firstMerged.add(i); updateEvoUnlocks(); triggerWipeOut(W/2,H/2); } return; }
   if(e.key==='?'||e.key==='/'){ toggleHelp(); return; }
   if(e.key==='Escape'){ toggleHelp(false); return; }
-  if(e.key==='['){ e.preventDefault(); sidesOffset=Math.max(SIDES_MIN,sidesOffset-1); if(!solidMode){dbg=false;dbgPoly=true;} return; }
-  if(e.key===']'){ e.preventDefault(); sidesOffset=Math.min(SIDES_MAX,sidesOffset+1); if(!solidMode){dbg=false;dbgPoly=true;} return; }
-
+  // ── DEBUG only ─────────────────────────────────────
+  if(IS_DEBUG){
+    if(e.key==='s'||e.key==='S'){ showSpawnRate=!showSpawnRate; updateEvoLabels(); return; }
+    if(e.key==='d'||e.key==='D'){ dbg=!dbg; if(dbg)dbgPoly=false; return; }
+    if(e.key==='c'||e.key==='C'){ dbgPoly=!dbgPoly; if(dbgPoly){dbg=false;solidMode=false;} return; }
+    if(e.key==='h'||e.key==='H'){ solidMode=!solidMode; if(solidMode)dbgPoly=false; return; }
+    if(e.key==='w'||e.key==='W'){ if(!dead&&!wipeOutActive){ for(let i=1;i<=11;i++) firstMerged.add(i); updateEvoUnlocks(); triggerWipeOut(W/2,H/2); } return; }
+    if(e.key==='['){ e.preventDefault(); sidesOffset=Math.max(SIDES_MIN,sidesOffset-1); if(!solidMode){dbg=false;dbgPoly=true;} return; }
+    if(e.key===']'){ e.preventDefault(); sidesOffset=Math.min(SIDES_MAX,sidesOffset+1); if(!solidMode){dbg=false;dbgPoly=true;} return; }
+  }
   // ── keyboard gameplay ──────────────────────────────
-  // Arrow + Shift: track as held — processed every frame in processKeys()
   if(e.key==='ArrowLeft'||e.key==='ArrowRight'||e.key==='Shift'){
     e.preventDefault(); keysDown.add(e.key); return;
   }
   if(e.key===' '||e.key==='ArrowDown'){e.preventDefault();drop();return;}
 
   // debug spawn: 2-9 → lv2-9, 0 → lv10, 1 → lv11
+  if(!IS_DEBUG) return;
   const lvMap={'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'0':10,'1':11};
   const lvl=lvMap[e.key];
   if(lvl&&!dead){
