@@ -2,7 +2,15 @@
 
 ---
 
-## v20 (current)
+## v21 (current)
+- **Gamepad support** — Xbox/standard layout: left stick moves aim, A drops, LT/RT speed up, B toggles help popup, LB/RB switches help tab between keyboard and gamepad; gamepad tab hidden until controller connects
+- **Game over accept** — Enter/Space on keyboard or A on gamepad restarts from game over screen
+- **DEBUG/RELEASE switch** — `IS_DEBUG=true` on `main`, `false` on `release` branch; debug keyboard shortcuts and help section hidden in release
+- **Level SFX** — ascending C major arpeggio + shimmer on LEVEL UP announcement
+
+---
+
+## v20
 - **WIPE OUT trap door** — floor tile sprite drawn on canvas; opens when plushies start falling, closes after all plushies exit; 9-slice horizontal tile (capL/R=90px from meta); plushie-plushie SAT disabled while door is open so plushies spin and scatter freely
 - **WIPE OUT physics** — merging disabled during wipeout; spin+scatter forces applied at door-open time; close timing calculated from physics (worst-case fall distance)
 - **Cover patches moved to canvas** — reflection corner sprites drawn via `destination-over` compositing (behind plushies, above background)
