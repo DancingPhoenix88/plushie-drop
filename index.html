@@ -15,8 +15,6 @@
 <link rel="apple-touch-icon" href="Sprites/icons/app_icon.png">
 <!-- PixiJS v8 -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/8.9.1/pixi.min.js"></script>
-<!-- pixi-filters v6 (DropShadowFilter etc.) -->
-<script src="https://cdn.jsdelivr.net/npm/pixi-filters@6/dist/pixi-filters.js"></script>
 <style>
 :root{color-scheme:light}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;}
@@ -245,11 +243,11 @@ img.evo-locked{filter:brightness(0);opacity:0.45;}
       <tr><td>H</td><td>Toggle solid n-gon shapes</td></tr>
       <tr><td>S</td><td>Toggle spawn rate display</td></tr>
       <tr><td>2–9, 0, 1</td><td>Spawn rank 2–11</td></tr>
-      <tr><td>Q / E</td><td>Gyro tilt left / right (−5° / +5°)</td></tr>
-      <tr><td>R</td><td>Reset gyro tilt to 0°</td></tr>
-      <tr><td>G + mouse</td><td>Hold G, move mouse ←→ to tilt</td></tr>
-      <tr><td>F + mouse</td><td>Hold F, flick mouse fast to shake</td></tr>
+      <tr><td>G + mouse</td><td>Hold G, drag mouse ←→ to simulate tilt</td></tr>
+      <tr><td>F + mouse</td><td>Hold F, flick mouse fast to simulate shake</td></tr>
       <tr><td>M</td><td>Toggle merge on/off <input type="checkbox" id="dbg-nomerge-cb" onchange="noMerge=this.checked" style="margin-left:4px;cursor:pointer;vertical-align:middle;"></td></tr>
+      <tr><td>P</td><td>Pause simulation</td></tr>
+      <tr><td>.</td><td>Step one frame (while paused)</td></tr>
       </tbody>
     </table>
     <!-- gamepad tab -->
@@ -299,8 +297,9 @@ let score=0,best=0,cur=1,nxt=1;
 let mx=W/2,cooling=false,dead=false,tapHint=false;
 let danger={},firstMerged=new Set();
 let gameLevel=1,wipeOutActive=false,scoreMultiplier=1;
-let trapDoorOpen=false,trapDoorScale=1,trapDoorDir=0;
-const TRAP_OPEN_SPEED=1/(60*0.25),TRAP_CLOSE_SPEED=1/(60*0.30);
+let trapDoorOpen=false,trapDoorScale=0,trapDoorDir=0;
+const TRAP_ANIM_SPEED=1/(60*0.25); // 0.25s; scale 0=hidden, 1=fully shown
+const WIPEOUT_DAMP=0.97; // ~85% velocity retained per frame // per-substep extra damping during wipeout (~74% velocity retained per frame)        // extra per-frame damping during wipeout to slow terminal velocity     // gravity multiplier while plushies fall through (1=normal, lower=slower)
 window.TD={x:0,w:W,h:44,bottomY:H,capL:90,capR:90};
 const PTS_M=new Array(12);
 function rebuildPtsTable(){for(let i=1;i<=11;i++)PTS_M[i]=PTS[i]*scoreMultiplier;}
@@ -314,6 +313,11 @@ const dpr=window.devicePixelRatio||1;
 // ── PIXI SETUP (v8 — async init) ──────────────────────────────────────
 const cv=document.getElementById('gc');
 const app=new PIXI.Application();
+// DevTools getter — always returns live stage/renderer even before async init
+Object.defineProperty(window,'__PIXI_DEVTOOLS__',{
+  get:()=>({app,stage:app.stage??undefined,renderer:app.renderer??undefined}),
+  configurable:true
+});
 
 // Populated by initPixi() before loop starts
 let stage,layerBg,layerUI,layerClaw,layerPlushie,layerFx;
@@ -327,7 +331,7 @@ async function initPixi(){
   await app.init({canvas:cv,width:W,height:H,backgroundAlpha:0,antialias:true,resolution:dpr,autoDensity:true});
   app.ticker.stop();
   stage=app.stage; stage.label='root';
-  window.__PIXI_DEVTOOLS__={app};
+  // __PIXI_DEVTOOLS__ is a getter defined at module level — no reassignment needed
   cv.style.width='';cv.style.height=''; // let CSS width:100% win
 
   layerBg=new PIXI.Container();      layerBg.label='layer_bg';
@@ -346,7 +350,9 @@ async function initPixi(){
   clawHeldSpr =new PIXI.Sprite(PIXI.Texture.EMPTY); clawHeldSpr.label='claw_held';  clawHeldSpr.anchor.set(0.5,0.5);clawHeldSpr.visible=false;
   layerClaw.addChild(clawSprBack,clawHeldSpr,clawSprFront);
 
-  trapDoorSpr=new PIXI.Sprite(PIXI.Texture.EMPTY); trapDoorSpr.label='trap_door'; trapDoorSpr.visible=false;
+  // NineSliceSprite so the cap corners aren't stretched (capL=capR=90px from TD meta)
+  trapDoorSpr=new PIXI.NineSliceSprite({texture:PIXI.Texture.EMPTY,leftWidth:90,rightWidth:90,topHeight:0,bottomHeight:0});
+  trapDoorSpr.label='trap_door'; trapDoorSpr.visible=false;
   layerBg.addChild(trapDoorSpr);
 
   _dangerText=new PIXI.Text({text:'DANGER',style:{fontFamily:"'Segoe UI',system-ui,sans-serif",fontSize:Math.round(11*FS),fill:'#D23737'}});
@@ -399,26 +405,31 @@ class Ball{
     this.vx=0;this.vy=0;this.angle=0;this.av=0;
     this.level=lvl;this.mass=MASS[lvl];this.invMass=INV_MASS[lvl];this.born=Date.now();
     this.px=x;this.py=y;this.movH=new Float32Array(30);this.movI=0;this.movS=0;
+    this.dxH=new Float32Array(30);this.dyH=new Float32Array(30);this.dxS=0;this.dyS=0;
+    this.landed=false; // true once plushie touches floor or another plushie
     this.sprite=null;
     if(plushieTextures[lvl]){this.sprite=new PIXI.Sprite(plushieTextures[lvl]);this.sprite.label=PD[lvl].name;this.sprite.zIndex=11-lvl;this.sprite.anchor.set(0.5,0.5);this.sprite.scale.set(PD[lvl].r/imgR(lvl));const sh=makeShadow();if(sh)this.sprite.filters=[sh];layerPlushie.addChild(this.sprite);}
   }
   get speed(){return Math.hypot(this.vx,this.vy);}
 }
-function _destroyBall(b){if(!b)return;if(b.sprite){b.sprite.destroy();b.sprite=null;}if(b._nameText){b._nameText.destroy();b._nameText=null;}if(b._polyText){b._polyText.destroy();b._polyText=null;}}
+function _destroyBall(b){if(!b)return;delete danger[b.born];if(b.sprite){b.sprite.destroy();b.sprite=null;}if(b._nameText){b._nameText.destroy();b._nameText=null;}if(b._polyText){b._polyText.destroy();b._polyText=null;}}
 function clearPlushies(){plushies.forEach(_destroyBall);plushies=[];}
 
 
 function step(){
   const dt=1/SUBSTEPS;
   for(let s=0;s<SUBSTEPS;s++){
-    for(const p of plushies){p.vx+=GRAV*Math.sin(tiltAngle)*dt;p.vy+=GRAV*Math.cos(tiltAngle)*dt;p.vx*=DAMP_DT;p.vy*=DAMP_DT;const spd2=p.vx*p.vx+p.vy*p.vy;if(spd2>196){const f=14/Math.sqrt(spd2);p.vx*=f;p.vy*=f;}p.x+=p.vx;p.y+=p.vy;p.av=Math.max(-AV_MAX,Math.min(AV_MAX,p.av))*0.93;p.angle+=p.av;}
-    for(const p of plushies){if(p.x-p.r<PAD){p.x=PAD+p.r;if(p.vx<0)p.vx=-p.vx*REST;}if(p.x+p.r>W-PAD){p.x=W-PAD-p.r;if(p.vx>0)p.vx=-p.vx*REST;}if(p.y-p.r<0&&p.vy<0)p.vy=0;if(!trapDoorOpen){if(p.y+p.r>H-WALL){p.y=H-WALL-p.r;p.vy=-Math.abs(p.vy)*REST;p.vx*=FRIC;}}}
-    // SAT disabled while trap door open so plushies scatter freely (v20)
-    if(trapDoorOpen) continue;
-    for(let it=0;it<ITERS;it++){for(let i=0;i<plushies.length;i++){for(let j=i+1;j<plushies.length;j++){const a=plushies[i],b=plushies[j];const dx=b.x-a.x,dy=b.y-a.y,md=a.r+b.r;if(dx*dx+dy*dy>md*md)continue;const col=satTest(getVerts(a),getVerts(b));if(!col)continue;const{ov,nx,ny}=col;const ma=a.mass,mb=b.mass,mT=ma+mb,invMT=1/mT;a.x-=nx*ov*(mb*invMT);a.y-=ny*ov*(mb*invMT);b.x+=nx*ov*(ma*invMT);b.y+=ny*ov*(ma*invMT);if(it===0){const dvx=b.vx-a.vx,dvy=b.vy-a.vy,rel=dvx*nx+dvy*ny;if(rel<0){const imp=-(1+REST)*rel*(ma*mb*invMT);a.vx-=imp*a.invMass*nx;a.vy-=imp*a.invMass*ny;b.vx+=imp*b.invMass*nx;b.vy+=imp*b.invMass*ny;if(rel<-1.2){const tv=dvx-rel*nx;a.av=Math.max(-AV_MAX,Math.min(AV_MAX,a.av+tv*0.006*(mb*invMT)));b.av=Math.max(-AV_MAX,Math.min(AV_MAX,b.av-tv*0.006*(ma*invMT)));}}}}}
+    const _damp=wipeOutActive?WIPEOUT_DAMP*DAMP_DT:DAMP_DT;
+    for(const p of plushies){p.vx+=GRAV*Math.sin(tiltAngle)*dt;p.vy+=GRAV*Math.cos(tiltAngle)*dt;p.vx*=_damp;p.vy*=_damp;const spd2=p.vx*p.vx+p.vy*p.vy;if(spd2>196){const f=14/Math.sqrt(spd2);p.vx*=f;p.vy*=f;}p.x+=p.vx;p.y+=p.vy;p.av=Math.max(-AV_MAX,Math.min(AV_MAX,p.av))*0.93;p.angle+=p.av;}
+    for(const p of plushies){if(p.x-p.r<PAD){p.x=PAD+p.r;if(p.vx<0)p.vx=-p.vx*REST;}if(p.x+p.r>W-PAD){p.x=W-PAD-p.r;if(p.vx>0)p.vx=-p.vx*REST;}if(p.y-p.r<0){p.y=p.r;if(p.vy<0)p.vy=-p.vy*REST;}
+      // Floor: active until door is FULLY open; removed once scale=1 so plushies fall through
+      if(trapDoorScale<1){if(p.y+p.r>H-WALL){p.y=H-WALL-p.r;p.vy=-Math.abs(p.vy)*REST;p.vx*=FRIC;p.landed=true;}}}
+    // SAT: off for entire wipeout duration; restored by _onTrapDoorClosed (wipeOutActive=false)
+    if(wipeOutActive) continue;
+    for(let it=0;it<ITERS;it++){for(let i=0;i<plushies.length;i++){for(let j=i+1;j<plushies.length;j++){const a=plushies[i],b=plushies[j];const dx=b.x-a.x,dy=b.y-a.y,md=a.r+b.r;if(dx*dx+dy*dy>md*md)continue;const col=satTest(getVerts(a),getVerts(b));if(!col)continue;const{ov,nx,ny}=col;const ma=a.mass,mb=b.mass,mT=ma+mb,invMT=1/mT;a.x-=nx*ov*(mb*invMT);a.y-=ny*ov*(mb*invMT);b.x+=nx*ov*(ma*invMT);b.y+=ny*ov*(ma*invMT);a.landed=true;b.landed=true;if(it===0){const dvx=b.vx-a.vx,dvy=b.vy-a.vy,rel=dvx*nx+dvy*ny;if(rel<0){const imp=-(1+REST)*rel*(ma*mb*invMT);a.vx-=imp*a.invMass*nx;a.vy-=imp*a.invMass*ny;b.vx+=imp*b.invMass*nx;b.vy+=imp*b.invMass*ny;if(rel<-1.2){const tv=dvx-rel*nx;a.av=Math.max(-AV_MAX,Math.min(AV_MAX,a.av+tv*0.006*(mb*invMT)));b.av=Math.max(-AV_MAX,Math.min(AV_MAX,b.av-tv*0.006*(ma*invMT)));}}}}}
       }
     }
-  for(const p of plushies){if(Math.abs(p.vx)<V_EPS)p.vx=0;if(Math.abs(p.vy)<V_EPS)p.vy=0;const dx2=p.x-p.px,dy2=p.y-p.py,moved=dx2*dx2+dy2*dy2;p.movS-=p.movH[p.movI];p.movH[p.movI]=moved;p.movS+=moved;p.movI=(p.movI+1)%30;if(p.movS/30<0.0625&&Math.abs(p.av)>0.002)p.av=0;if(Math.abs(p.av)<0.002)p.av=0;p.px=p.x;p.py=p.y;}
+  for(const p of plushies){if(Math.abs(p.vx)<V_EPS)p.vx=0;if(Math.abs(p.vy)<V_EPS)p.vy=0;const dx2=p.x-p.px,dy2=p.y-p.py,moved=dx2*dx2+dy2*dy2;p.movS-=p.movH[p.movI];p.movH[p.movI]=moved;p.movS+=moved;p.dxS-=p.dxH[p.movI];p.dxH[p.movI]=dx2;p.dxS+=dx2;p.dyS-=p.dyH[p.movI];p.dyH[p.movI]=dy2;p.dyS+=dy2;p.movI=(p.movI+1)%30;if(p.movS/30<0.0625&&Math.abs(p.av)>0.002)p.av=0;if(Math.abs(p.av)<0.002)p.av=0;p.px=p.x;p.py=p.y;}
 }
 
 function detectMerges(){
@@ -439,24 +450,64 @@ function processMerges(){
   if(wipeOutPos)triggerWipeOut(wipeOutPos.x,wipeOutPos.y);
 }
 
+// ── FRAME-EVENT SCHEDULER — keeps physics & graphics in sync with step mode ──
+let _gameFrame=0;
+let _frameEvents=[];
+function scheduleAt(delayFrames,fn){_frameEvents.push({at:_gameFrame+Math.max(1,Math.round(delayFrames)),fn});}
+function clearScheduled(){_frameEvents=[];}
+function tickScheduled(){
+  _gameFrame++;
+  _frameEvents=_frameEvents.filter(e=>{if(_gameFrame>=e.at){e.fn();return false;}return true;});
+}
+
 function triggerWipeOut(x,y){
-  wipeOutActive=true;trapDoorOpen=false;trapDoorScale=1;trapDoorDir=-1;
-  setTimeout(()=>{trapDoorOpen=true;},250);
-  let totalPts=0;for(const p of plushies){totalPts+=PTS_M[p.level];p.vy=Math.max(p.vy,1+Math.random()*2);}
-  danger={};mergeQ=[];score+=totalPts;if(score>best)best=score;updUI();
+  wipeOutActive=true; trapDoorOpen=false;
+  // Force-drop anything the claw is holding, reset to rank 1–3
+  clawState='idle'; cooling=false; clawOpenTimer=0;
+  cur=rnd(); nxt=rnd(); updNext(); // rnd() always returns 1–3 when tank empties
+  clawX=W/2; clawLvl=cur;
+
+  // Frame-based timing (synced with P/. step mode)
+  // Phase 1: wait OPEN_F frames, then open door (SAT still ON during animation)
+  // Phase 2: tickTrapDoor auto-triggers scatter when scale reaches 1.0 (fully open)
+  // Phase 3: after plushies fall, close door — tickTrapDoor fires _onTrapDoorClosed when scale=0
+  const OPEN_F = Math.round(1/TRAP_ANIM_SPEED);         // ~15f — door starts opening
+  const fallF  = Math.ceil(Math.sqrt(2*(H+136)/(GRAV*SUBSTEPS))*1.5);
+  const CLOSE_F = OPEN_F + OPEN_F + fallF;               // wait for open anim + fall time
+
+  scheduleAt(OPEN_F,  ()=>{ trapDoorOpen=true;  }); // start opening — scatter fires in tickTrapDoor
+  scheduleAt(CLOSE_F, ()=>{
+    clearPlushies(); // destroy all remaining plushies before door closes
+    trapDoorOpen=false; // start closing — level-up fires in _onTrapDoorClosed
+  });
+
+  // Immediate: tally, confetti, WIPE OUT text, glare+sparkles+SFX
+  let totalPts=0;
+  for(const p of plushies){totalPts+=PTS_M[p.level];p.vy=Math.max(p.vy,1+Math.random()*2);}
+  danger={};mergeQ=[];_gyroMultiDangerSince=null;
+  score+=totalPts;if(score>best)best=score;updUI();
+
   for(let i=0;i<160;i++){const fromTop=i<50;const cx=fromTop?Math.random()*W:x,cy=fromTop?-10:y;const a=fromTop?(Math.PI/2+Math.random()*.8-.4):(Math.random()*Math.PI*2);const spd=fromTop?(4+Math.random()*7):(5+Math.random()*10);confetti.push({x:cx,y:cy,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,r:4+Math.random()*5,rot:Math.random()*Math.PI*2,rv:(Math.random()-.5)*0.3,w:5+Math.random()*6,h:7+Math.random()*9,color:CONFETTI_COLORS[Math.floor(Math.random()*CONFETTI_COLORS.length)],life:1.2,shape:Math.random()<0.6?'rect':'circle'});}
   celebrations.push({x:W/2,y:H/2-80,name:'WIPE OUT!',level:0,pts:totalPts,color:'#ff3030',stroke:'#800000',life:1,scale:0.1,phase:'in',isWipeOut:true});
   if(totalPts>0)popups.push({x:W/2,y:H/2+60,text:'+'+totalPts.toLocaleString(),color:'#f0c500',life:1.8,big:true});
   triggerClear();
-  setTimeout(()=>{gameLevel++;scoreMultiplier=Math.pow(2,gameLevel-1);rebuildPtsTable();const glEl=document.getElementById('gl-ls');if(glEl)glEl.textContent=gameLevel;firstMerged=new Set();updateEvoUnlocks();wipeOutActive=false;trapDoorOpen=false;plushies.filter(p=>p.y-p.r>=H+80).forEach(_destroyBall);plushies=plushies.filter(p=>p.y-p.r<H+80);trapDoorDir=1;setTimeout(()=>{celebrations.push({x:W/2,y:H/2-60,name:'LEVEL '+gameLevel,level:0,pts:0,color:'#f0c500',stroke:'#8a6000',life:1,scale:0.1,phase:'in',isLevelUp:true});sfxLevelUp();},500);},620);
 }
 
-// ── CLEAR sequence (triple glare + sparkles + SFX) — called by WIPE OUT and restart ──
+// ── CLEAR sequence — triple glare + sparkles + SFX (all frame-scheduled) ──
 function triggerClear(){
-  if(showClaw){triggerGlare();setTimeout(triggerGlare,300);setTimeout(triggerGlare,620);}
+  if(showClaw){
+    triggerGlare();           // glare #1 immediately
+    scheduleAt(18,triggerGlare); // glare #2 at ~300ms
+    scheduleAt(37,triggerGlare); // glare #3 at ~620ms
+  }
   sfxWipeOut();
-  const SPARKLE_EMITTER_LIFETIME=2000,SPARKLE_INTERVAL=100;
-  setTimeout(()=>{const emitterEnd=Date.now()+SPARKLE_EMITTER_LIFETIME;const emitOne=()=>{if(Date.now()>=emitterEnd)return;const baseR=10+Math.random()*18;sparkles.push({x:PAD+Math.random()*(W-PAD*2),y:Math.random()*H,r:baseR,baseR,rot:0,color:'#ffffff',life:1.2+Math.random()*0.8,delay:0,phase:Math.random()*Math.PI*2});setTimeout(emitOne,SPARKLE_INTERVAL);};emitOne();},300);
+  // Sparkle emitter: 20 sparkles, 1 every 6 frames starting at frame 18
+  for(let i=0;i<20;i++){
+    scheduleAt(18+i*6,()=>{
+      const baseR=10+Math.random()*18;
+      sparkles.push({x:PAD+Math.random()*(W-PAD*2),y:Math.random()*H,r:baseR,baseR,rot:0,color:'#ffffff',life:1.2+Math.random()*0.8,delay:0,phase:Math.random()*Math.PI*2});
+    });
+  }
 }
 
 function sfxWipeOut(){if(muted)return;const a=getAC(),t=a.currentTime;const o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a._sfxBus||a.destination);o.type='sawtooth';o.frequency.setValueAtTime(110,t);o.frequency.exponentialRampToValueAtTime(880,t+0.8);g.gain.setValueAtTime(0.4,t);g.gain.exponentialRampToValueAtTime(0.001,t+1.0);o.start(t);o.stop(t+1.1);[523,659,784,1047].forEach((f,k)=>{const o2=a.createOscillator(),g2=a.createGain();o2.connect(g2);g2.connect(a._sfxBus||a.destination);o2.type='triangle';o2.frequency.value=f;g2.gain.setValueAtTime(0,t+0.3+k*0.06);g2.gain.linearRampToValueAtTime(0.2,t+0.35+k*0.06);g2.gain.exponentialRampToValueAtTime(0.001,t+1.4);o2.start(t+0.3+k*0.06);o2.stop(t+1.5);});}
@@ -469,18 +520,35 @@ function sfxLevelUp(){
 
 // ── GAME OVER ─────────────────────────────────────────────────────────
 let _gyroMultiDangerSince=null;
+// ── 3-TIER DANGER SYSTEM ──────────────────────────────────────────────
+// Level 1: top  above DY  (p.y-p.r < DY)              → blink danger line
+// Level 2: center above DY, bottom below (p.y < DY && p.y+p.r >= DY) → slow pulse
+// Level 3: bottom above DY (p.y+p.r < DY)             → fast pulse + 1s → lose
 function checkDanger(){
-  const now=Date.now();let dangerCount=0;
-  for(const p of plushies){if(p.y<DY&&p.speed<1.4&&now-p.born>1000){danger[p.born]=danger[p.born]??now;dangerCount++;if(!gyroOn&&now-danger[p.born]>1000){gameOver();return;}}else delete danger[p.born];}
-  if(gyroOn){if(dangerCount>=3){_gyroMultiDangerSince=_gyroMultiDangerSince??now;if(now-_gyroMultiDangerSince>1000)gameOver();}else _gyroMultiDangerSince=null;}
-  else{_gyroMultiDangerSince=null;if(dangerCount>=3)gameOver();}
+  const now=Date.now();
+  for(const p of plushies){
+    if(!p.landed){p._dangerLevel=0;delete danger[p.born];continue;} // still in free fall
+    const vr=PD[p.level].r; // visual radius (sprite size), not physics radius
+    const topAbove   =p.y-vr<DY;          // top crosses DY
+    const bottomNearLine=p.y+vr<DY+10;    // bottom within 10px of crossing DY
+    if(bottomNearLine&&now-p.born>500){
+      p._dangerLevel=3;
+      danger[p.born]=danger[p.born]??now;
+      if(now-danger[p.born]>1000){gameOver();return;}
+    } else if(topAbove){
+      p._dangerLevel=2; delete danger[p.born];
+    } else {
+      p._dangerLevel=0; delete danger[p.born];
+    }
+  }
 }
 function gameOver(){dead=true;document.getElementById('fs').textContent=score.toLocaleString();document.getElementById('ov').classList.add('show');}
 function restart(){
-  dead=false;cooling=false;wipeOutActive=false;trapDoorOpen=false;trapDoorScale=1;trapDoorDir=0;gameLevel=1;scoreMultiplier=1;rebuildPtsTable();
+  dead=false;cooling=false;wipeOutActive=false;trapDoorOpen=false;trapDoorScale=0;trapDoorDir=0;gameLevel=1;scoreMultiplier=1;rebuildPtsTable();
   const glEl=document.getElementById('gl-ls');if(glEl)glEl.textContent=1;
   popups.forEach(p=>{if(p.pixiText)p.pixiText.destroy();});
   celebrations.forEach(c=>{if(c.pixiText)c.pixiText.destroy();if(c.pixiSub)c.pixiSub.destroy();});
+  clearScheduled();
   clearPlushies();
   parts=[];mergeQ=[];popups=[];confetti=[];celebrations=[];sparkles=[];danger={};_gyroMultiDangerSince=null;firstMerged=new Set();score=0;updUI();
   document.getElementById('ov').classList.remove('show');
@@ -489,6 +557,30 @@ function restart(){
 }
 
 function burst(x,y,color){for(let i=0;i<11;i++){const a=Math.PI*2*i/11+Math.random()*.5,spd=2+Math.random()*4;parts.push({x,y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,r:3+Math.random()*4,color,life:1});}}
+function tickTrapDoor(){
+  const target=trapDoorOpen?1:0;
+  if(trapDoorScale===target) return;
+  const prev=trapDoorScale;
+  trapDoorScale=target>prev?Math.min(1,prev+TRAP_ANIM_SPEED):Math.max(0,prev-TRAP_ANIM_SPEED);
+  // Door just became FULLY OPEN → scatter forces (SAT now disabled via trapDoorScale>=1)
+  if(prev<1&&trapDoorScale>=1&&wipeOutActive){
+    for(const p of plushies){p.av=(Math.random()-.5)*AV_MAX*10;p.vx+=(Math.random()-.5)*3;}
+  }
+  // Door just became FULLY CLOSED → end wipeout, level up
+  if(prev>0&&trapDoorScale<=0&&wipeOutActive) _onTrapDoorClosed();
+}
+
+function _onTrapDoorClosed(){
+  wipeOutActive=false;
+  gameLevel++;scoreMultiplier=Math.pow(2,gameLevel-1);rebuildPtsTable();
+  const glEl=document.getElementById('gl-ls');if(glEl)glEl.textContent=gameLevel;
+  firstMerged=new Set();updateEvoUnlocks();
+  // plushies already destroyed at CLOSE_F before door started closing
+  scheduleAt(30,()=>{ // ~500ms — LEVEL card + SFX
+    celebrations.push({x:W/2,y:H/2-60,name:'LEVEL '+gameLevel,level:0,pts:0,color:'#f0c500',stroke:'#8a6000',life:1,scale:0.1,phase:'in',isLevelUp:true});
+    sfxLevelUp();
+  });
+}
 function tickParts(){parts=parts.filter(p=>p.life>0);parts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.18;p.life-=.044;p.r*=.93;});}
 function tickPopups(){
   popups.forEach(p=>{p.y-=(p.big?0.4:1.2);p.life-=0.022;if(!p.pixiText&&p.life>0){const sz=p.big?Math.round(68*FS):Math.round(36*FS);p.pixiText=new PIXI.Text({text:p.text,style:{fontFamily:"'Righteous','Segoe UI',system-ui,sans-serif",fontSize:sz,fontWeight:'700',fill:p.color,stroke:{color:'#000000',width:3}}});p.pixiText.label='score_popup';p.pixiText.anchor.set(0.5,0.5);layerFx.addChild(p.pixiText);}if(p.pixiText){const sz=p.big?Math.round((48+p.life*20)*FS):Math.round((22+p.life*14)*FS);p.pixiText.style.fontSize=sz;p.pixiText.x=p.x;p.pixiText.y=p.y;p.pixiText.alpha=Math.min(p.life,1)*0.92;}});
@@ -516,7 +608,7 @@ function tickCelebrations(){
   celebrations=celebrations.filter(c=>c.life>0);
 }
 
-function processKeys(){if(dead)return;const hasL=keysDown.has('ArrowLeft'),hasR=keysDown.has('ArrowRight');if(!hasL&&!hasR)return;const speed=keysDown.has('Shift')?5:2;const mn=WALL+PD[cur].r+1,mx2=W-WALL-PD[cur].r-1,range=mx2-mn;if(range<=0)return;const delta=hasL?-speed:speed;mx=((mx+delta-mn)%range+range)%range+mn;}
+function processKeys(){if(dead)return;const hasL=keysDown.has('ArrowLeft'),hasR=keysDown.has('ArrowRight');if(!hasL&&!hasR)return;const speed=keysDown.has('Shift')?6.5:2.6;const mn=WALL+PD[cur].r+1,mx2=W-WALL-PD[cur].r-1,range=mx2-mn;if(range<=0)return;const delta=hasL?-speed:speed;mx=((mx+delta-mn)%range+range)%range+mn;}
 
 // ── GAMEPAD ───────────────────────────────────────────────────────────
 const GP_DEADZONE=0.2;
@@ -543,8 +635,9 @@ window.addEventListener('keydown',()=>setInputSource('keyboard'),{passive:true,c
 window.addEventListener('touchstart',()=>setInputSource('touch'),{passive:true,capture:true});
 
 function loop(){
+  tickScheduled();
   processGamepad();
-  if(trapDoorDir!==0){const spd=trapDoorDir>0?TRAP_OPEN_SPEED:TRAP_CLOSE_SPEED;trapDoorScale=Math.max(0,Math.min(1,trapDoorScale+trapDoorDir*spd));if(trapDoorScale===0||trapDoorScale===1)trapDoorDir=0;}
+  tickTrapDoor();
   processKeys();
   if(!dead){step();detectMerges();processMerges();}
   updateClaw();
@@ -552,7 +645,7 @@ function loop(){
   if(wipeOutActive){plushies.filter(p=>p.y-p.r>=H+80).forEach(_destroyBall);plushies=plushies.filter(p=>p.y-p.r<H+80);}
   tickParts();tickPopups();tickConfetti();tickSparkles();tickCelebrations();
   if(!dead)checkDanger();if(showClaw)tickGlare();if(typeof tickShakeCooldown==='function')tickShakeCooldown();render();
-  if(!dead)requestAnimationFrame(loop);
+  if(!dead&&!stepMode)requestAnimationFrame(loop);
 }
 function resumeLoop(){requestAnimationFrame(loop);}
 
@@ -569,9 +662,9 @@ window.TD={x:-30,w:690,h:38,bottomY:H,capL:90,capR:90};
 function render(){
   gfxUI.clear(); gfxClaw.clear(); gfxFx.clear();
 
-  // ── danger line (v8: draw path first, apply stroke after) ──────────
-  const inWarning=!cooling&&plushies.some(p=>(p.y-PD[p.level].r)<(DY+112)&&p.speed<2);
-  const blink=inWarning&&(Date.now()%600)<300;
+  // ── danger line — blinks when any plushie's top crosses DY (level 1+) ──
+  const _now=Date.now();
+  const blink=plushies.some(p=>p.landed&&(p.y-PD[p.level].r<DY+100))&&(_now%600)<300;
   const dzPad=W*0.1;
   _dashLineH(gfxUI,dzPad,W-dzPad,DY,7,5);
   gfxUI.stroke({width:blink?2.5:1.5,color:blink?0xDC1E1E:0xD23737,alpha:blink?0.95:0.55});
@@ -621,6 +714,21 @@ function render(){
     }
     if(p.sprite){
       p.sprite.x=p.x; p.sprite.y=p.y; p.sprite.rotation=p.angle;
+      // Tint by danger level
+      const _lv=p._dangerLevel||0;
+      if(_lv===3){
+        // Fast pulse red — 0.15s period
+        const pulse=0.5+0.5*Math.sin(_now/24);
+        const gb=Math.round(255*(1-pulse));
+        p.sprite.tint=(0xFF<<16)|(gb<<8)|gb;
+      } else if(_lv===2){
+        // Slow pulse red — 0.5s period
+        const pulse=0.3+0.3*Math.sin(_now/80);
+        const gb=Math.round(255*(1-pulse));
+        p.sprite.tint=(0xFF<<16)|(gb<<8)|gb;
+      } else {
+        p.sprite.tint=0xFFFFFF;
+      }
       if(solidMode){
         p.sprite.visible=false;
         const n=getSides(p.level),r=PD[p.level].physR??PD[p.level].r,pts=[];
@@ -642,10 +750,10 @@ function render(){
   // ── glare flash ─────────────────────────────────────────────────────
   if(showClaw&&_glareT>=0){
     const cx2=(_glareT*1.6-0.3)*W,angle=-Math.PI/7,cos=Math.cos(angle),sin=Math.sin(angle),hh=H*1.5;
-    const hw1=W*0.20;
+    const hw1=W*0.11; // reduced from 0.20
     gfxFx.poly([[-hw1,-hh],[hw1,-hh],[hw1,hh],[-hw1,hh]].map(([px,py])=>[cx2+px*cos-py*sin,H/2+px*sin+py*cos]).flat())
          .fill({color:0xFFFFFF,alpha:0.40});
-    const hw2=W*0.09,off2=W*0.28;
+    const hw2=W*0.05,off2=W*0.28; // reduced from 0.09
     gfxFx.poly([[-hw2+off2,-hh],[hw2+off2,-hh],[hw2+off2,hh],[-hw2+off2,hh]].map(([px,py])=>[cx2+px*cos-py*sin,H/2+px*sin+py*cos]).flat())
          .fill({color:0xFFFFFF,alpha:0.25});
   }
@@ -738,7 +846,14 @@ function _loadPixiAssets(cb){
     for(let i=1;i<=11;i++)plushieTextures[i]=results[`Sprites/characters/level_${i}.png`]||null;
     _clawTexBack=results['Sprites/claw/claw_back.png']||null;_clawTexFront=results['Sprites/claw/claw_front.png']||null;_clawTexOpen=results['Sprites/claw/claw_open.png']||null;
     if(_clawTexBack)clawSprBack.texture=_clawTexBack;if(_clawTexFront)clawSprFront.texture=_clawTexFront;
-    const td=results['Sprites/machine/claw_machine_floor_tile.png'];if(td){trapDoorSpr.texture=td;trapDoorSpr.visible=true;}
+    const td=results['Sprites/machine/claw_machine_floor_tile.png'];
+    if(td){
+      // Re-create as NineSliceSprite now that we have the real texture
+      const ns=new PIXI.NineSliceSprite({texture:td,leftWidth:90,rightWidth:90,topHeight:0,bottomHeight:0});
+      ns.label='trap_door'; ns.visible=false;
+      layerBg.removeChild(trapDoorSpr); trapDoorSpr.destroy();
+      trapDoorSpr=ns; layerBg.addChild(trapDoorSpr);
+    }
     cb();
   }
   urls.forEach(url=>{
@@ -953,6 +1068,7 @@ function updateClaw(){
 // ── INPUT ─────────────────────────────────────────────────────────────
 function clamp(x,lvl){const r=PD[lvl].r;return Math.max(PAD+r+1,Math.min(W-PAD-r-1,x));}
 let dbg=false,dbgPoly=false,solidMode=false,noMerge=false;
+let stepMode=false; // P = pause physics, . = advance one frame
 let showJoy=!window.matchMedia('(pointer:coarse)').matches;
 const isMobile=window.matchMedia('(pointer:coarse)').matches;
 let _joyLastMx=null,_joyNoMovFrames=0;
@@ -978,7 +1094,31 @@ document.addEventListener('keydown',e=>{
   if(e.key==='?'||e.key==='/'){toggleHelp();return;}
   if(e.key==='Escape'){toggleHelp(false);return;}
   if(IS_DEBUG){
-    if(e.key==='m'||e.key==='M'){noMerge=!noMerge;return;}
+    if(e.key==='m'||e.key==='M'){
+      noMerge=!noMerge;
+      const cb=document.getElementById('dbg-nomerge-cb');if(cb)cb.checked=noMerge;
+      _gyroHud(noMerge?'🚫 MERGE OFF':'✅ MERGE ON');
+      setTimeout(()=>_gyroHud(null),1500);
+      return;
+    }
+    if(e.key==='p'||e.key==='P'){
+      stepMode=!stepMode;
+      _gyroHud(stepMode?'⏸ PAUSED  (. = next frame)':'▶ RUNNING');
+      setTimeout(()=>_gyroHud(null),1200);
+      if(!stepMode&&!dead) resumeLoop(); // unpause restarts loop
+      return;
+    }
+    if(e.key==='.'&&stepMode){
+      // advance exactly one frame — includes scheduler so wipeout events fire correctly
+      tickScheduled();
+      tickTrapDoor();
+      if(!dead){step();detectMerges();processMerges();}
+      updateClaw();
+      tickParts();tickPopups();tickConfetti();tickSparkles();tickCelebrations();
+      if(showClaw)tickGlare();if(typeof tickShakeCooldown==='function')tickShakeCooldown();
+      render();
+      return;
+    }
     if(e.key==='s'||e.key==='S'){showSpawnRate=!showSpawnRate;updateEvoLabels();return;}
     if(e.key==='d'||e.key==='D'){dbg=!dbg;if(dbg)dbgPoly=false;return;}
     if(e.key==='c'||e.key==='C'){dbgPoly=!dbgPoly;if(dbgPoly){dbg=false;solidMode=false;}return;}
