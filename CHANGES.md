@@ -2,7 +2,12 @@
 
 ---
 
-## v26 (current)
+## v27 (current)
+- **Wall reflections restored in PixiJS** — two `PIXI.RenderTexture`s at 0.5× res capture source strips every 3rd frame (~20fps); sprites display flipped reflections at both walls with alpha 0.22; cover-patch sprites (`claw_machine_top/bottom_left_reflection_cover.png`) frame the corners; adaptive enable on mobile (≥55fps for 2s)
+
+---
+
+## v26
 - **PixiJS v8 renderer** — Canvas 2D replaced with WebGL via PixiJS v8; all plushie/claw sprites rendered as `PIXI.Sprite`; 5 named render layers (`bg`, `ui`, `claw`, `plushies`, `fx`)
 - **Trap door NineSliceSprite** — `claw_machine_floor_tile.png` rendered with `NineSliceSprite` (capL/R=90px) for correct cap stretching
 - **3-tier danger system** — buffer zone blinks line / top-crosses slow red pulse / bottom-near fast red pulse + 1s lose; uses 30-frame net-delta settle check (neutralises oscillation)
