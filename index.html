@@ -328,7 +328,14 @@ const plushieTextures=new Array(12);
 let _clawTexBack,_clawTexFront,_clawTexOpen;
 
 async function initPixi(){
-  await app.init({canvas:cv,width:W,height:H,backgroundAlpha:0,antialias:true,resolution:dpr,autoDensity:true});
+  await app.init({
+    canvas:cv, width:W, height:H,
+    backgroundAlpha:0,
+    antialias:!isMobile,      // antialias+transparent canvas breaks on iOS Safari
+    resolution:dpr,
+    autoDensity:true,
+    powerPreference:'high-performance',
+  });
   app.ticker.stop();
   stage=app.stage; stage.label='root';
   // __PIXI_DEVTOOLS__ is a getter defined at module level — no reassignment needed
@@ -361,7 +368,8 @@ async function initPixi(){
   _versionText=new PIXI.Text({text:'v25',style:{fontFamily:"'Segoe UI',system-ui,sans-serif",fontSize:Math.round(9*FS),fill:'#5a3820'}});
   _versionText.label='version_label';_versionText.anchor.set(1,1);_versionText.x=W-W*0.1-4;_versionText.y=DY-5;_versionText.alpha=0.45;layerUI.addChild(_versionText);
 
-  _tapText=new PIXI.Text({text:'TAP TO DROP',style:{fontFamily:"'Righteous','Segoe UI',system-ui,sans-serif",fontSize:Math.round(36*FS),fontWeight:'400',fill:'#5a3820',dropShadow:{color:'#5a3820',blur:12,alpha:0.3}}});
+  _tapText=new PIXI.Text({text:'TAP TO DROP',style:{fontFamily:"'Righteous','Segoe UI',system-ui,sans-serif",fontSize:Math.round(36*FS),fontWeight:'400',fill:'#5a3820',stroke:{color:'#5a3820',width:1}}});
+  // Note: dropShadow removed — causes white background on iOS mobile WebGL
   _tapText.label='tap_hint';_tapText.anchor.set(0.5,0.5);_tapText.x=W/2;_tapText.y=H/2;_tapText.visible=false;layerUI.addChild(_tapText);
 }
 
@@ -601,7 +609,7 @@ function tickCelebrations(){
     if(c.phase==='in'){c.scale=Math.min(1,c.scale+0.12);c.y-=0.4;if(c.scale>=1){c.phase='hold';c.holdTimer=60;}}
     else if(c.phase==='hold'){c.holdTimer--;c.y-=0.4;if(c.holdTimer<=0)c.phase='out';}
     else{c.life-=0.022;c.y-=0.8;}
-    if(!c.pixiText&&c.life>0){let sub='';if(c.isWipeOut){sub=c.pts>0?'+'+c.pts.toLocaleString()+' bonus pts':'';}else if(c.isLevelUp){sub='×'+Math.pow(2,gameLevel-1)+' points multiplier';}else{sub=`Rank ${c.level}  ·  +${c.pts.toLocaleString()} pts`;}c.pixiText=new PIXI.Text({text:c.name,style:{fontFamily:"'Righteous','Segoe UI',system-ui,sans-serif",fontSize:Math.round(52*FS),fontWeight:'400',fill:c.color,stroke:{color:c.stroke,width:8},dropShadow:{color:c.stroke,blur:22,alpha:0.8}}});c.pixiText.label='celebration_'+c.name;c.pixiText.anchor.set(0.5,0.5);layerFx.addChild(c.pixiText);if(sub){c.pixiSub=new PIXI.Text({text:sub,style:{fontFamily:"'Righteous','Segoe UI',system-ui,sans-serif",fontSize:Math.round(16*FS),fontWeight:'400',fill:'#ffffff',stroke:{color:'#000000',width:3},dropShadow:{color:'#000000',blur:8,alpha:0.5}}});c.pixiSub.label='celebration_sub';c.pixiSub.anchor.set(0.5,0.5);layerFx.addChild(c.pixiSub);}}
+    if(!c.pixiText&&c.life>0){let sub='';if(c.isWipeOut){sub=c.pts>0?'+'+c.pts.toLocaleString()+' bonus pts':'';}else if(c.isLevelUp){sub='×'+Math.pow(2,gameLevel-1)+' points multiplier';}else{sub=`Rank ${c.level}  ·  +${c.pts.toLocaleString()} pts`;}c.pixiText=new PIXI.Text({text:c.name,style:{fontFamily:"'Righteous','Segoe UI',system-ui,sans-serif",fontSize:Math.round(52*FS),fontWeight:'400',fill:c.color,stroke:{color:c.stroke,width:8}}});c.pixiText.label='celebration_'+c.name;c.pixiText.anchor.set(0.5,0.5);layerFx.addChild(c.pixiText);if(sub){c.pixiSub=new PIXI.Text({text:sub,style:{fontFamily:"'Righteous','Segoe UI',system-ui,sans-serif",fontSize:Math.round(16*FS),fontWeight:'400',fill:'#ffffff',stroke:{color:'#000000',width:3}}});c.pixiSub.label='celebration_sub';c.pixiSub.anchor.set(0.5,0.5);layerFx.addChild(c.pixiSub);}}
     if(c.pixiText){const alpha=c.phase==='out'?c.life*0.95:0.97;c.pixiText.x=c.x;c.pixiText.y=c.y;c.pixiText.scale.set(c.scale);c.pixiText.alpha=alpha;if(c.pixiSub){c.pixiSub.x=c.x;c.pixiSub.y=c.y+34*c.scale;c.pixiSub.scale.set(c.scale);c.pixiSub.alpha=alpha;}}
   });
   celebrations.forEach(c=>{if(c.life<=0){if(c.pixiText){c.pixiText.destroy();c.pixiText=null;}if(c.pixiSub){c.pixiSub.destroy();c.pixiSub=null;}}});
