@@ -1524,12 +1524,14 @@ function toggleBGMAll(v){
 // ── GYRO / TILT ───────────────────────────────────────────────────────
 let tiltAngle = 0;   // current effective tilt (radians), updated by deviceorientation
 let gyroOn = false;
+// No direction flip needed — both paths now use gamma-consistent convention
 
 function onDeviceOrientation(e){
   if(e.gamma === null) return;
-  // Fallback for devices without DeviceMotion: use gamma (capped at ±90°).
-  // onDeviceMotion will override tiltAngle when available (full ±180°).
-  if(!_motionAvailable){
+  // Only use gamma fallback on non-iOS devices (iOS requires explicit DeviceMotion permission;
+  // using gamma without it would apply tilt without the user granting access).
+  // On Android/desktop DeviceMotion fires automatically so _motionAvailable will be true soon.
+  if(!_motionAvailable && !isIOS){
     tiltAngle = e.gamma * Math.PI / 180;
     updateGyroArrow(e.gamma);
   }
@@ -1584,7 +1586,8 @@ function onDeviceMotion(e){
   if(g && g.x != null && g.y != null){
     // atan2(-gx, -gy): upright=0, right=+90°, upside-down=±180°
     // Low-pass filter to smooth sensor noise
-    const rawAngle = Math.atan2(-g.x, -g.y);
+    // Derive tilt from gamma equivalent of gravity vector — consistent with DeviceOrientation path
+    const rawAngle = Math.atan2(g.x, g.y); // positive when tilting right on W3C-compliant devices
     tiltAngle = tiltAngle * 0.7 + rawAngle * 0.3;
     updateGyroArrow(tiltAngle * 180 / Math.PI);
   }
@@ -1657,6 +1660,7 @@ if(IS_DEBUG){
   document.addEventListener('keyup', e=>{
     if(e.key==='g'||e.key==='G'){
       _gKeyDown=false; _tiltPrevX=null;
+      tiltAngle=0; // reset gravity to normal on release
       if(!_fKeyDown) showGyroArrow(false);
       _updateGyroHud();
     }
