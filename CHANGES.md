@@ -2,7 +2,54 @@
 
 ---
 
-## v19 (current)
+## v25 (current)
+- **Reflection buffer at quarter-res** — `REFLECT_SCALE` reduced from 0.5 to 0.25 (4× smaller buffer) for better performance; visually imperceptible at 0.22 opacity
+
+---
+
+## v24
+- **Rename to BB Tower** — updated title in `<title>`, `apple-mobile-web-app-title`, and `manifest.json`
+- **Claw tracks mouse during cooldown** — claw now follows mouse/finger during the open animation instead of freezing at drop position, eliminating the hiccup when moving quickly
+- **`#fz-next-label` CSS** — width 70%, margin-left 32%
+
+---
+
+## v23
+- **Gyro / tilt controls** — GYRO checkbox enables device orientation; gravity direction follows phone tilt with full ±180° range via accelerometer gravity vector; unclamped (removed 15° cap)
+- **Gyro arrow** — rotating ▼ indicator in floor zone shows true gravity direction when GYRO is on; hidden on desktop (pointer:fine) except in debug mode
+- **Shake to push** — `DeviceMotionEvent` applies directional force to all plushies proportional to physical movement speed/direction
+- **Gyro losing condition** — in GYRO mode, game over only triggers when 3+ plushies stay above danger line for 1 continuous second
+- **Touch tween revamp** — tap distance <5% snaps instantly; 5–30% interpolates duration 0→300ms; ≥30% fixed 300ms
+- **Debug gyro sim** — hold G + mouse to tilt, hold F + mouse to shake (IS_DEBUG only); arrow swaps in for joystick while held
+- **Debug no-merge** — M key toggles merge on/off (IS_DEBUG only, release-safe)
+- **iOS gyro permission fix** — saved gyro pref no longer auto-calls `requestPermission` on load
+
+## v22
+- **Cover patch alignment fix** — canvas `.cw` top offset changed from fixed `11px` to proportional `calc(11/1280*100%)` so it scales with game-frame height; fixes cover patches appearing vertically offset on larger devices (iPhone XS Max / 15 Pro Max)
+- **Rename to BB Tower** — updated game title in `<title>`, `apple-mobile-web-app-title`, and `manifest.json`
+- **Remove TTS on merge** — reverted name announcement (`speechSynthesis`) from `sfxMerge`; merges now play only the arpeggio SFX
+
+---
+
+## v21
+- **Gamepad support** — Xbox/standard layout: left stick moves aim, A drops, LT/RT speed up, B toggles help popup, LB/RB switches help tab between keyboard and gamepad; gamepad tab hidden until controller connects
+- **Game over accept** — Enter/Space on keyboard or A on gamepad restarts from game over screen
+- **DEBUG/RELEASE switch** — `IS_DEBUG=true` on `main`, `false` on `release` branch; debug keyboard shortcuts and help section hidden in release
+- **Level SFX** — ascending C major arpeggio + shimmer on LEVEL UP announcement
+
+---
+
+## v20
+- **WIPE OUT trap door** — floor tile sprite drawn on canvas; opens when plushies start falling, closes after all plushies exit; 9-slice horizontal tile (capL/R=90px from meta); plushie-plushie SAT disabled while door is open so plushies spin and scatter freely
+- **WIPE OUT physics** — merging disabled during wipeout; spin+scatter forces applied at door-open time; close timing calculated from physics (worst-case fall distance)
+- **Cover patches moved to canvas** — reflection corner sprites drawn via `destination-over` compositing (behind plushies, above background)
+- **Sidebar reordered** — Next above Level
+- **Floor zone NEXT label** — shows `NEXT (LvX)` with current game level
+- **Celebration sub-label** — shows `Lv X · Rank N · +pts`
+
+---
+
+## v19
 - **Floor zone redesign** — 3 independently absolute-positioned panels (score+next left, joystick center, checkboxes right); all scale with floor-zone height via `aspect-ratio` + `%` sizing; no flex interference between panels
 - **Portrait layout locked to viewport** — `height:100dvh; overflow:hidden` in portrait mode; `justify-content:flex-end` sticks game to bottom; no page scroll
 - **Mid-range ar [0.6–0.667] offset** — top-bar and main-content shift down by evo zone height (11.25vw) to hide evo strip when screen is borderline portrait/wide
