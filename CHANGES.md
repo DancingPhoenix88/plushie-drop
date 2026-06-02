@@ -2,7 +2,14 @@
 
 ---
 
-## v23 (current)
+## v24 (current)
+- **Rename to BB Tower** — updated title in `<title>`, `apple-mobile-web-app-title`, and `manifest.json`
+- **Claw tracks mouse during cooldown** — claw now follows mouse/finger during the open animation instead of freezing at drop position, eliminating the hiccup when moving quickly
+- **`#fz-next-label` CSS** — width 70%, margin-left 32%
+
+---
+
+## v23
 - **Gyro / tilt controls** — GYRO checkbox enables device orientation; gravity direction follows phone tilt with full ±180° range via accelerometer gravity vector; unclamped (removed 15° cap)
 - **Gyro arrow** — rotating ▼ indicator in floor zone shows true gravity direction when GYRO is on; hidden on desktop (pointer:fine) except in debug mode
 - **Shake to push** — `DeviceMotionEvent` applies directional force to all plushies proportional to physical movement speed/direction
