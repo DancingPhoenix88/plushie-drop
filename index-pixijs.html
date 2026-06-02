@@ -14,6 +14,8 @@
 <link rel="apple-touch-icon" href="Sprites/icons/app_icon.png">
 <!-- PixiJS v8 -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/8.9.1/pixi.min.js"></script>
+<!-- pixi-filters v6 (DropShadowFilter etc.) -->
+<script src="https://cdn.jsdelivr.net/npm/pixi-filters@6/dist/pixi-filters.js"></script>
 <style>
 :root{color-scheme:light}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;}
@@ -51,7 +53,7 @@ html,body{width:100vw;height:100dvh;overflow:hidden;position:relative;font-famil
 #top-tile{
   width:calc(460px + var(--bms)*2);
   border-width:24px;border-style:solid;border-color:transparent;
-  border-image:url('Sprites/machine/claw_machine_top_tile.png') 48 fill / 24px round;
+  border-image:url('Sprites/claw_machine_top_tile.png') 48 fill / 24px round;
   display:flex;align-items:center;justify-content:center;
 }
 #top-tile h1{font-size:14px;font-weight:700;color:#5a3820;letter-spacing:.1em;text-transform:uppercase;position:relative;z-index:1;}
@@ -59,13 +61,13 @@ html,body{width:100vw;height:100dvh;overflow:hidden;position:relative;font-famil
 #game-frame{
   width:100%;height:100%;position:relative;overflow:hidden;
   border-style:solid;border-color:transparent;border-width:0;
-  border-image:url('Sprites/machine/claw_machine_middle_tile.png') 70 116 240 116 fill / 6.08% 16.11% 22.57% 16.11% round;
+  border-image:url('Sprites/claw_machine_middle_tile.png') 70 116 240 116 fill / 6.08% 16.11% 22.57% 16.11% round;
 }
 #game-frame .cw{position:absolute;top:11px;left:calc(45/720*100%);width:calc(632/720*100%);height:calc(1049/1280*100%);overflow:hidden;}
 #game-frame canvas{display:block;width:100%;height:auto;aspect-ratio:632/1049;}
 #floor-zone{position:absolute;left:calc(20/720*100%);right:calc(20/720*100%);bottom:calc(82/1280*100%);height:calc(112/1280*100%);border-style:solid;border-color:transparent;border-width:0;}
 #fz-inner{position:absolute;inset:0;overflow:hidden;margin:0 10px;}
-#fz-scorenext{position:absolute;left:0;top:10%;bottom:0;height:70%;aspect-ratio:174/60;background:url('Sprites/machine/claw_machine_score_next_bg.png') no-repeat center/100% 100%;display:flex;gap:0;padding:0;box-sizing:border-box;}
+#fz-scorenext{position:absolute;left:0;top:10%;bottom:0;height:70%;aspect-ratio:174/60;background:url('Sprites/claw_machine_score_next_bg.png') no-repeat center/100% 100%;display:flex;gap:0;padding:0;box-sizing:border-box;}
 #fz-score,#fz-next{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;flex:1;min-width:0;height:90%;}
 #fz-next{padding-right:4%;}
 .fz-label{font-size:clamp(6px,12%,9px);color:#8a6848;text-transform:uppercase;letter-spacing:.08em;text-align:center;line-height:1.2;font-family:'Segoe UI',system-ui,sans-serif;margin:12% 0 0 11%;}
@@ -80,9 +82,9 @@ html,body{width:100vw;height:100dvh;overflow:hidden;position:relative;font-famil
 #fz-ctrl button.active,#gyro-ls.active{background:#fde8d8;border-color:#c05020;}
 .cb-item{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:0;cursor:pointer;height:100%;}
 .cb-item .fz-label{font-size:clamp(5px,1.8vw,8px);margin-top:1px;position:relative;z-index:1;}
-input.sprite-cb{-webkit-appearance:none;appearance:none;height:72%;width:auto;aspect-ratio:1;flex-shrink:0;margin:0;cursor:pointer;background:url('Sprites/ui/checkbox_bg.png') no-repeat center/contain;}
-input.sprite-cb:checked{background-image:url('Sprites/ui/checkbox_tick.png');}
-.ap-dial{height:72%;width:auto;aspect-ratio:1;flex-shrink:0;margin:0;cursor:pointer;background:url('Sprites/ui/checkbox_bg.png') no-repeat center/contain;display:flex;align-items:center;justify-content:center;user-select:none;}
+input.sprite-cb{-webkit-appearance:none;appearance:none;height:72%;width:auto;aspect-ratio:1;flex-shrink:0;margin:0;cursor:pointer;background:url('Sprites/checkbox_bg.png') no-repeat center/contain;}
+input.sprite-cb:checked{background-image:url('Sprites/checkbox_tick.png');}
+.ap-dial{height:72%;width:auto;aspect-ratio:1;flex-shrink:0;margin:0;cursor:pointer;background:url('Sprites/checkbox_bg.png') no-repeat center/contain;display:flex;align-items:center;justify-content:center;user-select:none;}
 .ap-dial .ap-seg{display:none;font-family:'Righteous','Share Tech Mono','Courier New',monospace;font-size:20px;font-weight:400;line-height:1;transform:translateX(-2px) skew(6deg, 0deg);}
 .ap-dial .ap-seg.active{display:block;color:#8b0000;text-shadow:0 0 6px #ff2020,0 0 14px #cc0000;}
 .ap-dial .ap-seg[data-spd="0"].active{display:block;color:transparent;text-shadow:none;}
@@ -97,7 +99,7 @@ input.sprite-cb:checked{background-image:url('Sprites/ui/checkbox_tick.png');}
 img.evo-locked{filter:brightness(0);opacity:0.45;}
 #top-tile{display:flex;align-items:center;justify-content:center;width:100%;}
 #bottom-tile{position:relative;overflow:hidden;width:100%;}
-#bottom-tile::before{content:'';position:absolute;top:0;left:0;right:0;height:max(100%,54px);border-width:4px 54px 50px 54px;border-style:solid;border-color:transparent;border-image:url('Sprites/machine/claw_machine_bottom_tile.png') 4 54 50 54 fill / clamp(0px, calc(431px - 64.3vw), 200px) 54px 50px 54px round;}
+#bottom-tile::before{content:'';position:absolute;top:0;left:0;right:0;height:max(100%,54px);border-width:4px 54px 50px 54px;border-style:solid;border-color:transparent;border-image:url('Sprites/claw_machine_bottom_tile.png') 4 54 50 54 fill / clamp(0px, calc(431px - 64.3vw), 200px) 54px 50px 54px round;}
 #evo-panel{width:118px;background:#fdf2ea;border:.5px solid #dfc8b0;border-radius:14px;padding:12px 10px;flex-shrink:0;overflow-y:auto;}
 .ar{display:flex;align-items:center;gap:6px;padding:4px 0;cursor:pointer;}
 .ar input{width:14px;height:14px;cursor:pointer;accent-color:#c05020;}
@@ -143,8 +145,8 @@ img.evo-locked{filter:brightness(0);opacity:0.45;}
             <div id="fz-next"><span class="fz-label">NEXT</span><img id="nc" src="" alt="next"></div>
           </div>
           <div id="joyctrl">
-            <img id="joy-img" src="Sprites/ui/joystick_released.png" alt="">
-            <img id="drop-btn" src="Sprites/ui/button_released.png" alt="">
+            <img id="joy-img" src="Sprites/joystick_released.png" alt="">
+            <img id="drop-btn" src="Sprites/button_released.png" alt="">
           </div>
           <div id="fz-ctrl">
             <label class="cb-item"><input type="checkbox" class="sprite-cb" id="gyro-cb" onchange="toggleGyro();saveCbPrefs()"><span class="fz-label">GYRO</span></label>
@@ -301,6 +303,11 @@ async function initPixi(){
   _tapText.label='tap_hint';_tapText.anchor.set(0.5,0.5);_tapText.x=W/2;_tapText.y=H/2;_tapText.visible=false;layerUI.addChild(_tapText);
 }
 
+function makeShadow(){
+  const F=globalThis.PixiFilters||PIXI?.filters;
+  if(!F?.DropShadowFilter)return null;
+  return new F.DropShadowFilter({offset:{x:2,y:5},blur:4,alpha:0.28,color:0x000000,resolution:dpr});
+}
 function cssHex(css){
   if(!css)return 0xffffff;
   if(css.startsWith('#')){const h=css.slice(1);if(h.length===3)return parseInt(h[0]+h[0]+h[1]+h[1]+h[2]+h[2],16);return parseInt(h,16);}
@@ -337,11 +344,11 @@ class Ball{
     this.level=lvl;this.mass=MASS[lvl];this.invMass=INV_MASS[lvl];this.born=Date.now();
     this.px=x;this.py=y;this.movH=new Float32Array(30);this.movI=0;this.movS=0;
     this.sprite=null;
-    if(plushieTextures[lvl]){this.sprite=new PIXI.Sprite(plushieTextures[lvl]);this.sprite.label=PD[lvl].name;this.sprite.zIndex=11-lvl;this.sprite.anchor.set(0.5,0.5);this.sprite.scale.set(PD[lvl].r/imgR(lvl));layerPlushie.addChild(this.sprite);}
+    if(plushieTextures[lvl]){this.sprite=new PIXI.Sprite(plushieTextures[lvl]);this.sprite.label=PD[lvl].name;this.sprite.zIndex=11-lvl;this.sprite.anchor.set(0.5,0.5);this.sprite.scale.set(PD[lvl].r/imgR(lvl));const sh=makeShadow();if(sh)this.sprite.filters=[sh];layerPlushie.addChild(this.sprite);}
   }
   get speed(){return Math.hypot(this.vx,this.vy);}
 }
-function _destroyBall(b){if(b&&b.sprite){b.sprite.destroy();b.sprite=null;}}
+function _destroyBall(b){if(!b)return;if(b.sprite){b.sprite.destroy();b.sprite=null;}if(b._nameText){b._nameText.destroy();b._nameText=null;}if(b._polyText){b._polyText.destroy();b._polyText=null;}}
 function clearPlushies(){plushies.forEach(_destroyBall);plushies=[];}
 
 function step(){
@@ -495,15 +502,14 @@ function render(){
     if(frontTex){clawSprFront.texture=frontTex;clawSprFront.x=cx-cw/2;clawSprFront.y=imgY;clawSprFront.width=cw;clawSprFront.height=cw;clawSprFront.visible=true;}
   }
 
-  // ── plushies ────────────────────────────────────────────────────────
-  layerPlushie.removeChildren();
-  const byLevel=[...plushies].sort((a,b)=>b.level-a.level);
-  for(const p of byLevel){
+  // ── plushies (sortableChildren+zIndex handles draw order — no removeChildren needed) ──
+  for(const p of plushies){
     if(!p.sprite&&plushieTextures[p.level]){
       p.sprite=new PIXI.Sprite(plushieTextures[p.level]);
       p.sprite.zIndex=11-p.level;
       p.sprite.label=PD[p.level].name;
       p.sprite.anchor.set(0.5,0.5); p.sprite.scale.set(PD[p.level].r/imgR(p.level));
+      const sh=makeShadow();if(sh)p.sprite.filters=[sh];
       layerPlushie.addChild(p.sprite);
     }
     if(p.sprite){
@@ -513,7 +519,7 @@ function render(){
         const n=getSides(p.level),r=PD[p.level].physR??PD[p.level].r,pts=[];
         for(let k=0;k<n;k++){const a=p.angle+2*Math.PI*k/n;pts.push(p.x+r*Math.cos(a),p.y+r*Math.sin(a));}
         gfxFx.poly(pts).fill({color:cssHex(PD[p.level].body)}).stroke({width:2,color:cssHex(PD[p.level].stroke)});
-      } else { p.sprite.visible=true; }
+      } else { p.sprite.visible=true; if(!p.sprite.parent)layerPlushie.addChild(p.sprite); }
     }
   }
 
@@ -553,19 +559,56 @@ function render(){
     gfxFx.fill({color:0xFFFFFF,alpha:Math.min(s.life,1)*0.92});
   }
 
-  // ── debug overlays ───────────────────────────────────────────────────
+  // ── D: collider circles — dashed ring in character color, red tint if spinning ──
   if(dbg){
     for(const p of plushies){
       const sp=Math.abs(p.av)>0.01;
-      gfxFx.circle(p.x,p.y,p.r).stroke({width:1.8,color:sp?0xFF3232:0x32C850,alpha:sp?0.85:0.75});
-      gfxFx.circle(p.x,p.y,3).fill({color:sp?0xFF0000:0x00CC00});
+      const bc=cssHex(PD[p.level].body);
+      // dashed collider ring using character body color, red when spinning
+      _dashCircle(gfxFx,p.x,p.y,p.r,4,3);
+      gfxFx.stroke({width:2.5,color:sp?0xFF3232:bc,alpha:0.88});
+      // center dot: green=still, red=spinning
+      gfxFx.circle(p.x,p.y,3.5).fill({color:sp?0xFF2020:0x20CC20});
     }
   }
+  // ── C: polygon colliders — character colors, thick stroke, vertex dots, edge count ──
   if(dbgPoly){
     for(const p of plushies){
       const verts=getVerts(p);
-      gfxFx.poly(verts.flat()).stroke({width:2,color:cssHex(PD[p.level].body),alpha:0.88});
+      const bc=cssHex(PD[p.level].body), sc=cssHex(PD[p.level].stroke);
+      // polygon outline
+      gfxFx.poly(verts.flat()).stroke({width:3,color:sc,alpha:0.92});
+      // vertex circles
+      for(const [vx,vy] of verts)
+        gfxFx.circle(vx,vy,3).fill({color:bc});
+      // edge count label — create once, update text every frame (sides can change with [/])
+      if(!p._polyText){
+        p._polyText=new PIXI.Text({text:'',style:{fontFamily:'monospace',fontSize:Math.max(12,Math.round(p.r*0.3)),fontWeight:'bold',fill:'rgba(0,0,0,0.7)'}});
+        p._polyText.anchor.set(0.5,0.5);
+        layerFx.addChild(p._polyText);
+      }
+      p._polyText.text=getSides(p.level)+'-gon';
+      p._polyText.x=p.x; p._polyText.y=p.y+4; p._polyText.visible=true;
     }
+  } else {
+    for(const p of plushies) if(p._polyText) p._polyText.visible=false;
+  }
+  // ── H: solid n-gon with character name label ─────────────────────────
+  if(solidMode){
+    for(const p of plushies){
+      if(p.sprite&&!p.sprite.visible){
+        // name label drawn as PIXI.Text — create once, reuse
+        if(!p._nameText){
+          p._nameText=new PIXI.Text({text:PD[p.level].name,style:{fontFamily:'monospace',fontSize:Math.max(8,Math.round(p.r*.28)),fontWeight:'bold',fill:'rgba(0,0,0,0.65)'}});
+          p._nameText.anchor.set(0.5,0.5);
+          layerFx.addChild(p._nameText);
+        }
+        p._nameText.x=p.x; p._nameText.y=p.y; p._nameText.visible=true;
+      } else if(p._nameText){ p._nameText.visible=false; }
+    }
+  } else {
+    // hide all name texts when solidMode off
+    for(const p of plushies) if(p._nameText) p._nameText.visible=false;
   }
 
   app.renderer.render(stage);
@@ -575,26 +618,26 @@ const imgSprites=new Array(12);
 function imgR(lvl){return lvl<=8?65:90;}
 function loadSprites(cb){
   let done=0;
-  for(let lvl=1;lvl<=11;lvl++){const img=new Image();img.onload=img.onerror=()=>{if(++done===11)_loadPixiAssets(cb);};img.src=`Sprites/characters/level_${lvl}.png`;imgSprites[lvl]=img;}
+  for(let lvl=1;lvl<=11;lvl++){const img=new Image();img.onload=img.onerror=()=>{if(++done===11)_loadPixiAssets(cb);};img.src=`Sprites/level_${lvl}.png`;imgSprites[lvl]=img;}
 }
 function _loadPixiAssets(cb){
   // v8: load directly by URL (Assets.add(alias,url) two-arg form removed in v8)
   const urls=[];
-  for(let i=1;i<=11;i++)urls.push(`Sprites/characters/level_${i}.png`);
-  urls.push('Sprites/claw/claw_back.png','Sprites/claw/claw_front.png','Sprites/claw/claw_open.png');
-  urls.push('Sprites/machine/claw_machine_floor_tile.png');
+  for(let i=1;i<=11;i++)urls.push(`Sprites/level_${i}.png`);
+  urls.push('Sprites/claw_back.png','Sprites/claw_front.png','Sprites/claw_open.png');
+  urls.push('Sprites/claw_machine_floor_tile.png');
 
   const results={};
   let pending=urls.length;
   function done(){
     if(--pending>0)return;
-    for(let i=1;i<=11;i++)plushieTextures[i]=results[`Sprites/characters/level_${i}.png`]||null;
-    _clawTexBack =results['Sprites/claw/claw_back.png']||null;
-    _clawTexFront=results['Sprites/claw/claw_front.png']||null;
-    _clawTexOpen =results['Sprites/claw/claw_open.png']||null;
+    for(let i=1;i<=11;i++)plushieTextures[i]=results[`Sprites/level_${i}.png`]||null;
+    _clawTexBack =results['Sprites/claw_back.png']||null;
+    _clawTexFront=results['Sprites/claw_front.png']||null;
+    _clawTexOpen =results['Sprites/claw_open.png']||null;
     if(_clawTexBack) clawSprBack.texture=_clawTexBack;
     if(_clawTexFront)clawSprFront.texture=_clawTexFront;
-    const td=results['Sprites/machine/claw_machine_floor_tile.png'];
+    const td=results['Sprites/claw_machine_floor_tile.png'];
     if(td){trapDoorSpr.texture=td;trapDoorSpr.visible=true;}
     cb();
   }
@@ -622,8 +665,8 @@ const joyEl=()=>document.getElementById('joyctrl');
 const joyImg=()=>document.getElementById('joy-img');
 const dropBtn=()=>document.getElementById('drop-btn');
 let btnPressTO=null;
-function updateJoyDir(dir){const img=joyImg();if(!img)return;if(dir==='none'){img.src='Sprites/ui/joystick_released.png';img.classList.remove('flip');}else{img.src='Sprites/ui/joystick_tilted.png';img.classList.toggle('flip',dir==='right');}}
-function flashDropBtn(){const btn=dropBtn();if(!btn)return;btn.src='Sprites/ui/button_pressed.png';clearTimeout(btnPressTO);btnPressTO=setTimeout(()=>{btn.src='Sprites/ui/button_released.png';},300);}
+function updateJoyDir(dir){const img=joyImg();if(!img)return;if(dir==='none'){img.src='Sprites/joystick_released.png';img.classList.remove('flip');}else{img.src='Sprites/joystick_tilted.png';img.classList.toggle('flip',dir==='right');}}
+function flashDropBtn(){const btn=dropBtn();if(!btn)return;btn.src='Sprites/button_pressed.png';clearTimeout(btnPressTO);btnPressTO=setTimeout(()=>{btn.src='Sprites/button_released.png';},300);}
 function toggleJoy(){showJoy=!showJoy;const el=joyEl();if(!el)return;el.style.display=showJoy?'flex':'none';}
 const keysDown=new Set();
 document.addEventListener('keyup',e=>keysDown.delete(e.key));
@@ -655,8 +698,8 @@ function fitScoreFont(){fitScoreFontEl(document.getElementById('sc-p'),30);fitSc
 let _lastScoreLen=0;
 function updUI(){const s=score.toLocaleString();document.getElementById('sc').textContent=s;const elp=document.getElementById('sc-p');elp.textContent=s;if(s.length!==_lastScoreLen){_lastScoreLen=s.length;fitScoreFont();}const ll=document.getElementById('level-label');if(ll)ll.textContent='· LV '+gameLevel;}
 window.addEventListener('resize',()=>{_lastScoreLen=0;fitScoreFont();});
-function updNext(){nc.src=`Sprites/characters/level_${nxt}.png`;nctxls.clearRect(0,0,98,80);drawAtFit(nctxls,98,80,nxt);document.getElementById('nl-ls').textContent=PD[nxt].name;}
-function buildEvo(){const el=document.getElementById('ev');el.innerHTML='';const es=document.getElementById('ev-s');es.innerHTML='';for(let i=1;i<=11;i++){const sc=i<=8?'transform:scale(1.3);transform-origin:center;':'';const base=`src="Sprites/characters/level_${i}.png" data-unlock-lvl="${i}" style="object-fit:contain;flex-shrink:0;${sc}"`;const row=document.createElement('div');row.style.cssText='display:flex;align-items:center;gap:6px;padding:0;';row.innerHTML=`<img ${base.replace('flex-shrink:0;','flex-shrink:0;width:32px;height:32px;')}><span data-lvl="${i}" style="font-size:9px;color:#8a7060;">${PD[i].name}</span>`;el.appendChild(row);const cell=document.createElement('div');cell.className='ec';cell.innerHTML=`<img ${base.replace('flex-shrink:0;','flex-shrink:0;width:100%;aspect-ratio:1;')}><div class="ec-shadow"></div><span class="en" data-lvl="${i}">${PD[i].name}</span>`;es.appendChild(cell);}updateEvoUnlocks();}
+function updNext(){nc.src=`Sprites/level_${nxt}.png`;nctxls.clearRect(0,0,98,80);drawAtFit(nctxls,98,80,nxt);document.getElementById('nl-ls').textContent=PD[nxt].name;}
+function buildEvo(){const el=document.getElementById('ev');el.innerHTML='';const es=document.getElementById('ev-s');es.innerHTML='';for(let i=1;i<=11;i++){const sc=i<=8?'transform:scale(1.3);transform-origin:center;':'';const base=`src="Sprites/level_${i}.png" data-unlock-lvl="${i}" style="object-fit:contain;flex-shrink:0;${sc}"`;const row=document.createElement('div');row.style.cssText='display:flex;align-items:center;gap:6px;padding:0;';row.innerHTML=`<img ${base.replace('flex-shrink:0;','flex-shrink:0;width:32px;height:32px;')}><span data-lvl="${i}" style="font-size:9px;color:#8a7060;">${PD[i].name}</span>`;el.appendChild(row);const cell=document.createElement('div');cell.className='ec';cell.innerHTML=`<img ${base.replace('flex-shrink:0;','flex-shrink:0;width:100%;aspect-ratio:1;')}><div class="ec-shadow"></div><span class="en" data-lvl="${i}">${PD[i].name}</span>`;es.appendChild(cell);}updateEvoUnlocks();}
 function updateEvoUnlocks(){document.querySelectorAll('img[data-unlock-lvl]').forEach(img=>{const lvl=+img.dataset.unlockLvl;img.classList.toggle('evo-locked',lvl>3&&!firstMerged.has(lvl));});}
 const CB_KEY='plushie_cb_prefs';
 function saveCbPrefs(){try{localStorage.setItem(CB_KEY,JSON.stringify({bgm:document.getElementById('bgm-cb')?.checked??false,gyro:document.getElementById('gyro-cb')?.checked??false}));}catch(e){}}
