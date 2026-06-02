@@ -839,40 +839,42 @@ function render(){
 
 const imgSprites=new Array(12);
 function imgR(lvl){return lvl<=8?65:90;}
+const _extraImgs={back:null,front:null,open:null,floor:null};
 function loadSprites(cb){
-  let done=0;
-  for(let lvl=1;lvl<=11;lvl++){const img=new Image();img.onload=img.onerror=()=>{if(++done===11)_loadPixiAssets(cb);};img.src=`Sprites/characters/level_${lvl}.png`;imgSprites[lvl]=img;}
+  const total=11+4; let done=0;
+  const tick=()=>{ if(++done===total) _loadPixiAssets(cb); };
+  for(let lvl=1;lvl<=11;lvl++){
+    const img=new Image(); img.onload=img.onerror=tick;
+    img.src=`Sprites/characters/level_${lvl}.png`; imgSprites[lvl]=img;
+  }
+  // Claw + trap door as raw images so _loadPixiAssets can create textures without PIXI.Assets
+  ['back','front','open'].forEach(k=>{
+    const img=new Image(); img.onload=img.onerror=tick;
+    img.src=`Sprites/claw/claw_${k}.png`; _extraImgs[k]=img;
+  });
+  const floor=new Image(); floor.onload=floor.onerror=tick;
+  floor.src='Sprites/machine/claw_machine_floor_tile.png'; _extraImgs.floor=floor;
 }
 function _loadPixiAssets(cb){
-  // Character textures: create directly from already-loaded imgSprites (no extra network)
+  // All textures from already-loaded Image objects — no PIXI.Assets network calls
   for(let i=1;i<=11;i++){
     const img=imgSprites[i];
     if(img&&img.naturalWidth) plushieTextures[i]=PIXI.Texture.from(img);
   }
-  // Claw + trap door: still need PIXI.Assets.load
-  const urls=['Sprites/claw/claw_back.png','Sprites/claw/claw_front.png','Sprites/claw/claw_open.png','Sprites/machine/claw_machine_floor_tile.png'];
-  const results={};let pending=urls.length;
-  function done(){
-    if(--pending>0)return;
-    _clawTexBack =results['Sprites/claw/claw_back.png']||null;
-    _clawTexFront=results['Sprites/claw/claw_front.png']||null;
-    _clawTexOpen =results['Sprites/claw/claw_open.png']||null;
-    if(_clawTexBack)clawSprBack.texture=_clawTexBack;if(_clawTexFront)clawSprFront.texture=_clawTexFront;
-    const td=results['Sprites/machine/claw_machine_floor_tile.png'];
-    if(td){
-      // Re-create as NineSliceSprite now that we have the real texture
-      const ns=new PIXI.NineSliceSprite({texture:td,leftWidth:90,rightWidth:90,topHeight:0,bottomHeight:0});
-      ns.label='trap_door'; ns.visible=false;
-      layerBg.removeChild(trapDoorSpr); trapDoorSpr.destroy();
-      trapDoorSpr=ns; layerBg.addChild(trapDoorSpr);
-    }
-    cb();
+  const mkTex=img=>img&&img.naturalWidth?PIXI.Texture.from(img):null;
+  _clawTexBack =mkTex(_extraImgs.back);
+  _clawTexFront=mkTex(_extraImgs.front);
+  _clawTexOpen =mkTex(_extraImgs.open);
+  if(_clawTexBack) clawSprBack.texture=_clawTexBack;
+  if(_clawTexFront)clawSprFront.texture=_clawTexFront;
+  const td=mkTex(_extraImgs.floor);
+  if(td){
+    const ns=new PIXI.NineSliceSprite({texture:td,leftWidth:90,rightWidth:90,topHeight:0,bottomHeight:0});
+    ns.label='trap_door'; ns.visible=false;
+    layerBg.removeChild(trapDoorSpr); trapDoorSpr.destroy();
+    trapDoorSpr=ns; layerBg.addChild(trapDoorSpr);
   }
-  urls.forEach(url=>{
-    PIXI.Assets.load(url)
-      .then(tex=>{results[url]=tex;done();})
-      .catch(()=>{console.warn('[PixiJS] asset missing:',url);done();});
-  });
+  cb();
 }
 function drawAtFit(c,cW,cH,lvl,alpha=1){const img=imgSprites[lvl];if(!img||!img.naturalWidth)return;const sc=Math.min(cW/img.naturalWidth,cH/img.naturalHeight);const w=img.naturalWidth*sc,h=img.naturalHeight*sc;c.save();c.globalAlpha=alpha;c.drawImage(img,(cW-w)/2,(cH-h)/2,w,h);c.restore();}
 
