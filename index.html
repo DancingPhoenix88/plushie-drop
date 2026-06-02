@@ -3,15 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-<title>Plushie Drop</title>
+<title>BB Tower</title>
 <link rel="manifest" href="manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Righteous&display=swap" rel="stylesheet">
 <meta name="theme-color" content="#c87830">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Plushie Drop">
-<link rel="apple-touch-icon" href="Sprites/app_icon.png">
+<meta name="apple-mobile-web-app-title" content="BB Tower">
+<link rel="apple-touch-icon" href="Sprites/icons/app_icon.png">
 <style>
 :root{color-scheme:light}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;}
@@ -58,7 +58,7 @@ html,body{width:100vw;height:100dvh;overflow:hidden;position:relative;font-famil
 #top-tile{
   width:calc(460px + var(--bms)*2);
   border-width:24px;border-style:solid;border-color:transparent;
-  border-image:url('Sprites/claw_machine_top_tile.png') 48 fill / 24px round;
+  border-image:url('Sprites/machine/claw_machine_top_tile.png') 48 fill / 24px round;
   display:flex;align-items:center;justify-content:center;
 }
 #top-tile h1{
@@ -73,13 +73,13 @@ html,body{width:100vw;height:100dvh;overflow:hidden;position:relative;font-famil
   width:100%;height:100%;
   position:relative;overflow:hidden;
   border-style:solid;border-color:transparent;border-width:0;
-  border-image:url('Sprites/claw_machine_middle_tile.png') 70 116 240 116 fill / 6.08% 16.11% 22.57% 16.11% round;
+  border-image:url('Sprites/machine/claw_machine_middle_tile.png') 70 116 240 116 fill / 6.08% 16.11% 22.57% 16.11% round;
 }
 
 /* .cw: canvas area — 632×1049 at 720×1280 reference */
 #game-frame .cw{
   position:absolute;
-  top:11px;
+  top:calc(11/1280*100%); /* proportional to ref 720×1280; keeps cover-patch alignment consistent across device sizes */
   left:calc(45/720*100%);
   width:calc(632/720*100%);
   height:calc(1049/1280*100%);
@@ -104,7 +104,7 @@ html,body{width:100vw;height:100dvh;overflow:hidden;position:relative;font-famil
   position:absolute;left:0;top:10%;bottom:0;
   height:70%;
   aspect-ratio:174/60;
-  background:url('Sprites/claw_machine_score_next_bg.png') no-repeat center/100% 100%;
+  background:url('Sprites/machine/claw_machine_score_next_bg.png') no-repeat center/100% 100%;
   display:flex;gap:0;padding:0;
   box-sizing:border-box;
 }
@@ -158,13 +158,13 @@ html,body{width:100vw;height:100dvh;overflow:hidden;position:relative;font-famil
 input.sprite-cb{
   -webkit-appearance:none;appearance:none;
   height:72%;width:auto;aspect-ratio:1;flex-shrink:0;margin:0;cursor:pointer;
-  background:url('Sprites/checkbox_bg.png') no-repeat center/contain;
+  background:url('Sprites/ui/checkbox_bg.png') no-repeat center/contain;
 }
-input.sprite-cb:checked{background-image:url('Sprites/checkbox_tick.png');}
+input.sprite-cb:checked{background-image:url('Sprites/ui/checkbox_tick.png');}
 /* AUTO fan-dial */
 .ap-dial{
   height:72%;width:auto;aspect-ratio:1;flex-shrink:0;margin:0;cursor:pointer;
-  background:url('Sprites/checkbox_bg.png') no-repeat center/contain;
+  background:url('Sprites/ui/checkbox_bg.png') no-repeat center/contain;
   display:flex;align-items:center;justify-content:center;
   user-select:none;
 }
@@ -183,6 +183,34 @@ input.sprite-cb:checked{background-image:url('Sprites/checkbox_tick.png');}
   display:block;
   color:transparent;
   text-shadow:none;
+}
+/* gyro "true down" arrow — shown in joyctrl center when joystick hidden and gyro ON */
+#gyro-arrow{
+  display:none;
+  flex-direction:column;align-items:center;justify-content:center;
+  height:80%;width:auto;aspect-ratio:1;
+  font-size:clamp(28px,8vw,52px);
+  line-height:1;
+  filter:drop-shadow(0 0 6px #f9a04088);
+  transition:transform 0.1s linear;
+  pointer-events:none;
+  color:#f9a040;
+}
+#gyro-arrow.visible{ display:flex; }
+/* debug gyro-drag HUD */
+#gyro-drag-hud{
+  display:none;position:fixed;bottom:12px;left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,.72);color:#f9a040;
+  font-family:'Share Tech Mono','Courier New',monospace;font-size:12px;
+  padding:5px 14px;border-radius:20px;pointer-events:none;z-index:9999;
+  white-space:nowrap;letter-spacing:.04em;
+}
+#gyro-drag-hud.active{ display:block; }
+/* hide GYRO controls on desktop (pointer:fine) — gyro not useful without touch/tilt */
+/* exception: debug-mode keeps them visible for keyboard simulation testing */
+@media (pointer: fine){
+  body:not(.debug-mode) #fz-ctrl label:has(#gyro-cb),
+  body:not(.debug-mode) #ls-cbs label:has(#gyro-ls){ display:none !important; }
 }
 /* joystick visibility controlled by JS (showJoy) only — no CSS breakpoint */
 /* landscape/wide (≥4:5) AND short (<879px): expand canvas; floor-zone stays visible so score is always accessible */
@@ -237,7 +265,7 @@ img.evo-locked{filter:brightness(0);opacity:0.45;}
      top = 431px - 64.3vw  (derived from W=495→113px, W=523→95px) */
   height:max(100%,54px);
   border-width:4px 54px 50px 54px;border-style:solid;border-color:transparent;
-  border-image:url('Sprites/claw_machine_bottom_tile.png')
+  border-image:url('Sprites/machine/claw_machine_bottom_tile.png')
     4 54 50 54 fill / clamp(0px, calc(431px - 64.3vw), 200px) 54px 50px 54px round;
 }
 
@@ -334,8 +362,9 @@ img.evo-locked{filter:brightness(0);opacity:0.45;}
           </div>
           <!-- CENTER: joystick + drop button -->
           <div id="joyctrl">
-            <img id="joy-img"  src="Sprites/joystick_released.png" alt="">
-            <img id="drop-btn" src="Sprites/button_released.png"   alt="">
+            <img id="joy-img"  src="Sprites/ui/joystick_released.png" alt="">
+            <img id="drop-btn" src="Sprites/ui/button_released.png"   alt="">
+            <div id="gyro-arrow">▼</div>
           </div>
           <!-- RIGHT: checkboxes -->
           <div id="fz-ctrl">
@@ -450,6 +479,11 @@ img.evo-locked{filter:brightness(0);opacity:0.45;}
       <tr><td>H</td><td>Toggle solid n-gon shapes</td></tr>
       <tr><td>S</td><td>Toggle spawn rate display</td></tr>
       <tr><td>2–9, 0, 1</td><td>Spawn rank 2–11</td></tr>
+      <tr><td>Q / E</td><td>Gyro tilt left / right (−5° / +5°)</td></tr>
+      <tr><td>R</td><td>Reset gyro tilt to 0°</td></tr>
+      <tr><td>G + mouse</td><td>Hold G, move mouse ←→ to tilt</td></tr>
+      <tr><td>F + mouse</td><td>Hold F, flick mouse fast to shake</td></tr>
+      <tr><td>M</td><td>Toggle merge on/off <input type="checkbox" id="dbg-nomerge-cb" onchange="noMerge=this.checked" style="margin-left:4px;cursor:pointer;vertical-align:middle;"></td></tr>
       </tbody>
     </table>
     <!-- gamepad tab -->
@@ -472,6 +506,8 @@ const IS_DEBUG = false; // set to false on release branch
 if(!IS_DEBUG){
   const dbgSection=document.getElementById('help-debug-section');
   if(dbgSection) dbgSection.style.display='none';
+} else {
+  document.body.classList.add('debug-mode');
 }
 
 // ── DATA ──────────────────────────────────────────────────────────────
@@ -538,17 +574,17 @@ const CLAW_OPEN_FRAMES=18;
 const clawImg={
   back :new Image(), front:new Image(), open:new Image()
 };
-clawImg.back.src ='Sprites/claw_back.png';
-clawImg.front.src='Sprites/claw_front.png';
-clawImg.open.src ='Sprites/claw_open.png';
+clawImg.back.src ='Sprites/claw/claw_back.png';
+clawImg.front.src='Sprites/claw/claw_front.png';
+clawImg.open.src ='Sprites/claw/claw_open.png';
 
 // Reflection corner cover sprites
 const coverImg={ top:new Image(), bot:new Image() };
-coverImg.top.src='Sprites/claw_machine_top_left_reflection_cover.png';
-coverImg.bot.src='Sprites/claw_machine_bottom_left_reflection_cover.png';
+coverImg.top.src='Sprites/machine/claw_machine_top_left_reflection_cover.png';
+coverImg.bot.src='Sprites/machine/claw_machine_bottom_left_reflection_cover.png';
 // Trap door sprite
 const trapDoorImg=new Image();
-trapDoorImg.src='Sprites/claw_machine_floor_tile.png';
+trapDoorImg.src='Sprites/machine/claw_machine_floor_tile.png';
 
 const dpr=window.devicePixelRatio||1;
 
@@ -754,6 +790,7 @@ function detectMerges(){
 
 function processMerges(){
   if(!mergeQ.length) return;
+  if(IS_DEBUG && noMerge){ mergeQ=[]; return; }
   const pairs=mergeQ.splice(0).sort((a,b)=>Math.max(b[0],b[1])-Math.max(a[0],a[1]));
   const toRemove=new Set(), toAdd=[];
   let wipeOutPos=null;
@@ -784,6 +821,39 @@ function processMerges(){
   if(wipeOutPos) triggerWipeOut(wipeOutPos.x,wipeOutPos.y);
 }
 
+// ── CLEAR sequence — triple glare, sparkles, wipeout SFX ─────────────
+// Called by both WIPE OUT and restart.
+function triggerClear(){
+  if(showClaw){
+    triggerGlare();
+    setTimeout(triggerGlare,300);
+    setTimeout(triggerGlare,620);
+  }
+  sfxWipeOut();
+  // Sparkle emitter: starts at 2nd glare (t=300), 10 particles/s for 2s = 20 particles
+  const SPARKLE_EMITTER_LIFETIME=2000; // ms
+  const SPARKLE_INTERVAL=100;          // 10/s
+  setTimeout(()=>{
+    const emitterEnd=Date.now()+SPARKLE_EMITTER_LIFETIME;
+    const emitOne=()=>{
+      if(Date.now()>=emitterEnd) return;
+      const baseR=10+Math.random()*18;
+      sparkles.push({
+        x:PAD+Math.random()*(W-PAD*2),
+        y:Math.random()*H,
+        r:baseR, baseR,
+        rot:0,
+        color:'#ffffff',
+        life:1.2+Math.random()*0.8,
+        delay:0,
+        phase:Math.random()*Math.PI*2
+      });
+      setTimeout(emitOne, SPARKLE_INTERVAL);
+    };
+    emitOne();
+  },300);
+}
+
 // ── WIPE OUT ──────────────────────────────────────────────────────────
 function triggerWipeOut(x,y){
   wipeOutActive=true;
@@ -809,7 +879,7 @@ function triggerWipeOut(x,y){
     totalPts+=PTS_M[p.level];
     p.vy=Math.max(p.vy, 1+Math.random()*2); // gentle downward nudge
   }
-  danger={}; mergeQ=[];
+  danger={}; mergeQ=[]; _gyroMultiDangerSince=null;
   score+=totalPts; if(score>best) best=score;
   updUI();
   // Massive confetti burst
@@ -830,35 +900,8 @@ function triggerWipeOut(x,y){
   // Big total points popup
   if(totalPts>0)
     popups.push({x:W/2,y:H/2+60,text:'+'+totalPts.toLocaleString(),color:'#f0c500',life:1.8,big:true});
-  // Triple glare sweep: t=0, t=300, t=620
-  if(showClaw){
-    triggerGlare();
-    setTimeout(triggerGlare,300);
-    setTimeout(triggerGlare,620);
-  }
-  sfxWipeOut();
-  // Sparkle emitter: starts at 2nd glare (t=300), 10 particles/s for 2s = 20 particles
-  const SPARKLE_EMITTER_LIFETIME=2000; // ms
-  const SPARKLE_INTERVAL=100;          // 10/s
-  setTimeout(()=>{
-    const emitterEnd=Date.now()+SPARKLE_EMITTER_LIFETIME;
-    const emitOne=()=>{
-      if(Date.now()>=emitterEnd) return;
-      const baseR=10+Math.random()*18;
-      sparkles.push({
-        x:PAD+Math.random()*(W-PAD*2),
-        y:Math.random()*H,
-        r:baseR, baseR,
-        rot:0,          // no rotation
-        color:'#ffffff',
-        life:1.2+Math.random()*0.8, // longer lifetime
-        delay:0,
-        phase:Math.random()*Math.PI*2
-      });
-      setTimeout(emitOne, SPARKLE_INTERVAL);
-    };
-    emitOne();
-  },300);
+  // Triple glare + sparkles + SFX (shared with restart CLEAR sequence)
+  triggerClear();
   // Level state updates at last glare (t=620), announcement delayed 500ms more (t=1120)
   setTimeout(()=>{
     gameLevel++;
@@ -928,6 +971,7 @@ function sfxLevelUp(){
 }
 
 // ── GAME OVER ─────────────────────────────────────────────────────────
+let _gyroMultiDangerSince = null; // timestamp when 3+ plushies first went above line (gyro mode)
 function checkDanger(){
   const now=Date.now();
   let dangerCount=0;
@@ -935,10 +979,21 @@ function checkDanger(){
     if(p.y<DY&&p.speed<1.4&&now-p.born>1000){
       danger[p.born]=danger[p.born]??now;
       dangerCount++;
-      if(now-danger[p.born]>1000){gameOver();return;} // single plushie above line for 1s
+      if(!gyroOn && now-danger[p.born]>1000){gameOver();return;} // normal: single plushie for 1s
     } else delete danger[p.born];
   }
-  if(dangerCount>=3){gameOver();} // 3+ plushies above line simultaneously
+  if(gyroOn){
+    // gyro: lose only if 3+ plushies hold above the line for 1s continuously
+    if(dangerCount>=3){
+      _gyroMultiDangerSince = _gyroMultiDangerSince ?? now;
+      if(now - _gyroMultiDangerSince > 1000){ gameOver(); }
+    } else {
+      _gyroMultiDangerSince = null; // reset if count drops below 3
+    }
+  } else {
+    _gyroMultiDangerSince = null;
+    if(dangerCount>=3){gameOver();} // normal: 3+ simultaneously
+  }
 }
 
 function gameOver(){
@@ -955,6 +1010,7 @@ function restart(){
   cur=rnd(); nxt=rnd(); updNext();
   clawState='idle'; clawY=DROPY; clawLvl=cur;
   resetClawForNewRound();
+  triggerClear(); // CLEAR animation on restart
   resumeLoop(); // restart the paused animation loop
 }
 
@@ -1197,7 +1253,7 @@ function loop(){
   }
   // remove fall-through plushies once fully below the canvas
   if(wipeOutActive) plushies=plushies.filter(p=>p.y-p.r<H+80); // remove once fully off-screen
-  tickParts(); tickPopups(); tickConfetti(); tickSparkles(); tickCelebrations(); if(!dead) checkDanger(); if(showClaw) tickGlare(); render();
+  tickParts(); tickPopups(); tickConfetti(); tickSparkles(); tickCelebrations(); if(!dead) checkDanger(); if(showClaw) tickGlare(); tickShakeCooldown(); render();
   if(!dead) requestAnimationFrame(loop); // pause loop on game-over to save battery
 }
 function resumeLoop(){ requestAnimationFrame(loop); }
@@ -1399,7 +1455,7 @@ function render(){
   ctx.textAlign='right';
   ctx.font=`${Math.round(9*FS)}px 'Segoe UI',system-ui,sans-serif`;
   ctx.fillStyle='rgba(90,56,32,0.45)';
-  ctx.fillText('v21',W-dzPad-4,DY-5);
+  ctx.fillText('v22',W-dzPad-4,DY-5);
   // TAP TO DROP hint — big, slowly blinking at tank center
   if(tapHint && !dead && !wipeOutActive){
     const pulse=0.4+0.6*Math.abs(Math.sin(Date.now()/700)); // 0.4–1.0, ~1.4s period
@@ -1702,7 +1758,7 @@ function loadSprites(cb){
   for(let lvl=1;lvl<=11;lvl++){
     const img=new Image();
     img.onload=img.onerror=()=>{ if(++done===11){ prerenderSprites(); cb(); } };
-    img.src=`Sprites/level_${lvl}.png`;
+    img.src=`Sprites/characters/level_${lvl}.png`;
     imgSprites[lvl]=img;
   }
 }
@@ -1936,7 +1992,7 @@ function updateClaw(){
 
 // ── INPUT ─────────────────────────────────────────────────────────────
 function clamp(x,lvl){const r=PD[lvl].r;return Math.max(PAD+r+1,Math.min(W-PAD-r-1,x));}
-let dbg=false, dbgPoly=false, solidMode=false;
+let dbg=false, dbgPoly=false, solidMode=false, noMerge=false;
 // joystick on by default on PC (non-touch), off on touch devices
 let showJoy=!window.matchMedia('(pointer:coarse)').matches;
 const isMobile=window.matchMedia('(pointer:coarse)').matches;
@@ -1971,14 +2027,14 @@ let btnPressTO=null;
 
 function updateJoyDir(dir){ // dir: 'left'|'right'|'none'
   const img=joyImg(); if(!img) return;
-  if(dir==='none'){ img.src='Sprites/joystick_released.png'; img.classList.remove('flip'); }
-  else { img.src='Sprites/joystick_tilted.png'; img.classList.toggle('flip', dir==='right'); }
+  if(dir==='none'){ img.src='Sprites/ui/joystick_released.png'; img.classList.remove('flip'); }
+  else { img.src='Sprites/ui/joystick_tilted.png'; img.classList.toggle('flip', dir==='right'); }
 }
 function flashDropBtn(){
   const btn=dropBtn(); if(!btn) return;
-  btn.src='Sprites/button_pressed.png';
+  btn.src='Sprites/ui/button_pressed.png';
   clearTimeout(btnPressTO);
-  btnPressTO=setTimeout(()=>{ btn.src='Sprites/button_released.png'; }, 300);
+  btnPressTO=setTimeout(()=>{ btn.src='Sprites/ui/button_released.png'; }, 300);
 }
 function toggleJoy(){
   showJoy=!showJoy;
@@ -1997,6 +2053,17 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){ toggleHelp(false); return; }
   // ── DEBUG only ─────────────────────────────────────
   if(IS_DEBUG){
+    // Q/E: simulate gyro tilt left/right (±5° per press); R resets tilt
+    if(e.key==='q'||e.key==='Q'){ _simGyro(tiltAngle*180/Math.PI - 5); return; }
+    if(e.key==='e'||e.key==='E'){ _simGyro(tiltAngle*180/Math.PI + 5); return; }
+    if(e.key==='r'||e.key==='R'){ _simGyro(0); return; }
+    if(e.key==='m'||e.key==='M'){
+      noMerge=!noMerge;
+      const cb=document.getElementById('dbg-nomerge-cb'); if(cb) cb.checked=noMerge;
+      _gyroHud(noMerge ? '🚫 MERGE OFF' : '✅ MERGE ON');
+      setTimeout(()=>{ if(!_gKeyDown&&!_fKeyDown) _gyroHud(null); }, 1500);
+      return;
+    }
     if(e.key==='s'||e.key==='S'){ showSpawnRate=!showSpawnRate; updateEvoLabels(); return; }
     if(e.key==='d'||e.key==='D'){ dbg=!dbg; if(dbg)dbgPoly=false; return; }
     if(e.key==='c'||e.key==='C'){ dbgPoly=!dbgPoly; if(dbgPoly){dbg=false;solidMode=false;} return; }
@@ -2064,6 +2131,7 @@ function drop(){
 }
 function setMx(raw){ mx=Math.max(PAD,Math.min(W-PAD,raw)); }
 cv.addEventListener('mousemove',e=>{
+  if(typeof _gKeyDown !== 'undefined' && _gKeyDown) return; // G held = tilt sim
   const r=cv.getBoundingClientRect();
   setMx((e.clientX-r.left)*(W/r.width));
 });
@@ -2189,7 +2257,7 @@ function drawAtFit(c,cW,cH,lvl,alpha=1){
 }
 function updNext(){
   const name=PD[nxt].name;
-  nc.src=`Sprites/level_${nxt}.png`;
+  nc.src=`Sprites/characters/level_${nxt}.png`;
   nctxls.clearRect(0,0,98,80); drawAtFit(nctxls,98,80,nxt);
   document.getElementById('nl-ls').textContent=name;
   const lbl=document.getElementById('fz-next-label');
@@ -2200,7 +2268,7 @@ function buildEvo(){
   const es=document.getElementById('ev-s'); es.innerHTML='';
   for(let i=1;i<=11;i++){
     const sc=i<=8?'transform:scale(1.3);transform-origin:center;':'';
-    const base=`src="Sprites/level_${i}.png" data-unlock-lvl="${i}" style="object-fit:contain;flex-shrink:0;${sc}"`;
+    const base=`src="Sprites/characters/level_${i}.png" data-unlock-lvl="${i}" style="object-fit:contain;flex-shrink:0;${sc}"`;
     // landscape row
     const row=document.createElement('div');
     row.style.cssText='display:flex;align-items:center;gap:6px;padding:0;';
@@ -2243,7 +2311,7 @@ function updateHelpMeta(){
   const meta=document.getElementById('help-meta');
   if(!meta) return;
   const vw=window.innerWidth,vh=window.innerHeight;
-  meta.textContent=`v21  ·  ${vw}×${vh}  ar:${(vw/vh).toFixed(3)}`;
+  meta.textContent=`v22  ·  ${vw}×${vh}  ar:${(vw/vh).toFixed(3)}`;
 }
 let _helpTab='kb';
 function showHelpTab(tab){
@@ -2357,13 +2425,6 @@ const MSFX=[null,
 function sfxMerge(lvl){
   if(muted)return;
   (MSFX[lvl]||[]).forEach(([f,d,t,v,u])=>tone(f,d,t,v,u));
-  // speak name — give it a moment to avoid overlap with SFX
-  setTimeout(()=>{
-    if(muted||!window.speechSynthesis)return;
-    const u=new SpeechSynthesisUtterance(PD[lvl]?.name||'');
-    u.rate=1.05; u.pitch=1.4-(lvl*0.05); u.volume=0.85;
-    speechSynthesis.cancel(); speechSynthesis.speak(u);
-  },220);
 }
 
 // BGM — cheerful 8-bar C-major melody, loops forever
@@ -2413,16 +2474,167 @@ function toggleBGMAll(v){
 }
 
 // ── GYRO / TILT ───────────────────────────────────────────────────────
-const TILT_MAX_DEG = 15;                          // configurable cap (degrees)
-const TILT_MAX = TILT_MAX_DEG * Math.PI / 180;   // in radians
 let tiltAngle = 0;   // current effective tilt (radians), updated by deviceorientation
 let gyroOn = false;
 
 function onDeviceOrientation(e){
   if(e.gamma === null) return;
   // gamma: left(-) / right(+), degrees. Portrait mode is the natural frame.
-  const raw = e.gamma * Math.PI / 180;
-  tiltAngle = Math.max(-TILT_MAX, Math.min(TILT_MAX, raw));
+  tiltAngle = e.gamma * Math.PI / 180;  // unclamped — full ±90° range
+  updateGyroArrow(e.gamma);
+}
+
+// ── GYRO ARROW ────────────────────────────────────────────────────────
+function updateGyroArrow(gammaDeg){
+  const el=document.getElementById('gyro-arrow');
+  if(!el) return;
+  el.style.transform=`rotate(${-gammaDeg}deg)`;
+}
+function showGyroArrow(v){
+  const jc=joyEl(); if(!jc) return;
+  const arrow=document.getElementById('gyro-arrow');
+  const joyImg=document.getElementById('joy-img');
+  const dropBtnEl=document.getElementById('drop-btn');
+  if(!arrow) return;
+  if(v){
+    jc.style.display='flex';
+    arrow.classList.add('visible');
+    // hide joystick images so arrow takes center stage
+    if(joyImg)   joyImg.style.display='none';
+    if(dropBtnEl) dropBtnEl.style.display='none';
+  } else {
+    arrow.classList.remove('visible');
+    // restore joystick images if joy is supposed to be visible
+    if(showJoy){
+      if(joyImg)   joyImg.style.display='';
+      if(dropBtnEl) dropBtnEl.style.display='';
+    }
+    if(!showJoy) jc.style.display='none';
+  }
+}
+
+// ── SHAKE / PUSH FORCE ────────────────────────────────────────────────
+// applyShakeForce(fx, fy): push all plushies with a directional force.
+// fx/fy are already in game-units/frame — caller is responsible for scaling.
+const SHAKE_FORCE_SCALE = 0.06; // tuning knob
+function applyShakeForce(fx, fy){
+  plushies.forEach(p=>{ p.vx += fx; p.vy += fy; });
+}
+
+// DeviceMotion: use acceleration directly as a directional force each event.
+// acceleration (without gravity) gives the net movement vector in m/s².
+// We map it: right=+x, down=+y in screen space (portrait: ax→vx, -ay→vy).
+let _prevAccel = null;
+function onDeviceMotion(e){
+  const a = e.acceleration; // without gravity — cleaner than includingGravity
+  if(!a || a.x==null) return;
+  // portrait screen: phone x-axis = screen x, phone y-axis = screen y (inverted)
+  const fx = a.x  * SHAKE_FORCE_SCALE;
+  const fy = -a.y * SHAKE_FORCE_SCALE; // phone +y = up, screen +y = down
+  if(Math.abs(fx) > 0.05 || Math.abs(fy) > 0.05) applyShakeForce(fx, fy);
+}
+
+// legacy no-arg shake kept for Q/E keyboard path
+let _shakeCD = 0;
+function _triggerShake(){
+  if(_shakeCD>0) return; _shakeCD=18;
+  plushies.forEach(p=>{ p.vx+=(Math.random()-.5)*3; p.vy-=Math.random()*3; });
+}
+function tickShakeCooldown(){ if(_shakeCD>0) _shakeCD--; }
+
+// Debug helper: simulate tilt with a given gamma (degrees)
+function _simGyro(gammaDeg){
+  if(!gyroOn) enableGyro();
+  onDeviceOrientation({ gamma: Math.max(-90, Math.min(90, gammaDeg)) });
+}
+
+// ── DEBUG MOUSE GYRO SIM (IS_DEBUG only) ──────────────────────────────
+// Hold G + move mouse left/right  → tilt (gamma). No mouse button needed.
+// Hold F + move mouse fast         → shake (any direction).
+// G and F can be held simultaneously.
+var _gKeyDown = false, _fKeyDown = false; // var so visible outside if(IS_DEBUG) block
+var _tiltPrevX = null;  // previous mouse X while G held, for delta accumulation
+var _shakeTrackX = 0, _shakeTrackY = 0, _shakeTrackT = 0;
+const GYRO_DRAG_SCALE = 0.4; // px delta → degrees delta
+
+function _gyroHud(msg){
+  const el=document.getElementById('gyro-drag-hud');
+  if(!el) return;
+  if(msg){ el.textContent=msg; el.classList.add('active'); }
+  else   { el.classList.remove('active'); }
+}
+function _updateGyroHud(){
+  if(!_gKeyDown && !_fKeyDown){ _gyroHud(null); return; }
+  const parts=[];
+  if(_gKeyDown) parts.push(`G ←→ tilt: ${(tiltAngle*180/Math.PI).toFixed(1)}°`);
+  if(_fKeyDown) parts.push(`F fast-move: shake`);
+  _gyroHud('🎮 ' + parts.join('   '));
+}
+
+if(IS_DEBUG){
+  document.addEventListener('keydown', e=>{
+    if(e.repeat) return;
+    if(e.key==='g'||e.key==='G'){
+      _gKeyDown=true;
+      if(!gyroOn) enableGyro();
+      _tiltPrevX=null;
+      if(!_fKeyDown) showGyroArrow(true);
+      updateGyroArrow(tiltAngle*180/Math.PI);
+      _updateGyroHud();
+    }
+    if(e.key==='f'||e.key==='F'){
+      _fKeyDown=true;
+      if(!gyroOn) enableGyro();
+      _shakeTrackT=0;
+      if(!_gKeyDown) showGyroArrow(true);
+      updateGyroArrow(tiltAngle*180/Math.PI);
+      _updateGyroHud();
+    }
+  });
+  document.addEventListener('keyup', e=>{
+    if(e.key==='g'||e.key==='G'){
+      _gKeyDown=false; _tiltPrevX=null;
+      if(!_fKeyDown) showGyroArrow(false);
+      _updateGyroHud();
+    }
+    if(e.key==='f'||e.key==='F'){
+      _fKeyDown=false;
+      if(!_gKeyDown) showGyroArrow(false);
+      _updateGyroHud();
+    }
+  });
+
+  document.addEventListener('mousemove', e=>{
+    if(!_gKeyDown && !_fKeyDown) return;
+
+    if(_gKeyDown){
+      if(_tiltPrevX !== null){
+        // delta mouse X → delta gamma (accumulates on top of existing tilt)
+        const ddeg = (e.clientX - _tiltPrevX) * GYRO_DRAG_SCALE;
+        const newGamma = Math.max(-90, Math.min(90,
+                          tiltAngle * 180/Math.PI + ddeg));
+        tiltAngle = newGamma * Math.PI / 180;
+        updateGyroArrow(newGamma);
+      }
+      _tiltPrevX = e.clientX;
+    }
+
+    if(_fKeyDown){
+      const now = performance.now();
+      const dt = now - _shakeTrackT;
+      if(_shakeTrackT > 0 && dt > 0 && dt < 80){
+        const ddx = e.clientX - _shakeTrackX;
+        const ddy = e.clientY - _shakeTrackY;
+        // velocity in px/ms → scale to game units/frame force
+        const fx = -(ddx / dt) * 1.2;
+        const fy = -(ddy / dt) * 1.2;
+        if(Math.abs(fx) > 0.05 || Math.abs(fy) > 0.05) applyShakeForce(fx, fy);
+      }
+      _shakeTrackX=e.clientX; _shakeTrackY=e.clientY; _shakeTrackT=now;
+    }
+
+    _updateGyroHud();
+  });
 }
 
 function _syncGyroCb(v){ const cb=document.getElementById('gyro-cb'); if(cb) cb.checked=v; }
@@ -2442,15 +2654,31 @@ function toggleGyro(){
 function _syncGyroBoth(v){
   ['gyro-cb','gyro-ls'].forEach(id=>{ const el=document.getElementById(id); if(el) el.checked=v; });
 }
+function _requestMotionPermission(cb){
+  if(typeof DeviceMotionEvent !== 'undefined' &&
+     typeof DeviceMotionEvent.requestPermission === 'function'){
+    DeviceMotionEvent.requestPermission()
+      .then(s=>{ if(s==='granted') cb(); })
+      .catch(()=>{}); // motion permission failure is non-fatal
+  } else {
+    cb(); // Android / desktop — no permission needed
+  }
+}
 function enableGyro(){
   window.addEventListener('deviceorientation', onDeviceOrientation);
+  _requestMotionPermission(()=>{
+    window.addEventListener('devicemotion', onDeviceMotion);
+  });
   gyroOn = true;
   _syncGyroBoth(true);
+  showGyroArrow(true);
 }
 function disableGyro(){
   window.removeEventListener('deviceorientation', onDeviceOrientation);
-  gyroOn = false; tiltAngle = 0;
+  window.removeEventListener('devicemotion', onDeviceMotion);
+  gyroOn = false; tiltAngle = 0; _prevAccel=null;
   _syncGyroBoth(false);
+  showGyroArrow(false);
 }
 
 // ── VIEWPORT SCALE ────────────────────────────────────────────────────
@@ -2518,5 +2746,6 @@ function dismissFsPrompt(){
   document.getElementById('fs-prompt').classList.add('show');
 })();
 </script>
+<div id="gyro-drag-hud"></div>
 </body>
 </html>

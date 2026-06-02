@@ -15,29 +15,65 @@ Live at: https://DancingPhoenix88.github.io/plushie-drop/
 ## File structure
 
 ```
-index.html       — everything: CSS + HTML + JS
-sw.js            — service worker (cache name = plushie-vN, must bump on every release)
-manifest.json    — PWA icons and display config
-CHANGES.md       — version changelog
-README.md        — player-facing docs
-Sprites/         — all sprite PNGs
-  level_1.png … level_11.png
-  app_icon.png   — PWA/homescreen icon (must exist; currently referenced but not yet created)
-  checkbox_bg.png, checkbox_tick.png
-  joystick_released.png, joystick_tilted.png, button_released.png
-  claw_machine_*.png — UI chrome sprites
+index.html          — everything: CSS + HTML + JS
+sw.js               — service worker (cache name = plushie-vN, must bump on every release)
+manifest.json       — PWA icons and display config
+CHANGES.md          — version changelog
+README.md           — player-facing docs
+Sprites/
+  characters/       — level_0.png … level_11.png (plushie sprites)
+  claw/             — claw_back.png, claw_front.png, claw_open.png
+  machine/          — claw_machine_*.png (UI chrome: top/middle/bottom tiles, floor, covers, score bg)
+  ui/               — checkbox_bg.png, checkbox_tick.png, joystick_*.png, button_*.png
+  icons/            — app_icon.png (PWA/homescreen icon; must exist — currently referenced but not yet created)
+dev/                — dev/experimental tools, not deployed
+  tool_9slice.html  — 9-slice border-image preview tool
+  index-pixijs.html — PixiJS experiment (not production)
 ```
 
 ---
 
 ## Version bumping (REQUIRED on every commit with user-visible changes)
 
-Three files must change together — never skip any:
+Four places must change together — never skip any:
 1. `sw.js` line 1: `const CACHE = 'plushie-vN'`
 2. `index.html`: `ctx.fillText('vN', ...)` (near the DANGER line draw)
-3. `CHANGES.md`: new section at top, rename old `(current)` → plain heading
+3. `index.html`: `meta.textContent = \`vN · ...\`` (in `updateHelpMeta()`)
+4. `CHANGES.md`: new section at top, rename old `(current)` → plain heading
 
-Help popup also shows version: `meta.textContent = \`vN · ...\`` — update that too.
+---
+
+## `bumpsup` workflow
+
+When Hoang says **`bumsup`** (his shorthand), do all of the following:
+
+**Step 1 — Claude does (files):**
+- Bump version in all 4 places above
+- Write new `## vN (current)` section in `CHANGES.md` summarising changes since last version
+
+**Step 2 — git commands for Hoang to run:**
+```bash
+git add index.html sw.js CHANGES.md
+git commit -m "vN: <one-line summary>"
+git push origin main
+git checkout release
+git merge main --no-ff -m "release vN"
+sed -i '' 's/const IS_DEBUG = true/const IS_DEBUG = false/' index.html
+git add index.html
+git commit --amend --no-edit
+git push origin release
+git checkout main
+```
+
+**Why the sed:** `main` always has `IS_DEBUG = true`; `release` always has `IS_DEBUG = false`. The sed ensures that after merging, release stays in release mode without ever manually editing that line.
+
+---
+
+## DEBUG / RELEASE branches
+
+- `main` → development, `IS_DEBUG = true` — debug keyboard shortcuts active, debug section in help popup visible
+- `release` → production (GitHub Pages deploys this), `IS_DEBUG = false` — debug features hidden
+- Never manually edit `IS_DEBUG` on `release` — the `bumpsup` sed handles it every time
 
 ---
 

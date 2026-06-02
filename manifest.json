@@ -1,6 +1,6 @@
 {
-  "name": "Plushie Drop",
-  "short_name": "Plushie",
+  "name": "BB Tower",
+  "short_name": "BB Tower",
   "description": "Drop and merge cute plushies!",
   "start_url": "./index.html",
   "display": "standalone",
@@ -8,7 +8,7 @@
   "background_color": "#e8d4b8",
   "theme_color": "#c87830",
   "icons": [
-    { "src": "Sprites/app_icon.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "Sprites/app_icon.png", "sizes": "512x512", "type": "image/png" }
+    { "src": "Sprites/icons/app_icon.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "Sprites/icons/app_icon.png", "sizes": "512x512", "type": "image/png" }
   ]
 }
