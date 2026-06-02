@@ -1,271 +1,6 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-<title>BB Tower</title>
-<link rel="manifest" href="manifest.json">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Righteous&display=swap" rel="stylesheet">
-<meta name="theme-color" content="#c87830">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="BB Tower">
-<link rel="icon" href="Sprites/icons/app_icon.png">
-<link rel="apple-touch-icon" href="Sprites/icons/app_icon.png">
-<!-- PixiJS v8 -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/8.9.1/pixi.min.js"></script>
-<style>
-:root{color-scheme:light}
-*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;}
-html,body{width:100vw;height:100dvh;overflow:hidden;position:relative;font-family:'Segoe UI',system-ui,sans-serif;
-  background-color:#A47966;}
-#game-root{
-  position:absolute;top:50%;left:50%;
-  transform:translate(-50%,-50%);transform-origin:center center;
-  display:flex;flex-direction:column;align-items:center;
-}
-.cw{position:relative;}
-#gc{display:block;cursor:crosshair;touch-action:none;}
-#ov{display:none;position:fixed;inset:0;z-index:9999;background:rgba(253,246,240,.93);flex-direction:column;align-items:center;justify-content:center;gap:8px;}
-#ov.show{display:flex;}
-#ov h2{font-size:20px;font-weight:500;color:#5a3820;}
-#ov .sub{font-size:12px;color:#a09078;}
-#ov .fs{font-size:28px;font-weight:500;color:#c05020;}
-#ov button{margin-top:4px;padding:10px 26px;background:#c05020;color:#fff;border:none;border-radius:8px;font-size:13px;font-family:inherit;cursor:pointer;}
-#fs-prompt{display:none;position:fixed;inset:0;z-index:10000;background:rgba(253,246,240,.96);align-items:center;justify-content:center;}
-#fs-prompt.show{display:flex;}
-#fs-prompt-box{text-align:center;padding:28px 32px;background:#fff8f2;border:1px solid #dfc8b0;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,.10);}
-#fs-prompt button{padding:10px 26px;background:#c05020;color:#fff;border:none;border-radius:8px;font-size:13px;font-family:inherit;cursor:pointer;}
-#help-popup{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:999;align-items:center;justify-content:center;}
-#help-popup.show{display:flex;}
-#help-box{background:#fdf6f0;border-radius:14px;padding:20px 24px;max-width:340px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.3);}
-#help-box h3{font-size:14px;font-weight:600;color:#5a3820;margin-bottom:12px;text-align:center;letter-spacing:.05em;text-transform:uppercase;}
-#help-box table{width:100%;border-collapse:collapse;font-size:12px;}
-#help-box td{padding:4px 6px;color:#5a3820;}
-#help-box td:first-child{font-family:monospace;background:#f0e4d4;border-radius:4px;text-align:center;width:80px;font-weight:600;color:#c05020;}
-#help-box tr+tr td{border-top:.5px solid #e8d8c8;}
-#help-box .close-btn{display:block;margin:14px auto 0;padding:7px 22px;background:#c05020;color:#fff;border:none;border-radius:8px;font-size:12px;font-family:inherit;cursor:pointer;}
-.lbl{font-size:10px;color:#b09878;text-align:center;letter-spacing:.06em;text-transform:uppercase;}
-.val{font-size:21px;font-weight:500;color:#5a3820;text-align:center;margin:2px 0 8px;}
-.sep{border:none;border-top:.5px solid #dfc8b0;margin:7px 0;}
-#top-tile{
-  width:calc(460px + var(--bms)*2);
-  border-width:24px;border-style:solid;border-color:transparent;
-  border-image:url('Sprites/machine/claw_machine_top_tile.png') 48 fill / 24px round;
-  display:flex;align-items:center;justify-content:center;
-}
-#top-tile h1{font-size:14px;font-weight:700;color:#5a3820;letter-spacing:.1em;text-transform:uppercase;position:relative;z-index:1;}
-#main-content{flex-shrink:0;}
-#game-frame{
-  width:100%;height:100%;position:relative;overflow:hidden;
-  border-style:solid;border-color:transparent;border-width:0;
-  border-image:url('Sprites/machine/claw_machine_middle_tile.png') 70 116 240 116 fill / 6.08% 16.11% 22.57% 16.11% round;
-}
 
-/* .cw: canvas area — 632×1049 at 720×1280 reference */
-#game-frame .cw{
-  position:absolute;
-  top:calc(11/1280*100%);
-  left:calc(45/720*100%);
-  width:calc(632/720*100%);
-  height:calc(1049/1280*100%);
-  overflow:hidden;
-}
-#game-frame canvas{display:block;width:100%;height:auto;aspect-ratio:632/1049;}
-#floor-zone{
-  position:absolute;
-  left:calc(20/720*100%);right:calc(20/720*100%);
-  bottom:calc(82/1280*100%);
-  height:calc(112/1280*100%);
-  border-style:solid;border-color:transparent;border-width:0;
-}
-#fz-inner{position:absolute;inset:0;overflow:hidden;margin:0 10px;}
-#fz-scorenext{
-  position:absolute;left:0;top:10%;bottom:0;
-  height:70%;aspect-ratio:174/60;
-  background:url('Sprites/machine/claw_machine_score_next_bg.png') no-repeat center/100% 100%;
-  display:flex;gap:0;padding:0;box-sizing:border-box;
-}
-#fz-score,#fz-next{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;flex:1;min-width:0;height:90%;}
-#fz-next{padding-right:4%;}
-.fz-label{font-size:clamp(6px,12%,9px);color:#8a6848;text-transform:uppercase;letter-spacing:.08em;text-align:center;line-height:1.2;font-family:'Segoe UI',system-ui,sans-serif;margin:12% 0 0 11%;}
-#fz-next-label{width:70%;margin-left:32%;}
-#nc{display:block;width:60%;height:auto;aspect-ratio:1;margin-top:-8%;margin-left:30%;}
-#sc-p{font-family:'Righteous','Share Tech Mono','Courier New',monospace;font-weight:400;color:#3a2010;white-space:nowrap;overflow:hidden;width:100%;text-align:center;display:flex;align-items:center;justify-content:center;font-size:30px;flex:1;}
-#joyctrl{position:absolute;left:50%;top:0;bottom:0;transform:translateX(-50%);height:100%;width:auto;display:none;align-items:flex-end;justify-content:center;gap:8%;pointer-events:none;padding-bottom:5%;box-sizing:border-box;}
-#joy-img{height:92%;width:auto;display:block;}
-#drop-btn{height:44%;width:auto;display:block;margin-left:-14%;}
-#joy-img.flip{transform:scaleX(-1);}
-#fz-ctrl{position:absolute;right:0;top:5%;height:80%;display:flex;align-items:stretch;justify-content:flex-end;gap:4px;padding:0;box-sizing:border-box;}
-#fz-ctrl button{background:none;border:.5px solid #dfc8b0;border-radius:8px;font-size:20px;padding:2px 6px;cursor:pointer;line-height:1;}
-#fz-ctrl button.active,#gyro-ls.active{background:#fde8d8;border-color:#c05020;}
-.cb-item{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:0;cursor:pointer;height:100%;}
-.cb-item .fz-label{font-size:clamp(5px,1.8vw,8px);margin-top:1px;position:relative;z-index:1;}
-input.sprite-cb{-webkit-appearance:none;appearance:none;height:72%;width:auto;aspect-ratio:1;flex-shrink:0;margin:0;cursor:pointer;background:url('Sprites/ui/checkbox_bg.png') no-repeat center/contain;}
-input.sprite-cb:checked{background-image:url('Sprites/ui/checkbox_tick.png');}
-.ap-dial{height:72%;width:auto;aspect-ratio:1;flex-shrink:0;margin:0;cursor:pointer;background:url('Sprites/ui/checkbox_bg.png') no-repeat center/contain;display:flex;align-items:center;justify-content:center;user-select:none;}
-.ap-dial .ap-seg{display:none;font-family:'Righteous','Share Tech Mono','Courier New',monospace;font-size:20px;font-weight:400;line-height:1;transform:translateX(-2px) skew(6deg, 0deg);}
-.ap-dial .ap-seg.active{display:block;color:#8b0000;text-shadow:0 0 6px #ff2020,0 0 14px #cc0000;}
-.ap-dial .ap-seg[data-spd="0"].active{display:block;color:transparent;text-shadow:none;}
-#gyro-arrow{display:none;flex-direction:column;align-items:center;justify-content:center;height:80%;width:auto;aspect-ratio:1;font-size:clamp(28px,8vw,52px);line-height:1;filter:drop-shadow(0 0 6px #f9a04088);transition:transform 0.1s linear;pointer-events:none;color:#f9a040;}
-#gyro-arrow.visible{display:flex;}
-#gyro-drag-hud{display:none;position:fixed;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.72);color:#f9a040;font-family:'Share Tech Mono','Courier New',monospace;font-size:12px;padding:5px 14px;border-radius:20px;pointer-events:none;z-index:9999;white-space:nowrap;letter-spacing:.04em;}
-#gyro-drag-hud.active{display:block;}
-@media (pointer:fine){body:not(.debug-mode) #fz-ctrl label:has(#gyro-cb),body:not(.debug-mode) #ls-cbs label:has(#gyro-ls){display:none !important;}}
-@media (min-aspect-ratio: 4/5) and (max-height: 878px){#ev-s{display:none !important;}#game-frame .cw{bottom:0 !important;height:auto !important;}}
-#ls-cbs{display:none;}
-@media (min-aspect-ratio: 4/5) and (max-height: 878px){#ls-cbs{display:flex;flex-wrap:wrap;justify-content:center;gap:0;padding-left:18px;}}
-#ev-s{position:absolute;left:calc(45/720*100%);right:calc(43/720*100%);bottom:0;height:calc(81/1280*100%);display:grid;grid-template-columns:repeat(11,1fr);gap:2px;box-sizing:border-box;padding-top:8px;}
-#ev-s .en{font-size:6px;color:#8a7060;text-align:center;background-color:#fcf1e0;border:1px solid #5b231d;display:block;width:39px;padding:2px 0;border-radius:8px;margin-top:-5px;}
-#ev-s .ec{display:flex;flex-direction:column;align-items:center;position:relative;}
-.ec-shadow{position:absolute;bottom:calc(1em + 3px);left:50%;transform:translateX(-50%);width:65%;height:3px;background:rgba(0,0,0,0.55);border-radius:50%;filter:blur(2.5px);pointer-events:none;}
-#ev-s img{width:100%;aspect-ratio:1;object-fit:contain;}
-img.evo-locked{filter:brightness(0);opacity:0.45;}
-#top-tile{display:flex;align-items:center;justify-content:center;width:100%;}
-#bottom-tile{position:relative;overflow:hidden;width:100%;}
-#bottom-tile::before{content:'';position:absolute;top:0;left:0;right:0;height:max(100%,54px);border-width:4px 54px 50px 54px;border-style:solid;border-color:transparent;border-image:url('Sprites/machine/claw_machine_bottom_tile.png') 4 54 50 54 fill / clamp(0px, calc(431px - 64.3vw), 200px) 54px 50px 54px round;}
-#evo-panel{width:118px;background:#fdf2ea;border:.5px solid #dfc8b0;border-radius:14px;padding:12px 10px;flex-shrink:0;overflow-y:auto;}
-.ar{display:flex;align-items:center;gap:6px;padding:4px 0;cursor:pointer;}
-.ar input{width:14px;height:14px;cursor:pointer;accent-color:#c05020;}
-.ar span{font-size:10px;color:#b09878;text-transform:uppercase;letter-spacing:.05em;}
-@media (max-aspect-ratio: 2/3){
-  html,body{height:100dvh;overflow:hidden;}
-  body{display:flex;flex-direction:column;align-items:center;}
-  #game-root{position:relative !important;top:auto !important;left:auto !important;transform:none !important;width:100%;height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;overflow:hidden;}
-  #ev-s .en{display:none;}
-  #top-tile{flex:0 0 auto;width:100%;}
-  #main-content{width:100%;aspect-ratio:9/16;flex-shrink:0;}
-  #bottom-tile{flex:1 1 0;width:100%;min-height:0;}
-  #evo-panel{display:none;}
-  #ev-s{display:grid;}
-}
-@media (min-aspect-ratio: 6/10) and (max-aspect-ratio: 2/3){
-  #top-tile{transform:translateY(11.25vw);}
-  #main-content{transform:translateY(11.25vw);}
-}
-@media (min-aspect-ratio: 2/3){
-  body{display:flex;}
-  #game-root{position:relative !important;top:auto !important;left:auto !important;transform:none !important;width:100vw;height:100dvh;overflow:hidden;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:10px;padding:0 10px;box-sizing:border-box;}
-  #top-tile,#bottom-tile{display:none;}
-  #main-content{height:100dvh;aspect-ratio:9/16;flex-shrink:0;}
-  #evo-panel{display:none;}
-}
-@media (min-aspect-ratio: 12/16){
-  #evo-panel{display:flex;flex-direction:column;align-self:center;height:auto;max-height:100dvh;overflow-y:auto;}
-  #ev-s .en{display:none;}
-}
-</style>
-</head>
-<body>
-<div id="game-root">
-  <div id="top-tile"><h1>BB Tower <span id="level-label" style="font-size:11px;opacity:0.7;letter-spacing:.06em;">· LV 1</span></h1></div>
-  <div id="main-content">
-    <div id="game-frame">
-      <div class="cw"><canvas id="gc" width="870" height="1046"></canvas></div>
-      <div id="floor-zone">
-        <div id="fz-inner">
-          <div id="fz-scorenext">
-            <div id="fz-score"><span class="fz-label">SCORE</span><span id="sc-p">0</span></div>
-            <div id="fz-next"><span class="fz-label" id="fz-next-label">NEXT</span><img id="nc" src="" alt="next"></div>
-          </div>
-          <div id="joyctrl">
-            <img id="joy-img" src="Sprites/ui/joystick_released.png" alt="">
-            <img id="drop-btn" src="Sprites/ui/button_released.png" alt="">
-            <div id="gyro-arrow">▼</div>
-          </div>
-          <div id="fz-ctrl">
-            <label class="cb-item"><input type="checkbox" class="sprite-cb" id="gyro-cb" onchange="toggleGyro();saveCbPrefs()"><span class="fz-label">GYRO</span></label>
-            <label class="cb-item"><input type="checkbox" class="sprite-cb" id="bgm-cb" onchange="toggleBGM(this.checked);saveCbPrefs()"><span class="fz-label">BGM</span></label>
-            <div class="cb-item" onclick="cycleAp()" id="ap-wrap">
-              <div class="ap-dial" id="ap"><span class="ap-seg" data-spd="0">0</span><span class="ap-seg" data-spd="1">1</span><span class="ap-seg" data-spd="2">2</span><span class="ap-seg" data-spd="3">3</span></div>
-              <span class="fz-label">AUTO</span>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div id="ev-s"></div>
-    </div>
-  </div>
-  <div id="evo-panel">
-    <div class="lbl">Score</div><div class="val" id="sc">0</div>
-    <hr class="sep">
-    <div class="lbl">Next</div>
-    <canvas id="nc-ls" width="98" height="80" style="display:block;margin:4px auto 0;"></canvas>
-    <div style="font-size:10px;color:#b09878;text-align:center;margin-top:3px;" id="nl-ls">—</div>
-    <hr class="sep">
-    <div class="lbl">Level</div><div class="val" id="gl-ls">1</div>
-    <hr class="sep">
-    <div class="lbl" style="margin-bottom:6px">Evolution</div>
-    <div id="ev"></div>
-    <hr class="sep">
-    <div id="ls-cbs">
-      <label class="cb-item"><input type="checkbox" class="sprite-cb" id="gyro-ls" onchange="toggleGyro()"><span class="fz-label">GYRO</span></label>
-      <label class="cb-item"><input type="checkbox" class="sprite-cb" id="bgm-ls" onchange="toggleBGM(this.checked)"><span class="fz-label">BGM</span></label>
-      <div class="cb-item" onclick="cycleAp()" id="ap-ls-wrap">
-        <div class="ap-dial" id="ap-ls"><span class="ap-seg" data-spd="0">0</span><span class="ap-seg" data-spd="1">1</span><span class="ap-seg" data-spd="2">2</span><span class="ap-seg" data-spd="3">3</span></div>
-        <span class="fz-label">AUTO</span>
-      </div>
-    </div>
-  </div>
-  <div id="bottom-tile"></div>
-</div>
-<div id="fs-prompt">
-  <div id="fs-prompt-box">
-    <div style="font-size:28px;margin-bottom:4px">⛶</div>
-    <div style="font-size:14px;font-weight:500;color:#5a3820;margin-bottom:6px">Full Screen</div>
-    <div id="fs-prompt-body"></div><div id="fs-prompt-action"></div>
-    <div style="margin-top:10px"><a onclick="dismissFsPrompt()" style="font-size:11px;color:#a09078;cursor:pointer;text-decoration:underline">Skip</a></div>
-  </div>
-</div>
-<div id="ov"><h2>Game Over!</h2><div class="sub">final score</div><div class="fs" id="fs">0</div><button onclick="restart()">Play Again ↺</button></div>
-<div id="help-popup">
-  <div id="help-box">
-    <!-- tab buttons — gamepad tab only shown when gamepad connected -->
-    <div id="help-tabs" style="display:flex;gap:6px;margin-bottom:10px;">
-      <button id="help-tab-kb"  onclick="showHelpTab('kb')"  style="flex:1;padding:4px 0;font-size:10px;font-family:inherit;border:1px solid #dfc8b0;border-radius:6px;cursor:pointer;background:#f0e4d4;color:#5a3820;font-weight:600;">⌨️ Keyboard</button>
-      <button id="help-tab-gp"  onclick="showHelpTab('gp')"  style="flex:1;padding:4px 0;font-size:10px;font-family:inherit;border:1px solid #dfc8b0;border-radius:6px;cursor:pointer;background:#fff8f2;color:#b09878;display:none;">🎮 Gamepad</button>
-    </div>
-    <!-- keyboard tab -->
-    <table id="help-content-kb">
-      <tr><td colspan="2" style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#b09878;padding:6px 6px 2px;font-weight:600;">Gameplay</td></tr>
-      <tr><td>← / →</td><td>Move aim (hold Shift for fast)</td></tr>
-      <tr><td>Space / ↓</td><td>Drop plushie</td></tr>
-      <tr><td>A</td><td>Cycle auto-drop speed (0→1→2→3)</td></tr>
-      <tr><td>? or /</td><td>Show this help</td></tr>
-      <tr><td>J</td><td>Toggle joystick display</td></tr>
-      <tbody id="help-debug-section">
-      <tr><td colspan="2" style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#b09878;padding:10px 6px 2px;font-weight:600;">Debug</td></tr>
-      <tr><td>W</td><td>Force WIPE OUT</td></tr>
-      <tr><td>[ / ]</td><td>Decrease / increase polygon sides</td></tr>
-      <tr><td>C</td><td>Show polygon colliders</td></tr>
-      <tr><td>D</td><td>Debug overlay (velocity / spin)</td></tr>
-      <tr><td>H</td><td>Toggle solid n-gon shapes</td></tr>
-      <tr><td>S</td><td>Toggle spawn rate display</td></tr>
-      <tr><td>2–9, 0, 1</td><td>Spawn rank 2–11</td></tr>
-      <tr><td>G + mouse</td><td>Hold G, drag mouse ←→ to simulate tilt</td></tr>
-      <tr><td>F + mouse</td><td>Hold F, flick mouse fast to simulate shake</td></tr>
-      <tr><td>M</td><td>Toggle merge on/off <input type="checkbox" id="dbg-nomerge-cb" onchange="noMerge=this.checked" style="margin-left:4px;cursor:pointer;vertical-align:middle;"></td></tr>
-      <tr><td>P</td><td>Pause simulation</td></tr>
-      <tr><td>.</td><td>Step one frame (while paused)</td></tr>
-      </tbody>
-    </table>
-    <!-- gamepad tab -->
-    <table id="help-content-gp" style="display:none;">
-      <tr><td colspan="2" style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#b09878;padding:6px 6px 2px;font-weight:600;">🎮 Xbox / Standard</td></tr>
-      <tr><td>Left Stick</td><td>Move aim</td></tr>
-      <tr><td>LT / RT</td><td>Speed up (hold)</td></tr>
-      <tr><td>A</td><td>Drop plushie</td></tr>
-      <tr><td>B</td><td>Show this help</td></tr>
-      <tr><td>LB / RB</td><td>Switch keyboard ↔ gamepad tab</td></tr>
-    </table>
-    <div id="help-meta" style="font-size:10px;color:#b09878;text-align:center;margin-top:10px;"></div>
-    <button class="close-btn" onclick="toggleHelp(false)">Close</button>
-  </div>
-</div>
-<script>
 'use strict';
-const IS_DEBUG = true; // set to false on release branch
+const IS_DEBUG = false; // set to false on release branch
 if(!IS_DEBUG){
   const dbgSection=document.getElementById('help-debug-section');
   if(dbgSection) dbgSection.style.display='none';
@@ -408,7 +143,7 @@ async function initPixi(){
   _dangerText=new PIXI.Text({text:'DANGER',style:{fontFamily:"'Segoe UI',system-ui,sans-serif",fontSize:Math.round(11*FS),fill:'#D23737'}});
   _dangerText.label='danger_label';_dangerText.x=W*0.1+5;_dangerText.y=DY-Math.round(14*FS);layerUI.addChild(_dangerText);
 
-  _versionText=new PIXI.Text({text:'v27',style:{fontFamily:"'Segoe UI',system-ui,sans-serif",fontSize:Math.round(9*FS),fill:'#5a3820'}});
+  _versionText=new PIXI.Text({text:'v28',style:{fontFamily:"'Segoe UI',system-ui,sans-serif",fontSize:Math.round(9*FS),fill:'#5a3820'}});
   _versionText.label='version_label';_versionText.anchor.set(1,1);_versionText.x=W-W*0.1-4;_versionText.y=DY-5;_versionText.alpha=0.45;layerUI.addChild(_versionText);
 
   _tapText=new PIXI.Text({text:'TAP TO DROP',style:{fontFamily:"'Righteous','Segoe UI',system-ui,sans-serif",fontSize:Math.round(36*FS),fontWeight:'400',fill:'#5a3820',stroke:{color:'#5a3820',width:1}}});
@@ -593,7 +328,134 @@ function checkDanger(){
     }
   }
 }
-function gameOver(){dead=true;document.getElementById('fs').textContent=score.toLocaleString();document.getElementById('ov').classList.add('show');}
+function sfxGameOver(){
+  if(muted)return;const a=getAC(),t=a.currentTime;
+  // sad descending arpeggio
+  [[392,.00,'sine',.25,.4],[330,.18,'sine',.22,.45],[261.63,.38,'sine',.2,.5],[196,.6,'sine',.18,.7]].forEach(([f,d,tp,v,u])=>tone(f,d,tp,v,u));
+  // low groan underneath
+  const o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a._sfxBus||a.destination);
+  o.type='sawtooth';o.frequency.setValueAtTime(120,t);o.frequency.linearRampToValueAtTime(60,t+1.2);
+  g.gain.setValueAtTime(0.08,t);g.gain.linearRampToValueAtTime(0,t+1.2);
+  o.start(t);o.stop(t+1.3);
+}
+// ── HIGHSCORE + RIVAL ────────────────────────────────────────────────
+const HS_KEY='plushie_highscore';
+const RIVAL_KEY='plushie_rival';
+let _highScore=0;
+function _loadHS(){ try{ _highScore=parseInt(localStorage.getItem(HS_KEY)||'0')||0; }catch(e){} }
+function _saveHS(v){ try{ localStorage.setItem(HS_KEY,v); }catch(e){} }
+function _loadRival(){ try{ const v=parseInt(localStorage.getItem(RIVAL_KEY)||'0')||0; return v||Math.round(700000+Math.random()*100000); }catch(e){ return Math.round(700000+Math.random()*100000); } }
+function _saveRival(v){ try{ localStorage.setItem(RIVAL_KEY,v); }catch(e){} }
+_loadHS();
+
+function _buildOvHint(isNewHS){
+  // homescreen tip for non-standalone mobile
+  const pins=isMobile&&!isStandalone?'<br>📱 Add to Home Screen to play offline, 1-tap!':'';
+  if(!isNewHS){
+    return `You've done <strong>${_highScore.toLocaleString()}</strong> before — beat it!${pins}`;
+  }
+  // new highscore hints
+  const unseenLvl=[...Array(12).keys()].slice(4).find(i=>!firstMerged.has(i));
+  if(unseenLvl){
+    return `<img src="Sprites/characters/level_${unseenLvl}.png" style="width:36px;height:36px;object-fit:contain;filter:brightness(0);opacity:0.4;display:inline-block;vertical-align:middle;margin-right:4px;"><span>???  Keep merging to unlock a secret character!</span>`;
+  }
+  if(gameLevel<2){
+    return `💡 Merge two Racoons for a <strong>WIPE OUT</strong> — the score multiplier doubles!${pins}`;
+  }
+  // random provoke / tease
+  const rival=_loadRival();
+  const newRival=Math.max(rival,_highScore)+Math.round(10000+Math.random()*10000);
+  _saveRival(newRival);
+  const teases=[
+    ()=>{
+      const a=Math.ceil(Math.random()*10)+1,b=a+1<=11?a+1:a;
+      const gain=PTS_M[Math.min(b,11)];
+      return `💰 Merging two <em>${PD[a].name}</em>s next level = <strong>+${gain.toLocaleString()} pts</strong>!${pins}`;
+    },
+    ()=>`🏆 Someone scored <strong>${newRival.toLocaleString()}</strong>… think you can beat that?${pins}`,
+  ];
+  return teases[Math.floor(Math.random()*teases.length)]();
+}
+
+let _polaroidDataURL=null; // clean snapshot — used for polaroid display
+let _shareDataURL=null;    // label-stamped snapshot — used for sharing
+function _cleanRender(){
+  // Hide UI overlays + reset tints, render, restore
+  const prev={dA:_dangerText?.alpha,vA:_versionText?.alpha,tV:_tapText?.visible,
+    cTL:_coverTopLt?.visible,cTR:_coverTopRt?.visible,cBL:_coverBotLt?.visible,cBR:_coverBotRt?.visible};
+  if(_dangerText)_dangerText.alpha=0;
+  if(_versionText)_versionText.alpha=0;
+  if(_tapText)_tapText.visible=false;
+  if(_reflectSprLt)_reflectSprLt.visible=false;
+  if(_reflectSprRt)_reflectSprRt.visible=false;
+  if(_coverTopLt)_coverTopLt.visible=false;
+  if(_coverTopRt)_coverTopRt.visible=false;
+  if(_coverBotLt)_coverBotLt.visible=false;
+  if(_coverBotRt)_coverBotRt.visible=false;
+  plushies.forEach(p=>{if(p.sprite)p.sprite.tint=0xFFFFFF;});
+  app.renderer.render(stage);
+  const url=cv.toDataURL('image/png');
+  if(_dangerText)_dangerText.alpha=prev.dA??0.65;
+  if(_versionText)_versionText.alpha=prev.vA??0.45;
+  if(_tapText)_tapText.visible=prev.tV??false;
+  if(_reflectSprLt)_reflectSprLt.visible=_reflectSprRt.visible=_reflectEnabled;
+  if(_coverTopLt)_coverTopLt.visible=prev.cTL??true;
+  if(_coverTopRt)_coverTopRt.visible=prev.cTR??true;
+  if(_coverBotLt)_coverBotLt.visible=prev.cBL??true;
+  if(_coverBotRt)_coverBotRt.visible=prev.cBR??true;
+  return url;
+}
+function _takePolaroid(){
+  try{
+    _polaroidDataURL=_cleanRender();
+    // Share capture: "BB Tower" label at top on highest layer, then re-render
+    const lbl=new PIXI.Text({text:'BB Tower',style:{fontFamily:"'Righteous','Segoe UI',system-ui,sans-serif",fontSize:Math.round(28*FS),fontWeight:'400',fill:'#ffffff',stroke:{color:'#000000',width:4}}});
+    lbl.label='share_watermark';lbl.anchor.set(0.5,0);lbl.x=W/2;lbl.y=18;
+    layerFx.addChild(lbl);
+    _shareDataURL=_cleanRender();
+    lbl.destroy();
+    // Show 1:1 center-cropped polaroid on popup
+    const img=document.getElementById('ov-polaroid-img');
+    const wrap=document.getElementById('ov-polaroid');
+    if(img&&wrap){img.src=_polaroidDataURL;wrap.style.display='block';}
+  }catch(e){}
+}
+function gameOver(){
+  dead=true;sfxGameOver();
+  _takePolaroid();
+  _loadHS();
+  const isNewHS=score>_highScore;
+  if(isNewHS){ _highScore=score; _saveHS(score); }
+  document.getElementById('fs').textContent=score.toLocaleString();
+  const sub=document.getElementById('ov-sub');
+  if(sub) sub.textContent=isNewHS?'🎉 New High Score!':'Final Score';
+  const title=document.getElementById('ov-title');
+  if(title) title.textContent=isNewHS?'Amazing!':score<_highScore*0.7?'Keep Trying!':['Well Played!','So Close!','Nice Score!'][Math.floor(Math.random()*3)];
+  const hint=document.getElementById('ov-hint');
+  if(hint) hint.innerHTML=_buildOvHint(isNewHS);
+  document.getElementById('ov').classList.add('show');
+}
+
+// ── SHARE ────────────────────────────────────────────────────────────
+function shareScore(){
+  const url='https://DancingPhoenix88.github.io/plushie-drop/';
+  const text=`I scored ${score.toLocaleString()} in BB Tower 🧸! Can you beat me?\n${url}`;
+  const polaroidImg=document.getElementById('ov-polaroid-img');
+  const doShare=(blob)=>{
+    if(blob&&navigator.canShare&&navigator.canShare({files:[new File([blob],'score.png',{type:'image/png'})]})){
+      navigator.share({title:'BB Tower',text,files:[new File([blob],'score.png',{type:'image/png'})]}).catch(()=>{});
+    } else if(navigator.share){
+      navigator.share({title:'BB Tower',text}).catch(()=>{});
+    } else {
+      navigator.clipboard.writeText(text).then(()=>alert('Copied to clipboard!')).catch(()=>prompt('Share this:',text));
+    }
+  };
+  if(_shareDataURL){
+    fetch(_shareDataURL).then(r=>r.blob()).then(doShare).catch(()=>doShare(null));
+  }else{
+    try{cv.toBlob(blob=>doShare(blob),'image/png');}catch(e){doShare(null);}
+  }
+}
 function restart(){
   dead=false;cooling=false;wipeOutActive=false;trapDoorOpen=false;trapDoorScale=0;trapDoorDir=0;gameLevel=1;scoreMultiplier=1;rebuildPtsTable();
   const glEl=document.getElementById('gl-ls');if(glEl)glEl.textContent=1;
@@ -603,8 +465,12 @@ function restart(){
   clearPlushies();
   parts=[];mergeQ=[];popups=[];confetti=[];celebrations=[];sparkles=[];danger={};_gyroMultiDangerSince=null;firstMerged=new Set();score=0;updUI();
   document.getElementById('ov').classList.remove('show');
+  _polaroidDataURL=null;_shareDataURL=null;
+  const polaroid=document.getElementById('ov-polaroid');if(polaroid)polaroid.style.display='none';
   cur=rnd();nxt=rnd();updNext();clawState='idle';clawY=DROPY;clawLvl=cur;resetClawForNewRound();
   triggerClear();resumeLoop();
+  // Restart BGM with fade in
+  if(bgmOn&&!muted){const el=_bgmEl();if(el)el.currentTime=0;bgmRunning=false;startBGM();}
 }
 
 function burst(x,y,color){for(let i=0;i<11;i++){const a=Math.PI*2*i/11+Math.random()*.5,spd=2+Math.random()*4;parts.push({x,y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,r:3+Math.random()*4,color,life:1});}}
@@ -1478,7 +1344,7 @@ function updateHelpMeta(){
   const meta=document.getElementById('help-meta');
   if(!meta) return;
   const vw=window.innerWidth,vh=window.innerHeight;
-  meta.textContent=`v27  ·  ${vw}×${vh}  ar:${(vw/vh).toFixed(3)}`;
+  meta.textContent=`v28  ·  ${vw}×${vh}  ar:${(vw/vh).toFixed(3)}`;
 }
 let _helpTab='kb';
 function showHelpTab(tab){
@@ -1532,7 +1398,15 @@ function updateEvoLabels(){
 }
 
 // ── AUDIO ─────────────────────────────────────────────────────────────
-let ac=null, muted=false, bgmRunning=false, bgmTO=null, bgmOn=false;
+let ac=null, muted=false, bgmRunning=false, bgmOn=true;
+let _bgmVolume=0.4;
+function setBGMVolume(v){
+  _bgmVolume=parseFloat(v);
+  const el=_bgmEl();if(el)el.volume=_bgmVolume;
+  const lbl=document.getElementById('bgm-vol-label');if(lbl)lbl.textContent=Math.round(_bgmVolume*100)+'%';
+  try{localStorage.setItem('plushie_bgm_vol',_bgmVolume);}catch(e){}
+}
+(function(){try{const v=parseFloat(localStorage.getItem('plushie_bgm_vol'));if(!isNaN(v)){_bgmVolume=v;const sl=document.getElementById('bgm-vol');if(sl)sl.value=v;const lbl=document.getElementById('bgm-vol-label');if(lbl)lbl.textContent=Math.round(v*100)+'%';}}catch(e){}})();
 
 function getAC(){
   if(!ac){
@@ -1568,11 +1442,11 @@ function sfxDrop(){
   const o=a.createOscillator(),g=a.createGain();
   o.connect(g);g.connect(a._sfxBus||a.destination);
   o.type='sine';
-  o.frequency.setValueAtTime(200,t);
-  o.frequency.exponentialRampToValueAtTime(70,t+0.1);
-  g.gain.setValueAtTime(0.35,t);
-  g.gain.exponentialRampToValueAtTime(0.001,t+0.13);
-  o.start(t);o.stop(t+0.15);
+  o.frequency.setValueAtTime(480,t);
+  o.frequency.exponentialRampToValueAtTime(280,t+0.06);
+  g.gain.setValueAtTime(0.12,t);
+  g.gain.exponentialRampToValueAtTime(0.001,t+0.08);
+  o.start(t);o.stop(t+0.10);
 }
 
 // Per-level merge arpeggios — bigger level = more notes, grander sound
@@ -1594,20 +1468,34 @@ function sfxMerge(lvl){
   (MSFX[lvl]||[]).forEach(([f,d,t,v,u])=>tone(f,d,t,v,u));
 }
 
-// BGM — cheerful 8-bar C-major melody, loops forever
-const _B=60/128; // beat at 128 BPM
-const [C4,D4,E4,G4,A4,C5]=[261.63,293.66,329.63,392.00,440.00,523.25];
-const BGM=[[E4,1],[G4,1],[A4,1],[G4,1],[E4,1],[D4,1],[C4,2],
-           [G4,1],[E4,1],[D4,1],[E4,1],[G4,1],[A4,1],[G4,2],
-           [E4,1],[G4,1],[A4,1],[C5,1],[A4,1],[G4,1],[E4,2],
-           [D4,1],[E4,1],[G4,1],[E4,1],[D4,1],[C4,1],[C4,2]];
-const BGM_DUR=BGM.reduce((s,[,b])=>s+b,0)*_B;
-function scheduleBGM(){if(!bgmRunning||muted)return;const a=getAC();let t=a.currentTime;for(const[freq,beats]of BGM){const o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a._sfxBus||a.destination);o.type='triangle';o.frequency.value=freq;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(0.07,t+0.03);g.gain.setValueAtTime(0.07,t+beats*_B-0.06);g.gain.linearRampToValueAtTime(0,t+beats*_B);o.start(t);o.stop(t+beats*_B+0.05);t+=beats*_B;}bgmTO=setTimeout(scheduleBGM,(BGM_DUR-0.08)*1000);}
-function startBGM(){if(!bgmRunning){bgmRunning=true;scheduleBGM();}}
-function stopBGM(){bgmRunning=false;clearTimeout(bgmTO);bgmTO=null;}
+// BGM — MP3 via <audio> element
+const _bgmEl=()=>document.getElementById('bgm-audio');
+let _bgmFadeTimer=null;
+function _bgmFadeIn(el){
+  clearInterval(_bgmFadeTimer);
+  el.volume=0;
+  const step=_bgmVolume/60; // 60 steps × 50ms = 3s
+  _bgmFadeTimer=setInterval(()=>{
+    el.volume=Math.min(_bgmVolume,el.volume+step);
+    if(el.volume>=_bgmVolume)clearInterval(_bgmFadeTimer);
+  },50);
+}
+function startBGM(){
+  if(muted||!bgmOn)return;
+  const el=_bgmEl();if(!el)return;
+  el.play().catch(()=>{});
+  _bgmFadeIn(el);
+  bgmRunning=true;
+}
+function stopBGM(){
+  clearInterval(_bgmFadeTimer);
+  const el=_bgmEl();if(!el)return;
+  el.pause();
+  bgmRunning=false;
+}
 function toggleBGM(on){
   bgmOn=on;
-  if(bgmOn&&!muted){bgmRunning=false;startBGM();}
+  if(bgmOn&&!muted)startBGM();
   else stopBGM();
 }
 function toggleMute(){
@@ -1616,7 +1504,7 @@ function toggleMute(){
   const muteLs=document.getElementById('mute-ls');
   if(muteLs) muteLs.textContent=icon;
   if(muted) stopBGM();
-  else if(bgmOn){bgmRunning=false;startBGM();}
+  else if(bgmOn) startBGM();
 }
 function toggleBGMAll(v){
   document.getElementById('bgm-cb').checked=v;
@@ -1868,15 +1756,83 @@ document.addEventListener('contextmenu',e=>e.preventDefault());
 document.addEventListener('touchmove',e=>{if(e.touches.length>1)e.preventDefault();},{passive:false});
 window.addEventListener('orientationchange',()=>setTimeout(fitToViewport,200));
 cur=rnd();nxt=rnd();clawLvl=cur;updUI();buildEvo();loadCbPrefs();setApSpeed(0);rebuildPtsTable();
+// sync BGM checkbox to actual bgmOn state (bgmOn defaults true)
+['bgm-cb','bgm-ls'].forEach(id=>{const el=document.getElementById(id);if(el)el.checked=bgmOn;});
+// start BGM after first user gesture (browser autoplay policy)
+{let _bgmStarted=false;const _bgmUnlock=()=>{if(_bgmStarted)return;_bgmStarted=true;if(bgmOn&&!muted)startBGM();};document.addEventListener('click',_bgmUnlock,{once:true});document.addEventListener('touchstart',_bgmUnlock,{once:true});}
 if(showJoy){const el=joyEl();if(el)el.style.display='flex';}
 Promise.all([document.fonts.load('400 16px Righteous'),document.fonts.ready,initPixi()]).then(()=>{loadSprites(()=>{updNext();fitToViewport();resetClawForNewRound();requestAnimationFrame(loop);});});
-if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js');
+  navigator.serviceWorker.addEventListener('message',e=>{
+    if(e.data?.type==='SW_UPDATED'){
+      const toast=document.getElementById('update-toast');
+      if(toast)toast.style.display='block';
+    }
+  });
+}
 const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
-const isStandalone=navigator.standalone===true;
+const isStandaloneMode=navigator.standalone===true||window.matchMedia('(display-mode:standalone)').matches;
+// isStandalone kept as alias for legacy refs
+const isStandalone=isStandaloneMode;
 function enterFullscreen(){const el=document.documentElement;const req=el.requestFullscreen||el.webkitRequestFullscreen||el.mozRequestFullScreen;if(req)req.call(el).catch(()=>{});dismissFsPrompt();}
 function dismissFsPrompt(){document.getElementById('fs-prompt').classList.remove('show');}
-(function(){if(!isMobile)return;if(isStandalone)return;if(!isIOS&&(document.fullscreenElement||document.webkitFullscreenElement))return;const body=document.getElementById('fs-prompt-body');const action=document.getElementById('fs-prompt-action');if(isIOS){body.innerHTML='<div style="font-size:11px;color:#a09078;margin-bottom:16px">For full screen, add this page<br>to your Home Screen:<br><br><span style="color:#5a3820">Share → Add to Home Screen</span></div>';action.innerHTML='<button onclick="dismissFsPrompt()">Got it</button>';}else{body.innerHTML='<div style="font-size:11px;color:#a09078;margin-bottom:16px">Tap for the best experience</div>';action.innerHTML='<button onclick="enterFullscreen()">Enter Full Screen</button>';}document.getElementById('fs-prompt').classList.add('show');})();
-</script>
-<div id="gyro-drag-hud"></div>
-</body>
-</html>
+
+let _deferredInstall=null;
+let _appAlreadyInstalled=false; // set true if getInstalledRelatedApps detects it, or beforeinstallprompt never fires on Chrome
+
+// Chrome/Android: capture install prompt; if it never fires, app is likely already installed
+let _installPromptFired=false;
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault();_deferredInstall=e;_installPromptFired=true;
+});
+function _installApp(){
+  if(_deferredInstall){_deferredInstall.prompt();_deferredInstall=null;}
+  dismissFsPrompt();
+}
+
+function _showAlreadyInstalled(action){
+  const div=document.getElementById(isMobile?'fsp-installed-mobile':'fsp-installed-pc');
+  if(div)div.style.display='';
+  action.innerHTML='<button onclick="dismissFsPrompt()">Got it!</button>';
+  document.getElementById('fs-prompt').classList.add('show');
+}
+
+(async function(){
+  if(isStandaloneMode)return; // already running as app — skip entirely
+  if(!isMobile&&(document.fullscreenElement||document.webkitFullscreenElement))return;
+
+  const action=document.getElementById('fs-prompt-action');
+
+  // Try getInstalledRelatedApps (Chrome on Android)
+  if('getInstalledRelatedApps' in navigator){
+    try{
+      const apps=await navigator.getInstalledRelatedApps();
+      if(apps&&apps.length>0){_showAlreadyInstalled(action);return;}
+    }catch(e){}
+  }
+
+  // On Chrome desktop/Android: wait a tick — if beforeinstallprompt didn't fire, app is likely installed
+  if(!isIOS&&!isStandaloneMode){
+    await new Promise(r=>setTimeout(r,500));
+    if(!_installPromptFired&&!isIOS){
+      // App probably installed — show nudge on mobile, skip prompt on desktop
+      if(isMobile){_showAlreadyInstalled(action);return;}
+      // Desktop with no install prompt = already installed or not installable — skip
+      return;
+    }
+  }
+
+  // Not installed — show install instructions
+  if(isIOS){
+    document.getElementById('fsp-ios').style.display='';
+    action.innerHTML='<button onclick="dismissFsPrompt()">Got it!</button>';
+  } else if(isMobile){
+    document.getElementById('fsp-android').style.display='';
+    action.innerHTML='<button onclick="enterFullscreen()">Got it!</button>';
+  } else {
+    document.getElementById('fsp-pc').style.display='';
+    action.innerHTML='<button onclick="_installApp()">Got it!</button>';
+  }
+  document.getElementById('fs-prompt').classList.add('show');
+})();
