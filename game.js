@@ -1,6 +1,6 @@
 
 'use strict';
-const IS_DEBUG = false; // set to false on release branch
+const IS_DEBUG = true; // set to false on release branch
 if(!IS_DEBUG){
   const dbgSection=document.getElementById('help-debug-section');
   if(dbgSection) dbgSection.style.display='none';
