@@ -175,7 +175,6 @@
     <button class="close-btn" onclick="toggleHelp(false)">Close</button>
   </div>
 </div>
-<<<<<<< HEAD
 <script>
 'use strict';
 const IS_DEBUG = false; // set to false on release branch
@@ -321,7 +320,7 @@ async function initPixi(){
   _dangerText=new PIXI.Text({text:'DANGER',style:{fontFamily:"'Segoe UI',system-ui,sans-serif",fontSize:Math.round(11*FS),fill:'#D23737'}});
   _dangerText.label='danger_label';_dangerText.x=W*0.1+5;_dangerText.y=DY-Math.round(14*FS);layerUI.addChild(_dangerText);
 
-  _versionText=new PIXI.Text({text:'v27',style:{fontFamily:"'Segoe UI',system-ui,sans-serif",fontSize:Math.round(9*FS),fill:'#5a3820'}});
+  _versionText=new PIXI.Text({text:'v29',style:{fontFamily:"'Segoe UI',system-ui,sans-serif",fontSize:Math.round(9*FS),fill:'#5a3820'}});
   _versionText.label='version_label';_versionText.anchor.set(1,1);_versionText.x=W-W*0.1-4;_versionText.y=DY-5;_versionText.alpha=0.45;layerUI.addChild(_versionText);
 
   _tapText=new PIXI.Text({text:'TAP TO DROP',style:{fontFamily:"'Righteous','Segoe UI',system-ui,sans-serif",fontSize:Math.round(36*FS),fontWeight:'400',fill:'#5a3820',stroke:{color:'#5a3820',width:1}}});
@@ -1391,7 +1390,7 @@ function updateHelpMeta(){
   const meta=document.getElementById('help-meta');
   if(!meta) return;
   const vw=window.innerWidth,vh=window.innerHeight;
-  meta.textContent=`v27  ·  ${vw}×${vh}  ar:${(vw/vh).toFixed(3)}`;
+  meta.textContent=`v29  ·  ${vw}×${vh}  ar:${(vw/vh).toFixed(3)}`;
 }
 let _helpTab='kb';
 function showHelpTab(tab){
@@ -1790,9 +1789,6 @@ function enterFullscreen(){const el=document.documentElement;const req=el.reques
 function dismissFsPrompt(){document.getElementById('fs-prompt').classList.remove('show');}
 (function(){if(!isMobile)return;if(isStandalone)return;if(!isIOS&&(document.fullscreenElement||document.webkitFullscreenElement))return;const body=document.getElementById('fs-prompt-body');const action=document.getElementById('fs-prompt-action');if(isIOS){body.innerHTML='<div style="font-size:11px;color:#a09078;margin-bottom:16px">For full screen, add this page<br>to your Home Screen:<br><br><span style="color:#5a3820">Share → Add to Home Screen</span></div>';action.innerHTML='<button onclick="dismissFsPrompt()">Got it</button>';}else{body.innerHTML='<div style="font-size:11px;color:#a09078;margin-bottom:16px">Tap for the best experience</div>';action.innerHTML='<button onclick="enterFullscreen()">Enter Full Screen</button>';}document.getElementById('fs-prompt').classList.add('show');})();
 </script>
-=======
-<script src="game.js"></script>
->>>>>>> main
 <div id="gyro-drag-hud"></div>
 <div id="update-toast" style="display:none;position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#3a2010;color:#fff;font-size:13px;padding:10px 18px;border-radius:20px;z-index:99999;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.4);cursor:pointer;" onclick="location.reload()">New version available — tap to reload</div>
 </body>
