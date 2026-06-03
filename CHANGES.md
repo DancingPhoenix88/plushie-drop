@@ -2,8 +2,8 @@
 
 ---
 
-## v29 (current)
-- **Merge conflict resolved** — removed stale conflict markers (`<<<<<<< HEAD` / `>>>>>>> main`) left from a `game.js` extraction experiment; inline script restored cleanly
+## v30 (current)
+- Restored all work from v28 after merge overwrite (commit 74aee79)
 
 ## v28
 - **CSS/JS extracted** — `game.css` and `game.js` split from `index.html`; no build step
