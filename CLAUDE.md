@@ -4,6 +4,22 @@ Developer context for AI sessions. Read this before touching anything.
 
 ---
 
+## Self-verification rule (REQUIRED before claiming work is done)
+
+**After every significant code edit, test in the browser before saying it's ready.**
+
+1. Reload the page at `http://localhost:800X`
+2. Check console for errors using the Claude in Chrome extension (`read_console_messages`, `onlyErrors:true`)
+3. Run a quick health check:
+```js
+({gameRunning: typeof dead!=='undefined'&&!dead, textures: typeof plushieTextures!=='undefined'?plushieTextures.filter(Boolean).length:'undef'})
+```
+4. Only report "done" after confirming no errors and healthy game state
+
+This rule exists because errors like `Uncaught SyntaxError`, `ReferenceError: cannot access before initialization`, and silently broken game loops have been claimed "working" multiple times without browser verification.
+
+---
+
 ## What this is
 
 Single-file HTML game (`index.html`) — Suika-style drop-and-merge. No build step, no framework. All game logic, physics, rendering, audio, and UI live in one file. `sw.js` is the service worker for PWA/offline. `manifest.json` is the PWA manifest.

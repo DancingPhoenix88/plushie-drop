@@ -116,10 +116,11 @@ A **celebration card** pops up the first time each rank appears, showing:
 - Big "WIPE OUT!" + "LEVEL X" celebration cards with animated scale-in
 
 ### Audio
-- BGM — cheerful looping melody via Web Audio API (triangle oscillators)
+- BGM — "Upbeat" by SyncLab Music (looping MP3). Licensed under [CC BY-ND 4.0](https://creativecommons.org/licenses/by-nd/4.0/).
 - Drop SFX — soft thud on every drop
 - Per-rank merge SFX — 11 unique ascending arpeggios
 - WIPE OUT SFX — rising sawtooth sweep + chord fanfare
+- Game Over SFX — sad descending tone
 - Character name TTS — `speechSynthesis` pronounces the name after each merge
 
 ### Responsive UI
