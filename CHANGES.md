@@ -2,7 +2,19 @@
 
 ---
 
-## v27 (current)
+## v28 (current)
+- **CSS/JS extracted** — `game.css` and `game.js` split from `index.html`; no build step
+- **BGM replaced** — procedural oscillator melody replaced with `Audio/Upbeat.mp3` (SyncLab Music, CC BY-ND 4.0); checkbox off by default; volume slider in help popup (default 0.4); 3s fade-in on start/restart
+- **Game Over redesign** — encouraging title (randomised), highscore tracking with contextual hints (unseen character, WIPE OUT tip, rival score provocation); polaroid screenshot overlay (clean capture, tinted off, patches hidden); Share button sends canvas snapshot + pre-filled text
+- **Add to Home Screen prompt** — separate iOS / Android / PC variant divs; detects if app already installed via `getInstalledRelatedApps` + `beforeinstallprompt` signal; shows "already installed" nudge instead of install instructions when detected; PC triggers PWA install prompt
+- **Auto-update toast** — service worker sends `SW_UPDATED` message on activate; page shows "New version available — tap to reload" toast; `skipWaiting` + `clients.claim` ensure immediate activation
+- **Game Over SFX** — sad descending arpeggio + low sawtooth groan on lose
+- **Drop SFX** — lighter, higher frequency, shorter decay
+- **(?) button** — help popup trigger added to top bar
+- **Meta tags** — `mobile-web-app-capable` added; `position:relative` fix on top tile for help button visibility
+- **Favicon** — `favicon.svg` added at repo root; `<link rel="icon" type="image/svg+xml">` in head
+
+## v27
 - **Wall reflections restored in PixiJS** — two `PIXI.RenderTexture`s at 0.5× res capture source strips every 3rd frame (~20fps); sprites display flipped reflections at both walls with alpha 0.22; cover-patch sprites (`claw_machine_top/bottom_left_reflection_cover.png`) frame the corners; adaptive enable on mobile (≥55fps for 2s)
 
 ---
