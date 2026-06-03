@@ -2,7 +2,10 @@
 
 ---
 
-## v28 (current)
+## v29 (current)
+- **Merge conflict resolved** — removed stale conflict markers (`<<<<<<< HEAD` / `>>>>>>> main`) left from a `game.js` extraction experiment; inline script restored cleanly
+
+## v28
 - **CSS/JS extracted** — `game.css` and `game.js` split from `index.html`; no build step
 - **BGM replaced** — procedural oscillator melody replaced with `Audio/Upbeat.mp3` (SyncLab Music, CC BY-ND 4.0); checkbox off by default; volume slider in help popup (default 0.4); 3s fade-in on start/restart
 - **Game Over redesign** — encouraging title (randomised), highscore tracking with contextual hints (unseen character, WIPE OUT tip, rival score provocation); polaroid screenshot overlay (clean capture, tinted off, patches hidden); Share button sends canvas snapshot + pre-filled text
