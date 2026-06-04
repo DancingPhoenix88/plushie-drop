@@ -2,7 +2,10 @@
 
 ---
 
-## v30 (current)
+## v31 (current)
+- **Voice over** — character names now announced by randomly picking between two recorded voices (Bap / Bong) on each merge; each voice has its own audio file (`Audio/Names_Bap.mp3`, `Audio/Names_Bong.mp3`) with separate timestamp tables
+
+## v30
 - Restored all work from v28 after merge overwrite (commit 74aee79)
 
 ## v28

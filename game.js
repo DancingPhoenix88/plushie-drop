@@ -1,6 +1,7 @@
 
 'use strict';
 const IS_DEBUG = true; // set to false on release branch
+const IS_GP_DEBUG = false; // force gamepad-connected visuals for testing; false on release (follows IS_DEBUG)
 if(!IS_DEBUG){
   const dbgSection=document.getElementById('help-debug-section');
   if(dbgSection) dbgSection.style.display='none';
@@ -9,7 +10,7 @@ if(!IS_DEBUG){
 }
 const PD=[null,
   {name:'Mây',r:30,body:'#8ee8ff',stroke:'#38a8d0'},
-  {name:'Bo',r:41,body:'#4a8c40',stroke:'#245820'},
+  {name:'Bơ',r:41,body:'#4a8c40',stroke:'#245820'},
   {name:'Vincam',r:52,body:'#f5f5f5',stroke:'#b8b8b8'},
   {name:'Mini Dora',r:62,body:'#e83030',stroke:'#980808'},
   {name:'Baby Bunny',r:73,physR:66,body:'#fff0f8',stroke:'#d89ab8'},
@@ -143,10 +144,10 @@ async function initPixi(){
   _dangerText=new PIXI.Text({text:'DANGER',style:{fontFamily:"'Segoe UI',system-ui,sans-serif",fontSize:Math.round(11*FS),fill:'#D23737'}});
   _dangerText.label='danger_label';_dangerText.x=W*0.1+5;_dangerText.y=DY-Math.round(14*FS);layerUI.addChild(_dangerText);
 
-  _versionText=new PIXI.Text({text:'v30',style:{fontFamily:"'Segoe UI',system-ui,sans-serif",fontSize:Math.round(9*FS),fill:'#5a3820'}});
+  _versionText=new PIXI.Text({text:'v31',style:{fontFamily:"'Segoe UI',system-ui,sans-serif",fontSize:Math.round(9*FS),fill:'#5a3820'}});
   _versionText.label='version_label';_versionText.anchor.set(1,1);_versionText.x=W-W*0.1-4;_versionText.y=DY-5;_versionText.alpha=0.45;layerUI.addChild(_versionText);
 
-  _tapText=new PIXI.Text({text:'TAP TO DROP',style:{fontFamily:"'Righteous','Segoe UI',system-ui,sans-serif",fontSize:Math.round(36*FS),fontWeight:'400',fill:'#5a3820',stroke:{color:'#5a3820',width:1}}});
+  _tapText=new PIXI.Text({text:'TAP TO DROP',style:{fontFamily:"'Cherry Bomb One','Segoe UI',system-ui,sans-serif",fontSize:Math.round(36*FS),fontWeight:'400',fill:'#5a3820',stroke:{color:'#ffffff',width:3}}});
   // Note: dropShadow removed — causes white background on iOS mobile WebGL
   _tapText.label='tap_hint';_tapText.anchor.set(0.5,0.5);_tapText.x=W/2;_tapText.y=H/2;_tapText.visible=false;layerUI.addChild(_tapText);
 }
@@ -409,7 +410,7 @@ function _takePolaroid(){
   try{
     _polaroidDataURL=_cleanRender();
     // Share capture: "BB Tower" label at top on highest layer, then re-render
-    const lbl=new PIXI.Text({text:'BB Tower',style:{fontFamily:"'Righteous','Segoe UI',system-ui,sans-serif",fontSize:Math.round(28*FS),fontWeight:'400',fill:'#ffffff',stroke:{color:'#000000',width:4}}});
+    const lbl=new PIXI.Text({text:'BB Tower',style:{fontFamily:"'Cherry Bomb One','Segoe UI',system-ui,sans-serif",fontSize:Math.round(28*FS),fontWeight:'400',fill:'#ffffff',stroke:{color:'#000000',width:4}}});
     lbl.label='share_watermark';lbl.anchor.set(0.5,0);lbl.x=W/2;lbl.y=18;
     layerFx.addChild(lbl);
     _shareDataURL=_cleanRender();
@@ -434,6 +435,7 @@ function gameOver(){
   const hint=document.getElementById('ov-hint');
   if(hint) hint.innerHTML=_buildOvHint(isNewHS);
   document.getElementById('ov').classList.add('show');
+  updateGpGuide();
 }
 
 // ── SHARE ────────────────────────────────────────────────────────────
@@ -465,6 +467,7 @@ function restart(){
   clearPlushies();
   parts=[];mergeQ=[];popups=[];confetti=[];celebrations=[];sparkles=[];danger={};_gyroMultiDangerSince=null;firstMerged=new Set();score=0;updUI();
   document.getElementById('ov').classList.remove('show');
+  updateGpGuide();
   _polaroidDataURL=null;_shareDataURL=null;
   const polaroid=document.getElementById('ov-polaroid');if(polaroid)polaroid.style.display='none';
   cur=rnd();nxt=rnd();updNext();clawState='idle';clawY=DROPY;clawLvl=cur;resetClawForNewRound();
@@ -535,7 +538,7 @@ function _onTrapDoorClosed(){
 }
 function tickParts(){parts=parts.filter(p=>p.life>0);parts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.18;p.life-=.044;p.r*=.93;});}
 function tickPopups(){
-  popups.forEach(p=>{p.y-=(p.big?0.4:1.2);p.life-=0.022;if(!p.pixiText&&p.life>0){const sz=p.big?Math.round(68*FS):Math.round(36*FS);p.pixiText=new PIXI.Text({text:p.text,style:{fontFamily:"'Righteous','Segoe UI',system-ui,sans-serif",fontSize:sz,fontWeight:'700',fill:p.color,stroke:{color:'#000000',width:3}}});p.pixiText.label='score_popup';p.pixiText.anchor.set(0.5,0.5);layerFx.addChild(p.pixiText);}if(p.pixiText){const sz=p.big?Math.round((48+p.life*20)*FS):Math.round((22+p.life*14)*FS);p.pixiText.style.fontSize=sz;p.pixiText.x=p.x;p.pixiText.y=p.y;p.pixiText.alpha=Math.min(p.life,1)*0.92;}});
+  popups.forEach(p=>{p.y-=(p.big?0.4:1.2);p.life-=0.022;if(!p.pixiText&&p.life>0){const sz=p.big?Math.round(68*FS):Math.round(36*FS);p.pixiText=new PIXI.Text({text:p.text,style:{fontFamily:"'Cherry Bomb One','Segoe UI',system-ui,sans-serif",fontSize:sz,fontWeight:'700',fill:p.color,stroke:{color:'#000000',width:3}}});p.pixiText.label='score_popup';p.pixiText.anchor.set(0.5,0.5);layerFx.addChild(p.pixiText);}if(p.pixiText){const sz=p.big?Math.round((48+p.life*20)*FS):Math.round((22+p.life*14)*FS);p.pixiText.style.fontSize=sz;p.pixiText.x=p.x;p.pixiText.y=p.y;p.pixiText.alpha=Math.min(p.life,1)*0.92;}});
   popups.filter(p=>p.life<=0).forEach(p=>{if(p.pixiText)p.pixiText.destroy();});
   popups=popups.filter(p=>p.life>0);
 }
@@ -543,6 +546,7 @@ function tickPopups(){
 const CONFETTI_COLORS=['#ff5a5a','#ffb830','#ffe234','#4ddc7a','#38c5f5','#c84dff','#ff6eb4','#ffffff'];
 function spawnCelebration(x,y,lvl,actualPts){
   if(showClaw)triggerGlare();
+  playCharacterName(lvl);
   celebrations.push({x:W/2,y:H/2-30,name:PD[lvl].name,level:lvl,pts:actualPts??PTS[lvl],color:PD[lvl].body,stroke:PD[lvl].stroke,life:1,scale:0.1,phase:'in'});
   setTimeout(()=>{for(let i=0;i<60;i++){const fromTop=i<20;const cx=fromTop?Math.random()*W:x,cy=fromTop?-10:y;const a=fromTop?(Math.PI/2+Math.random()*.8-.4):(Math.random()*Math.PI*2);const spd=fromTop?(3+Math.random()*5):(4+Math.random()*7);confetti.push({x:cx,y:cy,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,r:3+Math.random()*4,rot:Math.random()*Math.PI*2,rv:(Math.random()-.5)*0.25,w:4+Math.random()*5,h:6+Math.random()*8,color:CONFETTI_COLORS[Math.floor(Math.random()*CONFETTI_COLORS.length)],life:1,shape:Math.random()<0.6?'rect':'circle'});}},80);
 }
@@ -553,7 +557,7 @@ function tickCelebrations(){
     if(c.phase==='in'){c.scale=Math.min(1,c.scale+0.12);c.y-=0.4;if(c.scale>=1){c.phase='hold';c.holdTimer=60;}}
     else if(c.phase==='hold'){c.holdTimer--;c.y-=0.4;if(c.holdTimer<=0)c.phase='out';}
     else{c.life-=0.022;c.y-=0.8;}
-    if(!c.pixiText&&c.life>0){let sub='';if(c.isWipeOut){sub=c.pts>0?'+'+c.pts.toLocaleString()+' bonus pts':'';}else if(c.isLevelUp){sub='×'+Math.pow(2,gameLevel-1)+' points multiplier';}else{sub=`Rank ${c.level}  ·  +${c.pts.toLocaleString()} pts`;}c.pixiText=new PIXI.Text({text:c.name,style:{fontFamily:"'Righteous','Segoe UI',system-ui,sans-serif",fontSize:Math.round(52*FS),fontWeight:'400',fill:c.color,stroke:{color:c.stroke,width:8}}});c.pixiText.label='celebration_'+c.name;c.pixiText.anchor.set(0.5,0.5);layerFx.addChild(c.pixiText);if(sub){c.pixiSub=new PIXI.Text({text:sub,style:{fontFamily:"'Righteous','Segoe UI',system-ui,sans-serif",fontSize:Math.round(16*FS),fontWeight:'400',fill:'#ffffff',stroke:{color:'#000000',width:3}}});c.pixiSub.label='celebration_sub';c.pixiSub.anchor.set(0.5,0.5);layerFx.addChild(c.pixiSub);}}
+    if(!c.pixiText&&c.life>0){let sub='';if(c.isWipeOut){sub=c.pts>0?'+'+c.pts.toLocaleString()+' bonus pts':'';}else if(c.isLevelUp){sub='×'+Math.pow(2,gameLevel-1)+' points multiplier';}else{sub=`Rank ${c.level}  ·  +${c.pts.toLocaleString()} pts`;}c.pixiText=new PIXI.Text({text:c.name,style:{fontFamily:"'Cherry Bomb One','Segoe UI',system-ui,sans-serif",fontSize:Math.round(52*FS),fontWeight:'400',fill:c.color,stroke:{color:c.stroke,width:8}}});c.pixiText.label='celebration_'+c.name;c.pixiText.anchor.set(0.5,0.5);layerFx.addChild(c.pixiText);if(sub){c.pixiSub=new PIXI.Text({text:sub,style:{fontFamily:"'Cherry Bomb One','Segoe UI',system-ui,sans-serif",fontSize:Math.round(16*FS),fontWeight:'400',fill:'#ffffff',stroke:{color:'#000000',width:3}}});c.pixiSub.label='celebration_sub';c.pixiSub.anchor.set(0.5,0.5);layerFx.addChild(c.pixiSub);}}
     if(c.pixiText){const alpha=c.phase==='out'?c.life*0.95:0.97;c.pixiText.x=c.x;c.pixiText.y=c.y;c.pixiText.scale.set(c.scale);c.pixiText.alpha=alpha;if(c.pixiSub){c.pixiSub.x=c.x;c.pixiSub.y=c.y+34*c.scale;c.pixiSub.scale.set(c.scale);c.pixiSub.alpha=alpha;}}
   });
   celebrations.forEach(c=>{if(c.life<=0){if(c.pixiText){c.pixiText.destroy();c.pixiText=null;}if(c.pixiSub){c.pixiSub.destroy();c.pixiSub=null;}}});
@@ -569,17 +573,83 @@ function processGamepad(){
   const pads=navigator.getGamepads?navigator.getGamepads():[];let gp=null;
   for(const p of pads){if(p){gp=p;break;}}if(!gp)return;
   const pressed=i=>gp.buttons[i]?.pressed&&!_gpBtnPrev[i];
-  if(dead){if(pressed(0)){setInputSource('gamepad');restart();}for(let i=0;i<gp.buttons.length;i++)_gpBtnPrev[i]=gp.buttons[i]?.pressed;return;}
-  const fast=(gp.buttons[6]?.value??0)>0.3||(gp.buttons[7]?.value??0)>0.3;const speed=fast?5:2;
+  if(dead){
+    if(pressed(0)){setInputSource('gamepad');restart();}
+    if(pressed(3)){setInputSource('gamepad');shareScore();}
+    for(let i=0;i<gp.buttons.length;i++)_gpBtnPrev[i]=gp.buttons[i]?.pressed;return;
+  }
+  // fs-prompt: A = dismiss
+  if(document.getElementById('fs-prompt').classList.contains('show')){
+    if(pressed(0)){setInputSource('gamepad');dismissFsPrompt();}
+    for(let i=0;i<gp.buttons.length;i++)_gpBtnPrev[i]=gp.buttons[i]?.pressed;return;
+  }
+  const lt=gp.buttons[6]?.value??0, rt=gp.buttons[7]?.value??0;
+  // LT/RT analog [0,1]: sprint speed (base 2, max 10) + BGM volume adjustment
+  const triggerVal=Math.max(lt,rt);const speed=2+triggerVal*8;
+  if(lt>0.02||rt>0.02){const delta=(rt-lt)*0.006;const nv=Math.max(0,Math.min(1,_bgmVolume+delta));if(Math.abs(delta)>0.0001){setBGMVolume(nv);const sl=document.getElementById('bgm-vol');if(sl)sl.value=nv;}}
   const ax=gp.axes[0]??0;if(Math.abs(ax)>GP_DEADZONE){setInputSource('gamepad');const mn=WALL+PD[cur].r+1,mx2=W-WALL-PD[cur].r-1,range=mx2-mn;if(range>0)mx=Math.max(mn,Math.min(mx2,mx+ax*speed));}
   if(pressed(0)){setInputSource('gamepad');if(!wipeOutActive&&!dead)(function tryDrop(){if(wipeOutActive||dead)return;if(cooling)requestAnimationFrame(tryDrop);else drop();})();}
   if(pressed(1)){setInputSource('gamepad');toggleHelp();}
+  if(pressed(2)){setInputSource('gamepad');toggleBGMAll(!bgmOn);}
+  if(pressed(3)){setInputSource('gamepad');cycleAp();}
+  // D-pad left/right (buttons 14/15)
+  const mn=WALL+PD[cur].r+1,mx2=W-WALL-PD[cur].r-1;
+  if(gp.buttons[14]?.pressed){setInputSource('gamepad');if(mx2-mn>0)mx=Math.max(mn,Math.min(mx2,mx-speed));}
+  if(gp.buttons[15]?.pressed){setInputSource('gamepad');if(mx2-mn>0)mx=Math.max(mn,Math.min(mx2,mx+speed));}
   for(let i=0;i<gp.buttons.length;i++)_gpBtnPrev[i]=gp.buttons[i]?.pressed;
 }
 let inputSource='keyboard';
 function setInputSource(src){if(inputSource!==src){inputSource=src;}}
 let _gpConnected=false;
-function setGpConnected(v){_gpConnected=v;}
+function gpConnected(){return _gpConnected||IS_GP_DEBUG;}
+function updateGpVisuals(){
+  const v=gpConnected();
+  const gpTab=document.getElementById('help-tab-gp');
+  if(gpTab) gpTab.style.display=v?'':'none';
+  document.querySelectorAll('.gp-badge').forEach(el=>{if(el.closest('#help-content-gp'))return;el.style.display=v?'inline-block':'none';});
+  document.querySelectorAll('.gp-joy-hint').forEach(el=>el.style.display=v?'flex':'none');
+  if(v && document.getElementById('help-popup').classList.contains('show')) showHelpTab('gp');
+  updateGpGuide();
+}
+// Build a guide item: colored circle + label
+function _gpGuideItem(letter,bg,label){
+  return `<span class="gpg-item"><span class="gpg-btn" style="background:${bg}">${letter}</span><span class="gpg-lbl">${label}</span></span>`;
+}
+function _gpRectBtn(label,bg){
+  return `<span class="gpg-btn" style="background:${bg};border-radius:4px;min-width:20px">${label}</span>`;
+}
+const _gpSep='<span class="gpg-sep">·</span>';
+function updateKbGuide(){
+  const kb=document.getElementById('kb-guide');
+  if(!kb) return;
+  const anyPopup=document.getElementById('help-popup').classList.contains('show')||document.getElementById('fs-prompt').classList.contains('show')||document.getElementById('ov').classList.contains('show');
+  kb.style.display=(!gpConnected()&&!anyPopup&&!dead)?'flex':'none';
+}
+function updateGpGuide(){
+  updateKbGuide();
+  const guide=document.getElementById('gp-guide');
+  if(!guide) return;
+  if(!gpConnected()){guide.style.display='none';return;}
+  const helpOpen=document.getElementById('help-popup').classList.contains('show');
+  const fsOpen=document.getElementById('fs-prompt').classList.contains('show');
+  const ovOpen=document.getElementById('ov').classList.contains('show');
+  let html='';
+  let align='centered';
+  if(helpOpen){
+    html=[_gpGuideItem('B','#b02020','Close'),_gpSep,`<span class="gpg-item">${_gpRectBtn('LT','#607080')}<span class="gpg-lbl">/</span>${_gpRectBtn('RT','#607080')}<span class="gpg-lbl">Vol</span></span>`].join('');
+  } else if(ovOpen){
+    html=[_gpGuideItem('A','#2a7d2a','Restart'),_gpSep,_gpGuideItem('Y','#b8980a','Share')].join('');
+  } else if(fsOpen){
+    html=_gpGuideItem('A','#2a7d2a','Got it');
+  } else {
+    align='right-aligned';
+    html=[`<span class="gpg-item">${_gpRectBtn('LT','#607080')}<span class="gpg-lbl">+</span><span class="gpg-btn" style="background:#607080">LS</span><span class="gpg-lbl">Sprint</span></span>`,_gpSep,_gpGuideItem('B','#b02020','Help')].join('');
+  }
+  guide.className=align;
+  if(html){guide.innerHTML=html;guide.style.display='flex';guide.style.visibility='visible';}
+  else{guide.style.display='none';}
+}
+function setGpConnected(v){_gpConnected=v;updateGpVisuals();}
 window.addEventListener('gamepadconnected',()=>{setInputSource('gamepad');setGpConnected(true);});
 window.addEventListener('gamepaddisconnected',()=>{inputSource='keyboard';setGpConnected(false);});
 window.addEventListener('mousemove',()=>setInputSource('keyboard'),{passive:true});
@@ -931,7 +1001,7 @@ function drawVincam(c,r,d){
   wSmile(c,r,.14,'#2878a8',.2);
 }
 
-function drawBo(c,r,d){
+function drawBo_unused(c,r,d){
   c.beginPath();c.ellipse(0,r*.12,r*.64,r*.7,0,0,Math.PI*2);c.fillStyle='#c8e050';c.fill();
   c.beginPath();c.ellipse(0,r*.26,r*.3,r*.34,0,0,Math.PI*2);c.fillStyle='#6a3810';c.fill();
   c.beginPath();c.ellipse(0,r*.26,r*.22,r*.26,0,0,Math.PI*2);c.fillStyle='#8a5028';c.fill();
@@ -1071,7 +1141,7 @@ const keysDown=new Set();
 document.addEventListener('keyup',e=>keysDown.delete(e.key));
 window.addEventListener('blur',()=>keysDown.clear());
 document.addEventListener('keydown',e=>{
-  if(dead&&(e.key==='Enter'||e.key===' ')){e.preventDefault();restart();return;}
+  if(dead&&e.key==='Enter'){e.preventDefault();restart();return;}
   if(e.key==='j'||e.key==='J'){toggleJoy();return;}
   if(e.key==='a'||e.key==='A'){cycleAp();return;}
   if(e.key==='?'||e.key==='/'){toggleHelp();return;}
@@ -1261,7 +1331,7 @@ function rnd(){
   return 1;
 }
 // score font size: monospace-like font — scale by char count vs container width
-const SCORE_CHAR_RATIO=0.8; // estimated char width / font-size for Righteous
+const SCORE_CHAR_RATIO=0.8; // estimated char width / font-size for Cherry Bomb One
 function fitScoreFontEl(el, maxPx){
   if(!el||!el.textContent) return;
   const len=el.textContent.length; if(!len) return;
@@ -1344,27 +1414,26 @@ function updateHelpMeta(){
   const meta=document.getElementById('help-meta');
   if(!meta) return;
   const vw=window.innerWidth,vh=window.innerHeight;
-  meta.textContent=`v30  ·  ${vw}×${vh}  ar:${(vw/vh).toFixed(3)}`;
+  meta.textContent=`v31  ·  ${vw}×${vh}  ar:${(vw/vh).toFixed(3)}`;
 }
 let _helpTab='kb';
 function showHelpTab(tab){
   _helpTab=tab;
-  document.getElementById('help-content-kb').style.display=tab==='kb'?'':'none';
-  document.getElementById('help-content-gp').style.display=tab==='gp'?'':'none';
-  document.getElementById('help-tab-kb').style.background=tab==='kb'?'#f0e4d4':'#fff8f2';
-  document.getElementById('help-tab-kb').style.color=tab==='kb'?'#5a3820':'#b09878';
-  document.getElementById('help-tab-gp').style.background=tab==='gp'?'#f0e4d4':'#fff8f2';
-  document.getElementById('help-tab-gp').style.color=tab==='gp'?'#5a3820':'#b09878';
+  const gp=gpConnected();
+  document.getElementById('help-tabs').style.display='none';
+  document.getElementById('help-content-kb').style.display=(!gp&&tab==='kb')?'':'none';
+  document.getElementById('help-content-gp').style.display=(gp||tab==='gp')?'':'none';
 }
 function toggleHelpTab(){
-  if(!_gpConnected) return;
+  if(!gpConnected()) return;
   showHelpTab(_helpTab==='kb'?'gp':'kb');
 }
 function toggleHelp(force){
   const el=document.getElementById('help-popup');
   const show=force!==undefined?force:!el.classList.contains('show');
   el.classList.toggle('show',show);
-  if(show) updateHelpMeta();
+  if(show){updateHelpMeta();showHelpTab(gpConnected()?'gp':_helpTab);}
+  updateGpGuide();
 }
 window.addEventListener('resize',()=>{ if(document.getElementById('help-popup').classList.contains('show')) updateHelpMeta(); });
 document.getElementById('help-popup').addEventListener('click',e=>{
@@ -1397,12 +1466,86 @@ function updateEvoLabels(){
   });
 }
 
+// ── CHARACTER NAME AUDIO ──────────────────────────────────────────────
+// [start, duration] in seconds per voice
+// Order: Mây, Bơ, Vincam, Mini Dora, Baby Bunny, Poko, Doraemi, Doraemon, Bunny, Mimi, Racoon
+const NAME_SEGS_BAP=[null,
+  [0.000, 3.389],  // 1 Mây
+  [3.389, 2.407],  // 2 Bơ
+  [5.796, 3.038],  // 3 Vincam
+  [8.834, 3.248],  // 4 Mini Dora
+  [12.082, 2.477], // 5 Baby Bunny
+  [14.559, 2.244], // 6 Poko
+  [16.803, 2.407], // 7 Doraemi
+  [19.210, 2.384], // 8 Doraemon
+  [21.594, 1.752], // 9 Bunny
+  [23.346, 1.473], // 10 Mimi
+  [24.819, 2.000], // 11 Racoon (estimated)
+];
+const NAME_SEGS_BONG=[null,
+  [0.000, 2.389],  // 1 Mây
+  [2.389, 2.257],  // 2 Bơ
+  [4.646, 3.002],  // 3 Vincam
+  [7.648, 3.190],  // 4 Mini Dora
+  [10.838, 3.118], // 5 Baby Bunny
+  [13.956, 2.752], // 6 Poko
+  [16.708, 3.264], // 7 Doraemi
+  [19.972, 3.312], // 8 Doraemon
+  [23.284, 2.753], // 9 Bunny
+  [26.037, 2.728], // 10 Mimi
+  [28.765, 2.000], // 11 Racoon (estimated)
+];
+let _namesBufBap=null, _namesBufBong=null;
+(async function _loadNames(){
+  async function _loadBuf(url){
+    const resp=await fetch(url);
+    const arr=await resp.arrayBuffer();
+    const tmpAC=new(window.AudioContext||window.webkitAudioContext)();
+    return await tmpAC.decodeAudioData(arr);
+  }
+  try{ _namesBufBap=await _loadBuf('Audio/Names_Bap.mp3'); }catch(e){}
+  try{ _namesBufBong=await _loadBuf('Audio/Names_Bong.mp3'); }catch(e){}
+})();
+function playCharacterName(lvl){
+  if(muted)return;
+  const voices=[];
+  if(_namesBufBap) voices.push([_namesBufBap, NAME_SEGS_BAP]);
+  if(_namesBufBong) voices.push([_namesBufBong, NAME_SEGS_BONG]);
+  if(!voices.length)return;
+  const [buf,segs]=voices[Math.floor(Math.random()*voices.length)];
+  const seg=segs[lvl];
+  if(!seg)return;
+  const a=getAC();
+  const src=a.createBufferSource();
+  src.buffer=buf;
+  const g=a.createGain();g.gain.value=1.0;
+  src.connect(g);g.connect(a._sfxBus||a.destination);
+  src.start(a.currentTime,seg[0],seg[1]);
+}
+
 // ── AUDIO ─────────────────────────────────────────────────────────────
 let ac=null, muted=false, bgmRunning=false, bgmOn=true;
 let _bgmVolume=0.4;
+let _bgmGain=null, _bgmSrcNode=null;
+// Route BGM through a Web Audio GainNode so volume works on iOS
+// (iOS ignores el.volume; GainNode.gain.value is respected)
+function _initBgmRouting(){
+  if(_bgmGain)return _bgmGain;
+  const el=_bgmEl();if(!el)return null;
+  try{
+    const a=getAC();
+    _bgmSrcNode=a.createMediaElementSource(el);
+    _bgmGain=a.createGain();
+    _bgmGain.gain.value=_bgmVolume;
+    _bgmSrcNode.connect(_bgmGain);
+    _bgmGain.connect(a.destination);
+  }catch(e){}
+  return _bgmGain;
+}
 function setBGMVolume(v){
   _bgmVolume=parseFloat(v);
-  const el=_bgmEl();if(el)el.volume=_bgmVolume;
+  if(_bgmGain)_bgmGain.gain.value=_bgmVolume;
+  else{const el=_bgmEl();if(el)el.volume=_bgmVolume;}
   const lbl=document.getElementById('bgm-vol-label');if(lbl)lbl.textContent=Math.round(_bgmVolume*100)+'%';
   try{localStorage.setItem('plushie_bgm_vol',_bgmVolume);}catch(e){}
 }
@@ -1473,16 +1616,23 @@ const _bgmEl=()=>document.getElementById('bgm-audio');
 let _bgmFadeTimer=null;
 function _bgmFadeIn(el){
   clearInterval(_bgmFadeTimer);
-  el.volume=0;
+  const gain=_bgmGain;
+  if(gain)gain.gain.value=0; else el.volume=0;
   const step=_bgmVolume/60; // 60 steps × 50ms = 3s
   _bgmFadeTimer=setInterval(()=>{
-    el.volume=Math.min(_bgmVolume,el.volume+step);
-    if(el.volume>=_bgmVolume)clearInterval(_bgmFadeTimer);
+    if(_bgmGain){
+      _bgmGain.gain.value=Math.min(_bgmVolume,_bgmGain.gain.value+step);
+      if(_bgmGain.gain.value>=_bgmVolume)clearInterval(_bgmFadeTimer);
+    }else{
+      el.volume=Math.min(_bgmVolume,el.volume+step);
+      if(el.volume>=_bgmVolume)clearInterval(_bgmFadeTimer);
+    }
   },50);
 }
 function startBGM(){
   if(muted||!bgmOn)return;
   const el=_bgmEl();if(!el)return;
+  _initBgmRouting();
   el.play().catch(()=>{});
   _bgmFadeIn(el);
   bgmRunning=true;
@@ -1515,7 +1665,7 @@ function toggleBGMAll(v){
 // ── GYRO / TILT ───────────────────────────────────────────────────────
 let tiltAngle = 0;   // current effective tilt (radians), updated by deviceorientation
 let gyroOn = false;
-// No direction flip needed — both paths now use gamma-consistent convention
+// Direction is negated vs raw gamma/accelerometer — PixiJS coordinate system requires this flip
 
 function onDeviceOrientation(e){
   if(e.gamma === null) return;
@@ -1523,8 +1673,8 @@ function onDeviceOrientation(e){
   // using gamma without it would apply tilt without the user granting access).
   // On Android/desktop DeviceMotion fires automatically so _motionAvailable will be true soon.
   if(!_motionAvailable && !isIOS){
-    tiltAngle = e.gamma * Math.PI / 180;
-    updateGyroArrow(e.gamma);
+    tiltAngle = -e.gamma * Math.PI / 180;
+    updateGyroArrow(-e.gamma);
   }
 }
 let _motionAvailable = false;
@@ -1577,8 +1727,8 @@ function onDeviceMotion(e){
   if(g && g.x != null && g.y != null){
     // atan2(-gx, -gy): upright=0, right=+90°, upside-down=±180°
     // Low-pass filter to smooth sensor noise
-    // atan2(-gx, -gy): upright=0, right=+90°, upside-down=±180° — matches main branch
-    const rawAngle = Math.atan2(-g.x, -g.y);
+    // atan2(gx, -gy): upright=0, left=+90° — negated vs raw to match PixiJS direction flip
+    const rawAngle = Math.atan2(g.x, -g.y);
     tiltAngle = tiltAngle * 0.7 + rawAngle * 0.3;
     updateGyroArrow(tiltAngle * 180 / Math.PI);
   }
@@ -1669,10 +1819,11 @@ if(IS_DEBUG){
       if(_tiltPrevX !== null){
         // delta mouse X → delta gamma (accumulates on top of existing tilt)
         const ddeg = (e.clientX - _tiltPrevX) * GYRO_DRAG_SCALE;
+        // tiltAngle is negated vs gamma, so subtract ddeg to keep mouse-right = tilt-right
         const newGamma = Math.max(-90, Math.min(90,
-                          tiltAngle * 180/Math.PI + ddeg));
-        tiltAngle = newGamma * Math.PI / 180;
-        updateGyroArrow(newGamma);
+                          -tiltAngle * 180/Math.PI + ddeg));
+        tiltAngle = -newGamma * Math.PI / 180;
+        updateGyroArrow(-newGamma);
       }
       _tiltPrevX = e.clientX;
     }
@@ -1758,10 +1909,12 @@ window.addEventListener('orientationchange',()=>setTimeout(fitToViewport,200));
 cur=rnd();nxt=rnd();clawLvl=cur;updUI();buildEvo();loadCbPrefs();setApSpeed(0);rebuildPtsTable();
 // sync BGM checkbox to actual bgmOn state (bgmOn defaults true)
 ['bgm-cb','bgm-ls'].forEach(id=>{const el=document.getElementById(id);if(el)el.checked=bgmOn;});
+// apply gamepad debug state on load
+updateGpVisuals();
 // start BGM after first user gesture (browser autoplay policy)
 {let _bgmStarted=false;const _bgmUnlock=()=>{if(_bgmStarted)return;_bgmStarted=true;if(bgmOn&&!muted)startBGM();};document.addEventListener('click',_bgmUnlock,{once:true});document.addEventListener('touchstart',_bgmUnlock,{once:true});}
 if(showJoy){const el=joyEl();if(el)el.style.display='flex';}
-Promise.all([document.fonts.load('400 16px Righteous'),document.fonts.ready,initPixi()]).then(()=>{loadSprites(()=>{updNext();fitToViewport();resetClawForNewRound();requestAnimationFrame(loop);});});
+Promise.all([document.fonts.load("400 16px 'Cherry Bomb One'","ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789Mây Bơ"),document.fonts.ready,initPixi()]).then(()=>{loadSprites(()=>{updNext();fitToViewport();resetClawForNewRound();requestAnimationFrame(loop);});});
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('sw.js');
   navigator.serviceWorker.addEventListener('message',e=>{
@@ -1776,7 +1929,7 @@ const isStandaloneMode=navigator.standalone===true||window.matchMedia('(display-
 // isStandalone kept as alias for legacy refs
 const isStandalone=isStandaloneMode;
 function enterFullscreen(){const el=document.documentElement;const req=el.requestFullscreen||el.webkitRequestFullscreen||el.mozRequestFullScreen;if(req)req.call(el).catch(()=>{});dismissFsPrompt();}
-function dismissFsPrompt(){document.getElementById('fs-prompt').classList.remove('show');}
+function dismissFsPrompt(){document.getElementById('fs-prompt').classList.remove('show');updateGpGuide();}
 
 let _deferredInstall=null;
 let _appAlreadyInstalled=false; // set true if getInstalledRelatedApps detects it, or beforeinstallprompt never fires on Chrome
@@ -1795,7 +1948,7 @@ function _showAlreadyInstalled(action){
   const div=document.getElementById(isMobile?'fsp-installed-mobile':'fsp-installed-pc');
   if(div)div.style.display='';
   action.innerHTML='<button onclick="dismissFsPrompt()">Got it!</button>';
-  document.getElementById('fs-prompt').classList.add('show');
+  document.getElementById('fs-prompt').classList.add('show');updateGpGuide();
 }
 
 (async function(){
@@ -1834,5 +1987,5 @@ function _showAlreadyInstalled(action){
     document.getElementById('fsp-pc').style.display='';
     action.innerHTML='<button onclick="_installApp()">Got it!</button>';
   }
-  document.getElementById('fs-prompt').classList.add('show');
+  document.getElementById('fs-prompt').classList.add('show');updateGpGuide();
 })();
