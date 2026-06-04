@@ -2,7 +2,17 @@
 
 ---
 
-## v31 (current)
+## v32 (current)
+- **Cherry Bomb One font** — replaces Righteous for all game canvas text (celebration names, score popups, TAP TO DROP); Google Fonts link fixed (was still loading Righteous); hidden preload divs ensure font is ready before PixiJS renders
+- **Bơ** — rank 2 character renamed back from Bo
+- **Voice over (Bap / Bong)** — character names announced by randomly picking between two recorded voices per merge; each has its own timestamp table; mobile fix: raw bytes fetched at load, decoded lazily via main AudioContext after first user gesture
+- **Floor zone** — score and auto-dial use Righteous font; drop button height capped at 44%
+- **DANGER / version label** — switched to Share Tech Mono bold
+- **Celebration glow** — soft ellipse glow (blurred PIXI.Graphics + BlurFilter) rendered behind each celebration name text
+- **Gamepad guide hidden on mobile** — `pointer:coarse` media query prevents it showing on touch devices
+- **Font loading** — `initPixi()` now chains after `document.fonts.ready` (was parallel); `display=block` on Google Fonts ensures canvas gets real font, not swap fallback
+
+## v31
 - **Voice over** — character names now announced by randomly picking between two recorded voices (Bap / Bong) on each merge; each voice has its own audio file (`Audio/Names_Bap.mp3`, `Audio/Names_Bong.mp3`) with separate timestamp tables
 
 ## v30

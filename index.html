@@ -6,7 +6,7 @@
 <title>BB Tower</title>
 <link rel="manifest" href="manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Righteous&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Cherry+Bomb+One&family=Righteous&display=block" rel="stylesheet">
 <meta name="theme-color" content="#c87830">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -21,6 +21,10 @@
 <link rel="stylesheet" href="game.css">
 </head>
 <body>
+<!-- Forces browser to load these fonts before fonts.ready fires; opacity:0 keeps them invisible but rendered -->
+<div style="position:absolute;opacity:0;pointer-events:none;font-family:'Cherry Bomb One'">Mây Bơ BB Tower</div>
+<div style="position:absolute;opacity:0;pointer-events:none;font-family:'Share Tech Mono';font-weight:700">DANGER v0</div>
+<div style="position:absolute;opacity:0;pointer-events:none;font-family:'Righteous'">0123456789</div>
 <div id="game-root">
   <div id="top-tile"><h1>BB Tower <span id="level-label" style="font-size:11px;opacity:0.7;letter-spacing:.06em;">· LV 1</span></h1><button id="help-btn" onclick="toggleHelp()" aria-label="Help">?</button></div>
   <div id="main-content">

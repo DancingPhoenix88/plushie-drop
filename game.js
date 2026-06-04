@@ -141,10 +141,10 @@ async function initPixi(){
   trapDoorSpr.label='trap_door'; trapDoorSpr.visible=false;
   layerBg.addChild(trapDoorSpr);
 
-  _dangerText=new PIXI.Text({text:'DANGER',style:{fontFamily:"'Segoe UI',system-ui,sans-serif",fontSize:Math.round(11*FS),fill:'#D23737'}});
+  _dangerText=new PIXI.Text({text:'DANGER',style:{fontFamily:"'Share Tech Mono','Courier New',monospace",fontSize:Math.round(11*FS),fontWeight:'700',fill:'#D23737'}});
   _dangerText.label='danger_label';_dangerText.x=W*0.1+5;_dangerText.y=DY-Math.round(14*FS);layerUI.addChild(_dangerText);
 
-  _versionText=new PIXI.Text({text:'v31',style:{fontFamily:"'Segoe UI',system-ui,sans-serif",fontSize:Math.round(9*FS),fill:'#5a3820'}});
+  _versionText=new PIXI.Text({text:'v32',style:{fontFamily:"'Share Tech Mono','Courier New',monospace",fontSize:Math.round(9*FS),fontWeight:'700',fill:'#5a3820'}});
   _versionText.label='version_label';_versionText.anchor.set(1,1);_versionText.x=W-W*0.1-4;_versionText.y=DY-5;_versionText.alpha=0.45;layerUI.addChild(_versionText);
 
   _tapText=new PIXI.Text({text:'TAP TO DROP',style:{fontFamily:"'Cherry Bomb One','Segoe UI',system-ui,sans-serif",fontSize:Math.round(36*FS),fontWeight:'400',fill:'#5a3820',stroke:{color:'#ffffff',width:3}}});
@@ -557,10 +557,10 @@ function tickCelebrations(){
     if(c.phase==='in'){c.scale=Math.min(1,c.scale+0.12);c.y-=0.4;if(c.scale>=1){c.phase='hold';c.holdTimer=60;}}
     else if(c.phase==='hold'){c.holdTimer--;c.y-=0.4;if(c.holdTimer<=0)c.phase='out';}
     else{c.life-=0.022;c.y-=0.8;}
-    if(!c.pixiText&&c.life>0){let sub='';if(c.isWipeOut){sub=c.pts>0?'+'+c.pts.toLocaleString()+' bonus pts':'';}else if(c.isLevelUp){sub='×'+Math.pow(2,gameLevel-1)+' points multiplier';}else{sub=`Rank ${c.level}  ·  +${c.pts.toLocaleString()} pts`;}c.pixiText=new PIXI.Text({text:c.name,style:{fontFamily:"'Cherry Bomb One','Segoe UI',system-ui,sans-serif",fontSize:Math.round(52*FS),fontWeight:'400',fill:c.color,stroke:{color:c.stroke,width:8}}});c.pixiText.label='celebration_'+c.name;c.pixiText.anchor.set(0.5,0.5);layerFx.addChild(c.pixiText);if(sub){c.pixiSub=new PIXI.Text({text:sub,style:{fontFamily:"'Cherry Bomb One','Segoe UI',system-ui,sans-serif",fontSize:Math.round(16*FS),fontWeight:'400',fill:'#ffffff',stroke:{color:'#000000',width:3}}});c.pixiSub.label='celebration_sub';c.pixiSub.anchor.set(0.5,0.5);layerFx.addChild(c.pixiSub);}}
-    if(c.pixiText){const alpha=c.phase==='out'?c.life*0.95:0.97;c.pixiText.x=c.x;c.pixiText.y=c.y;c.pixiText.scale.set(c.scale);c.pixiText.alpha=alpha;if(c.pixiSub){c.pixiSub.x=c.x;c.pixiSub.y=c.y+34*c.scale;c.pixiSub.scale.set(c.scale);c.pixiSub.alpha=alpha;}}
+    if(!c.pixiText&&c.life>0){let sub='';if(c.isWipeOut){sub=c.pts>0?'+'+c.pts.toLocaleString()+' bonus pts':'';}else if(c.isLevelUp){sub='×'+Math.pow(2,gameLevel-1)+' points multiplier';}else{sub=`Rank ${c.level}  ·  +${c.pts.toLocaleString()} pts`;}const gfx=new PIXI.Graphics();gfx.ellipse(0,0,Math.round(120*FS),Math.round(50*FS));gfx.fill({color:c.color,alpha:0.65});gfx.filters=[new PIXI.BlurFilter({strength:28,quality:4})];gfx.label='celebration_glow';layerFx.addChild(gfx);c.pixiGlow=gfx;c.pixiText=new PIXI.Text({text:c.name,style:{fontFamily:"'Cherry Bomb One','Segoe UI',system-ui,sans-serif",fontSize:Math.round(52*FS),fontWeight:'400',fill:c.color,stroke:{color:c.stroke,width:8}}});c.pixiText.label='celebration_'+c.name;c.pixiText.anchor.set(0.5,0.5);layerFx.addChild(c.pixiText);if(sub){c.pixiSub=new PIXI.Text({text:sub,style:{fontFamily:"'Cherry Bomb One','Segoe UI',system-ui,sans-serif",fontSize:Math.round(16*FS),fontWeight:'400',fill:'#ffffff',stroke:{color:'#000000',width:3}}});c.pixiSub.label='celebration_sub';c.pixiSub.anchor.set(0.5,0.5);layerFx.addChild(c.pixiSub);}}
+    if(c.pixiText){const alpha=c.phase==='out'?c.life*0.95:0.97;if(c.pixiGlow){c.pixiGlow.x=c.x;c.pixiGlow.y=c.y;c.pixiGlow.scale.set(c.scale);c.pixiGlow.alpha=alpha*0.8;}c.pixiText.x=c.x;c.pixiText.y=c.y;c.pixiText.scale.set(c.scale);c.pixiText.alpha=alpha;if(c.pixiSub){c.pixiSub.x=c.x;c.pixiSub.y=c.y+34*c.scale;c.pixiSub.scale.set(c.scale);c.pixiSub.alpha=alpha;}}
   });
-  celebrations.forEach(c=>{if(c.life<=0){if(c.pixiText){c.pixiText.destroy();c.pixiText=null;}if(c.pixiSub){c.pixiSub.destroy();c.pixiSub=null;}}});
+  celebrations.forEach(c=>{if(c.life<=0){if(c.pixiGlow){c.pixiGlow.destroy();c.pixiGlow=null;}if(c.pixiText){c.pixiText.destroy();c.pixiText=null;}if(c.pixiSub){c.pixiSub.destroy();c.pixiSub=null;}}});
   celebrations=celebrations.filter(c=>c.life>0);
 }
 
@@ -1414,7 +1414,7 @@ function updateHelpMeta(){
   const meta=document.getElementById('help-meta');
   if(!meta) return;
   const vw=window.innerWidth,vh=window.innerHeight;
-  meta.textContent=`v31  ·  ${vw}×${vh}  ar:${(vw/vh).toFixed(3)}`;
+  meta.textContent=`v32  ·  ${vw}×${vh}  ar:${(vw/vh).toFixed(3)}`;
 }
 let _helpTab='kb';
 function showHelpTab(tab){
@@ -1496,18 +1496,25 @@ const NAME_SEGS_BONG=[null,
   [28.765, 2.000], // 11 Racoon (estimated)
 ];
 let _namesBufBap=null, _namesBufBong=null;
+let _namesRawBap=null, _namesRawBong=null;
 (async function _loadNames(){
-  async function _loadBuf(url){
-    const resp=await fetch(url);
-    const arr=await resp.arrayBuffer();
-    const tmpAC=new(window.AudioContext||window.webkitAudioContext)();
-    return await tmpAC.decodeAudioData(arr);
-  }
-  try{ _namesBufBap=await _loadBuf('Audio/Names_Bap.mp3'); }catch(e){}
-  try{ _namesBufBong=await _loadBuf('Audio/Names_Bong.mp3'); }catch(e){}
+  async function _fetchRaw(url){ const r=await fetch(url); return r.arrayBuffer(); }
+  try{ _namesRawBap=await _fetchRaw('Audio/Names_Bap.mp3'); }catch(e){}
+  try{ _namesRawBong=await _fetchRaw('Audio/Names_Bong.mp3'); }catch(e){}
 })();
 function playCharacterName(lvl){
   if(muted)return;
+  // Decode lazily on first call — always after a user gesture (merge just happened),
+  // so getAC() is safe on mobile. tmpAC at page load caused silent failures on iOS.
+  const a=getAC();
+  if(_namesRawBap&&!_namesBufBap){
+    const raw=_namesRawBap; _namesRawBap=null;
+    a.decodeAudioData(raw).then(b=>{_namesBufBap=b;}).catch(()=>{});
+  }
+  if(_namesRawBong&&!_namesBufBong){
+    const raw=_namesRawBong; _namesRawBong=null;
+    a.decodeAudioData(raw).then(b=>{_namesBufBong=b;}).catch(()=>{});
+  }
   const voices=[];
   if(_namesBufBap) voices.push([_namesBufBap, NAME_SEGS_BAP]);
   if(_namesBufBong) voices.push([_namesBufBong, NAME_SEGS_BONG]);
@@ -1515,7 +1522,6 @@ function playCharacterName(lvl){
   const [buf,segs]=voices[Math.floor(Math.random()*voices.length)];
   const seg=segs[lvl];
   if(!seg)return;
-  const a=getAC();
   const src=a.createBufferSource();
   src.buffer=buf;
   const g=a.createGain();g.gain.value=1.0;
@@ -1914,7 +1920,7 @@ updateGpVisuals();
 // start BGM after first user gesture (browser autoplay policy)
 {let _bgmStarted=false;const _bgmUnlock=()=>{if(_bgmStarted)return;_bgmStarted=true;if(bgmOn&&!muted)startBGM();};document.addEventListener('click',_bgmUnlock,{once:true});document.addEventListener('touchstart',_bgmUnlock,{once:true});}
 if(showJoy){const el=joyEl();if(el)el.style.display='flex';}
-Promise.all([document.fonts.load("400 16px 'Cherry Bomb One'","ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789Mây Bơ"),document.fonts.ready,initPixi()]).then(()=>{loadSprites(()=>{updNext();fitToViewport();resetClawForNewRound();requestAnimationFrame(loop);});});
+Promise.all([document.fonts.load("400 16px 'Cherry Bomb One'","ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789Mây Bơ"),document.fonts.ready]).then(()=>initPixi()).then(()=>{loadSprites(()=>{updNext();fitToViewport();resetClawForNewRound();requestAnimationFrame(loop);});});
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('sw.js');
   navigator.serviceWorker.addEventListener('message',e=>{
