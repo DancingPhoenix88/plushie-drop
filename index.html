@@ -6,7 +6,7 @@
 <title>BB Tower</title>
 <link rel="manifest" href="manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Righteous&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Cherry+Bomb+One&display=swap" rel="stylesheet">
 <meta name="theme-color" content="#c87830">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -33,16 +33,22 @@
             <div id="fz-next"><span class="fz-label" id="fz-next-label">NEXT</span><img id="nc" src="" alt="next"></div>
           </div>
           <div id="joyctrl">
-            <img id="joy-img" src="Sprites/ui/joystick_released.png" alt="">
-            <img id="drop-btn" src="Sprites/ui/button_released.png" alt="">
+            <div class="joy-col" id="joy-col-stick">
+              <img id="joy-img" src="Sprites/ui/joystick_released.png" alt="">
+              <span class="gp-joy-hint"><span class="gp-joy-badge" style="background:#607080">LS</span></span>
+            </div>
+            <div class="joy-col" id="joy-col-drop">
+              <img id="drop-btn" src="Sprites/ui/button_released.png" alt="">
+              <span class="gp-joy-hint"><span class="gp-joy-badge" style="background:#2a7d2a">A</span></span>
+            </div>
             <div id="gyro-arrow">▼</div>
           </div>
           <div id="fz-ctrl">
             <label class="cb-item"><input type="checkbox" class="sprite-cb" id="gyro-cb" onchange="toggleGyro();saveCbPrefs()"><span class="fz-label">GYRO</span></label>
-            <label class="cb-item"><input type="checkbox" class="sprite-cb" id="bgm-cb" onchange="toggleBGM(this.checked);saveCbPrefs()"><span class="fz-label">BGM</span></label>
+            <label class="cb-item"><input type="checkbox" class="sprite-cb" id="bgm-cb" onchange="toggleBGM(this.checked);saveCbPrefs()"><span class="fz-label">BGM</span><span class="gp-badge" style="background:#1e5eb4;">X</span></label>
             <div class="cb-item" onclick="cycleAp()" id="ap-wrap">
               <div class="ap-dial" id="ap"><span class="ap-seg" data-spd="0">0</span><span class="ap-seg" data-spd="1">1</span><span class="ap-seg" data-spd="2">2</span><span class="ap-seg" data-spd="3">3</span></div>
-              <span class="fz-label">AUTO</span>
+              <span class="fz-label">AUTO</span><span class="gp-badge" style="background:#b8980a;">Y</span>
             </div>
           </div>
         </div>
@@ -64,10 +70,10 @@
     <hr class="sep">
     <div id="ls-cbs">
       <label class="cb-item"><input type="checkbox" class="sprite-cb" id="gyro-ls" onchange="toggleGyro()"><span class="fz-label">GYRO</span></label>
-      <label class="cb-item"><input type="checkbox" class="sprite-cb" id="bgm-ls" onchange="toggleBGM(this.checked)"><span class="fz-label">BGM</span></label>
+      <label class="cb-item"><input type="checkbox" class="sprite-cb" id="bgm-ls" onchange="toggleBGM(this.checked)"><span class="fz-label">BGM</span><span class="gp-badge" style="background:#1e5eb4;">X</span></label>
       <div class="cb-item" onclick="cycleAp()" id="ap-ls-wrap">
         <div class="ap-dial" id="ap-ls"><span class="ap-seg" data-spd="0">0</span><span class="ap-seg" data-spd="1">1</span><span class="ap-seg" data-spd="2">2</span><span class="ap-seg" data-spd="3">3</span></div>
-        <span class="fz-label">AUTO</span>
+        <span class="fz-label">AUTO</span><span class="gp-badge" style="background:#b8980a;">Y</span>
       </div>
     </div>
   </div>
@@ -108,12 +114,12 @@
   </div>
 </div>
 <div id="ov">
-  <div id="ov-polaroid" style="display:none;position:absolute;top:50%;left:50%;transform:translate(25%,-80%) rotate(10deg);z-index:3;pointer-events:none;">
-    <div style="background:#fff;padding:8px 8px 28px;box-shadow:0 6px 24px rgba(0,0,0,.35);">
-      <img id="ov-polaroid-img" style="display:block;width:140px;height:140px;object-fit:cover;object-position:center;">
+  <div id="ov-box" style="position:relative;z-index:2;">
+    <div id="ov-polaroid" style="display:none;position:absolute;top:0;right:0;transform:translate(50%,-50%) rotate(10deg);z-index:3;pointer-events:none;">
+      <div style="background:#fff;padding:8px 8px 28px;box-shadow:0 6px 24px rgba(0,0,0,.35);">
+        <img id="ov-polaroid-img" style="display:block;width:140px;height:140px;object-fit:cover;object-position:center;">
+      </div>
     </div>
-  </div>
-  <div id="ov-box" style="position:relative;z-index:2;transform:translateX(-15%);"  >
     <h2 id="ov-title">Nice Score!</h2>
     <div class="sub" id="ov-sub"></div>
     <div class="fs" id="fs">0</div>
@@ -160,20 +166,32 @@
     <!-- gamepad tab -->
     <table id="help-content-gp" style="display:none;">
       <tr><td colspan="2" style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#b09878;padding:6px 6px 2px;font-weight:600;">🎮 Xbox / Standard</td></tr>
-      <tr><td>Left Stick</td><td>Move aim</td></tr>
-      <tr><td>LT / RT</td><td>Speed up (hold)</td></tr>
-      <tr><td>A</td><td>Drop plushie</td></tr>
-      <tr><td>B</td><td>Show this help</td></tr>
-      <tr><td>LB / RB</td><td>Switch keyboard ↔ gamepad tab</td></tr>
+      <tr><td>Left Stick / D-Pad</td><td>Move aim</td></tr>
+      <tr><td>LT / RT</td><td>Sprint (analog) · Vol ↓ / ↑</td></tr>
+      <tr><td><span class="gp-badge" style="display:inline-block;background:#2a7d2a;">A</span></td><td>Drop plushie</td></tr>
+      <tr><td><span class="gp-badge" style="display:inline-block;background:#b02020;">B</span></td><td>Show this help</td></tr>
+      <tr><td><span class="gp-badge" style="display:inline-block;background:#1e5eb4;">X</span></td><td>Toggle BGM</td></tr>
+      <tr><td><span class="gp-badge" style="display:inline-block;background:#b8980a;">Y</span></td><td>Cycle AUTO speed</td></tr>
     </table>
     <div style="display:flex;align-items:center;gap:8px;margin-top:12px;padding:0 2px;">
       <span style="font-size:11px;color:#b09878;white-space:nowrap;">🎵 BGM</span>
       <input type="range" id="bgm-vol" min="0" max="1" step="0.05" value="0.4" style="flex:1;accent-color:#c05020;" oninput="setBGMVolume(this.value)">
       <span id="bgm-vol-label" style="font-size:11px;color:#b09878;min-width:28px;text-align:right;">40%</span>
     </div>
-    <div id="help-meta" style="font-size:10px;color:#b09878;text-align:center;margin-top:10px;"></div>
+    <div style="font-size:10px;color:#b09878;text-align:center;margin-top:8px;">"Upbeat" by SyncLab Music ·<a href="https://creativecommons.org/licenses/by-nd/4.0/" target="_blank" style="color:#b09878;">CC BY-ND 4.0</a></div>
+    <div id="help-meta" style="font-size:10px;color:#b09878;text-align:center;margin-top:6px;"></div>
     <button class="close-btn" onclick="toggleHelp(false)">Close</button>
   </div>
+</div>
+<!-- gamepad quick-reference bar — populated & shown by updateGpGuide() -->
+<div id="gp-guide"></div>
+<!-- keyboard guide — shown on PC when no gamepad, no popup, sidebar visible -->
+<div id="kb-guide">
+  <span class="kbg-item"><span class="kb-key">Shift</span><span class="kbg-lbl">Sprint</span></span>
+  <span class="kbg-sep">·</span>
+  <span class="kbg-item"><span class="kb-key">Space</span><span class="kbg-lbl">Drop</span></span>
+  <span class="kbg-sep">·</span>
+  <span class="kbg-item"><span class="kb-key">/</span><span class="kbg-lbl">Help</span></span>
 </div>
 <script src="game.js"></script>
 <div id="gyro-drag-hud"></div>
