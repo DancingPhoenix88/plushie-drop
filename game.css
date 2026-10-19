@@ -119,8 +119,6 @@ input.sprite-cb:checked{background-image:url('Sprites/ui/checkbox_tick.png');}
 .ap-dial .ap-seg.active{display:block;color:#8b0000;text-shadow:0 0 6px #ff2020,0 0 14px #cc0000;}
 .ap-dial .ap-seg[data-spd="0"].active{display:block;color:transparent;text-shadow:none;}
 .gp-badge{display:none;width:13px;height:13px;border-radius:50%;font-size:8px;font-weight:700;color:#fff;text-align:center;line-height:13px;flex-shrink:0;margin-top:2px;}
-#gyro-arrow{display:none;flex-direction:column;align-items:center;justify-content:center;height:80%;width:auto;aspect-ratio:1;font-size:clamp(28px,8vw,52px);line-height:1;filter:drop-shadow(0 0 6px #f9a04088);transition:transform 0.1s linear;pointer-events:none;color:#f9a040;}
-#gyro-arrow.visible{display:flex;}
 #gyro-drag-hud{display:none;position:fixed;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.72);color:#f9a040;font-family:'Share Tech Mono','Courier New',monospace;font-size:12px;padding:5px 14px;border-radius:20px;pointer-events:none;z-index:9999;white-space:nowrap;letter-spacing:.04em;}
 #gyro-drag-hud.active{display:block;}
 @media (pointer:fine){body:not(.debug-mode) #fz-ctrl label:has(#gyro-cb),body:not(.debug-mode) #ls-cbs label:has(#gyro-ls){display:none !important;}}
