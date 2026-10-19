@@ -2,7 +2,10 @@
 
 ---
 
-## v32 (current)
+## v33 (current)
+- **Replace characters at level 4, 7, 8**: Mini Dora => Ai Ai, Doraemi => Lapas, Doraemon => Mama
+
+## v32
 - **Cherry Bomb One font** — replaces Righteous for all game canvas text (celebration names, score popups, TAP TO DROP); Google Fonts link fixed (was still loading Righteous); hidden preload divs ensure font is ready before PixiJS renders
 - **Bơ** — rank 2 character renamed back from Bo
 - **Voice over (Bap / Bong)** — character names announced by randomly picking between two recorded voices per merge; each has its own timestamp table; mobile fix: raw bytes fetched at load, decoded lazily via main AudioContext after first user gesture
