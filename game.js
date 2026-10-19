@@ -859,7 +859,7 @@ const imgSprites=new Array(12);
 function imgR(lvl){return lvl<=8?65:90;}
 const _extraImgs={back:null,front:null,open:null,floor:null,coverTopLt:null,coverBotLt:null};
 function loadSprites(cb){
-  const total=11+7; let done=0;
+  const total=11+6; let done=0;
   const tick=()=>{ if(++done===total) _loadPixiAssets(cb); };
   for(let lvl=1;lvl<=11;lvl++){
     const img=new Image(); img.onload=img.onerror=tick;
@@ -876,25 +876,9 @@ function loadSprites(cb){
   ct.src='Sprites/machine/claw_machine_top_left_reflection_cover.png'; _extraImgs.coverTopLt=ct;
   const cb2=new Image(); cb2.onload=cb2.onerror=tick;
   cb2.src='Sprites/machine/claw_machine_bottom_left_reflection_cover.png'; _extraImgs.coverBotLt=cb2;
-  // Claw machine middle tile for canvas background rendering
-  const mid=new Image(); mid.onload=mid.onerror=tick;
-  mid.src='Sprites/machine/claw_machine_middle_tile.png'; _extraImgs.machineMid=mid;
 }
 function _loadPixiAssets(cb){
   // All textures from already-loaded Image objects — no PIXI.Assets network calls
-  // ── Canvas machine background (9-slice, matches CSS border-image on #game-frame)
-  // Coordinate math: canvas is at (45,11) in a 720×1280 game-frame reference,
-  // so the sprite is offset (-45,-11) and sized 720×1280 to align with CSS.
-  // Slice values from CSS: border-image 70 116 240 116 → top/right/bottom/left image px.
-  const midTex=_extraImgs.machineMid&&_extraImgs.machineMid.naturalWidth?PIXI.Texture.from(_extraImgs.machineMid):null;
-  if(midTex){
-    const machineSpr=new PIXI.NineSliceSprite({texture:midTex,leftWidth:116,topHeight:70,rightWidth:116,bottomHeight:240});
-    machineSpr.label='machine_bg';
-    machineSpr.width=720; machineSpr.height=1280;
-    machineSpr.x=-45; machineSpr.y=-11;
-    machineSpr.alpha=0.7; machineSpr.tint=0xff4444; // red tint for CSS comparison — remove later
-    layerBg.addChildAt(machineSpr,0); // bottom-most layer
-  }
   for(let i=1;i<=11;i++){
     const img=imgSprites[i];
     if(img&&img.naturalWidth) plushieTextures[i]=PIXI.Texture.from(img);
@@ -1138,7 +1122,7 @@ function updateClaw(){
 function clamp(x,lvl){const r=PD[lvl].r;return Math.max(PAD+r+1,Math.min(W-PAD-r-1,x));}
 let dbg=false,dbgPoly=false,solidMode=false,noMerge=false;
 let stepMode=false; // P = pause physics, . = advance one frame
-let showJoy=true;
+let showJoy=!window.matchMedia('(pointer:coarse)').matches;
 const isMobile=window.matchMedia('(pointer:coarse)').matches;
 let _joyLastMx=null,_joyNoMovFrames=0;
 let _glareT=-1,_glareStart=0;
@@ -1157,10 +1141,6 @@ const keysDown=new Set();
 document.addEventListener('keyup',e=>keysDown.delete(e.key));
 window.addEventListener('blur',()=>keysDown.clear());
 document.addEventListener('keydown',e=>{
-  // Block browser navigation and zoom shortcuts
-  if(e.altKey&&(e.key==='ArrowLeft'||e.key==='ArrowRight')){e.preventDefault();return;}
-  if(e.ctrlKey&&(e.key==='+'||e.key==='-'||e.key==='='||e.key==='0'||e.key==='_')){e.preventDefault();return;}
-  if(e.key==='Backspace'&&!(e.target instanceof HTMLInputElement||e.target instanceof HTMLTextAreaElement)){e.preventDefault();return;}
   if(dead&&e.key==='Enter'){e.preventDefault();restart();return;}
   if(e.key==='j'||e.key==='J'){toggleJoy();return;}
   if(e.key==='a'||e.key==='A'){cycleAp();return;}
@@ -1705,9 +1685,34 @@ function onDeviceOrientation(e){
 }
 let _motionAvailable = false;
 
-// ── GYRO ARROW (removed) ──────────────────────────────────────────────
-function updateGyroArrow(){}
-function showGyroArrow(){}
+// ── GYRO ARROW ────────────────────────────────────────────────────────
+function updateGyroArrow(gammaDeg){
+  const el=document.getElementById('gyro-arrow');
+  if(!el) return;
+  el.style.transform=`rotate(${-gammaDeg}deg)`;
+}
+function showGyroArrow(v){
+  const jc=joyEl(); if(!jc) return;
+  const arrow=document.getElementById('gyro-arrow');
+  const joyImg=document.getElementById('joy-img');
+  const dropBtnEl=document.getElementById('drop-btn');
+  if(!arrow) return;
+  if(v){
+    jc.style.display='flex';
+    arrow.classList.add('visible');
+    // hide joystick images so arrow takes center stage
+    if(joyImg)   joyImg.style.display='none';
+    if(dropBtnEl) dropBtnEl.style.display='none';
+  } else {
+    arrow.classList.remove('visible');
+    // restore joystick images if joy is supposed to be visible
+    if(showJoy){
+      if(joyImg)   joyImg.style.display='';
+      if(dropBtnEl) dropBtnEl.style.display='';
+    }
+    if(!showJoy) jc.style.display='none';
+  }
+}
 
 // ── SHAKE / PUSH FORCE ────────────────────────────────────────────────
 // applyShakeForce(fx, fy): push all plushies with a directional force.
@@ -1907,17 +1912,6 @@ window.addEventListener('resize', fitToViewport);
 document.addEventListener('contextmenu',e=>e.preventDefault());
 document.addEventListener('touchmove',e=>{if(e.touches.length>1)e.preventDefault();},{passive:false});
 window.addEventListener('orientationchange',()=>setTimeout(fitToViewport,200));
-// ── LOCK DOWN WEB INTERACTIONS ────────────────────────────────────────
-// Game over overlay: only the Play Again button or Enter key can restart;
-// clicks on the backdrop are swallowed immediately
-document.getElementById('ov').addEventListener('click',e=>{if(!e.target.closest('#ov-box'))e.stopImmediatePropagation();},{capture:true});
-// Prevent browser back / forward (history trap)
-history.pushState(null,'',location.href);
-window.addEventListener('popstate',()=>history.pushState(null,'',location.href));
-// Prevent ctrl+scroll and pinch zoom
-window.addEventListener('wheel',e=>e.preventDefault(),{passive:false});
-// Prevent drag-selection
-document.addEventListener('dragstart',e=>e.preventDefault());
 cur=rnd();nxt=rnd();clawLvl=cur;updUI();buildEvo();loadCbPrefs();setApSpeed(0);rebuildPtsTable();
 // sync BGM checkbox to actual bgmOn state (bgmOn defaults true)
 ['bgm-cb','bgm-ls'].forEach(id=>{const el=document.getElementById(id);if(el)el.checked=bgmOn;});
@@ -1926,7 +1920,7 @@ updateGpVisuals();
 // start BGM after first user gesture (browser autoplay policy)
 {let _bgmStarted=false;const _bgmUnlock=()=>{if(_bgmStarted)return;_bgmStarted=true;if(bgmOn&&!muted)startBGM();};document.addEventListener('click',_bgmUnlock,{once:true});document.addEventListener('touchstart',_bgmUnlock,{once:true});}
 if(showJoy){const el=joyEl();if(el)el.style.display='flex';}
-Promise.all([document.fonts.load("400 16px 'Cherry Bomb One'","ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789Mây Bo"),document.fonts.ready]).then(()=>initPixi()).then(()=>{loadSprites(()=>{updNext();fitToViewport();resetClawForNewRound();requestAnimationFrame(loop);});});
+Promise.all([document.fonts.load("400 16px 'Cherry Bomb One'","ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789Mây Bơ"),document.fonts.ready]).then(()=>initPixi()).then(()=>{loadSprites(()=>{updNext();fitToViewport();resetClawForNewRound();requestAnimationFrame(loop);});});
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('sw.js');
   navigator.serviceWorker.addEventListener('message',e=>{
