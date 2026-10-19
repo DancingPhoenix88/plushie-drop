@@ -1,7 +1,18 @@
-const CACHE = 'plushie-v33';
+import { VERSION } from './src/config.js';
+
+const CACHE = `plushie-${VERSION}`;
 const FILES = [
+  './',
   './index.html',
+  './game.css',
   './manifest.json',
+  './src/config.js',
+  './src/physics.js',
+  './src/audio.js',
+  './src/renderer.js',
+  './src/input.js',
+  './src/ui.js',
+  './src/main.js',
   './Sprites/level_1.png',
   './Sprites/level_2.png',
   './Sprites/level_3.png',
@@ -27,12 +38,11 @@ self.addEventListener('activate', e => {
       .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
       .then(() => self.clients.matchAll())
-      .then(clients => clients.forEach(c => c.postMessage({type:'SW_UPDATED'})))
+      .then(clients => clients.forEach(c => c.postMessage({ type: 'SW_UPDATED' })))
   );
 });
 
 self.addEventListener('fetch', e => {
-  // Network-first: always try the network, fall back to cache if offline
   e.respondWith(
     fetch(e.request).then(res => {
       const clone = res.clone();
