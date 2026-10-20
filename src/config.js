@@ -1,5 +1,5 @@
 export const VERSION = 'v36';
-export const IS_DEBUG = true;
+export const IS_DEBUG = false;
 export const IS_GP_DEBUG = false;
 
 export const W = 632;
