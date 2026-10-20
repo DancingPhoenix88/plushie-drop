@@ -735,7 +735,15 @@ async function boot() {
   const unlockAudio = () => { 
     markUserInteracted();
     if (bgmOn && !muted) startBGM();
+
+    // Auto-resume Gyro on iOS on the player's very first tap
+    const prefs = JSON.parse(localStorage.getItem('plushie_cb_prefs') || '{}');
+    if (prefs.gyro && !gyroOn) {
+      toggleGyro();
+    }
   };
+  document.addEventListener('click', unlockAudio, { once: true });
+  document.addEventListener('touchstart', unlockAudio, { once: true });
   document.addEventListener('click', unlockAudio, { once: true });
   document.addEventListener('touchstart', unlockAudio, { once: true });
   document.addEventListener('keydown', unlockAudio, { once: true });

@@ -1,4 +1,4 @@
-export const VERSION = 'v35';
+export const VERSION = 'v36';
 export const IS_DEBUG = true;
 export const IS_GP_DEBUG = false;
 

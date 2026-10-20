@@ -178,11 +178,14 @@ export function loadCbPrefs() {
       });
     }
     const isMobile = window.matchMedia('(pointer:coarse)').matches;
-    if (p.gyro === true && isMobile) {
+    // Note: iOS requires an explicit user gesture to call requestPermission(),
+    // so auto-enabling on reload only works on Android / non-permission browsers.
+    if (p.gyro === true && isMobile && typeof DeviceOrientationEvent?.requestPermission !== 'function') {
       ['gyro-cb', 'gyro-ls'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.checked = true;
       });
+      toggleGyro();
     }
   } catch (e) {}
 }

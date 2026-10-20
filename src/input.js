@@ -30,7 +30,9 @@ export let _fKeyDown = false;
 let _tiltPrevX = null;
 let _shakeTrackX = 0, _shakeTrackY = 0, _shakeTrackT = 0;
 const GYRO_DRAG_SCALE = 0.4;
+const SHAKE_FORCE_SCALE = 0.025;
 let _onGyroHud = null;
+let _onShakeForce = null;
 
 export function clampClaw(x, lvl) {
   const r = PD[lvl].r;
@@ -55,6 +57,7 @@ function updateGyroHudState() {
 
 export function initInputHandlers({ onDrop, onShakeForce, onGyroHud }) {
   _onGyroHud = onGyroHud;
+  _onShakeForce = onShakeForce;
 
   window.addEventListener('keydown', e => {
     setInputSource('keyboard');
@@ -118,6 +121,7 @@ export function initInputHandlers({ onDrop, onShakeForce, onGyroHud }) {
           const ddeg = (e.clientX - _tiltPrevX) * GYRO_DRAG_SCALE;
           const newGamma = Math.max(-90, Math.min(90, -tiltAngle * 180 / Math.PI + ddeg));
           tiltAngle = -newGamma * Math.PI / 180;
+          updateGyroArrow(-newGamma);
         }
         _tiltPrevX = e.clientX;
       }
@@ -130,8 +134,8 @@ export function initInputHandlers({ onDrop, onShakeForce, onGyroHud }) {
           const ddy = e.clientY - _shakeTrackY;
           const fx = -(ddx / dt) * 1.2;
           const fy = -(ddy / dt) * 1.2;
-          if ((Math.abs(fx) > 0.05 || Math.abs(fy) > 0.05) && onShakeForce) {
-            onShakeForce(fx, fy);
+          if ((Math.abs(fx) > 0.05 || Math.abs(fy) > 0.05) && _onShakeForce) {
+            _onShakeForce(fx, fy);
           }
         }
         _shakeTrackX = e.clientX;
@@ -275,9 +279,37 @@ export function flashDropBtn() {
   setTimeout(() => { btn.src = 'Sprites/ui/button_released.png'; }, 300);
 }
 
+// ── GYRO ARROW & SENSORS (from game-v32.js) ───────────────────────────
+export function updateGyroArrow(gammaDeg) {
+  const el = document.getElementById('gyro-arrow');
+  if (!el) return;
+  el.style.transform = `rotate(${-gammaDeg}deg)`;
+}
+
+export function showGyroArrow(v) {
+  const jc = document.getElementById('joyctrl');
+  const arrow = document.getElementById('gyro-arrow');
+  const joyImg = document.getElementById('joy-img');
+  const dropBtnEl = document.getElementById('drop-btn');
+  if (!arrow) return;
+  if (v) {
+    if (jc) jc.style.display = 'flex';
+    arrow.classList.add('visible');
+    if (joyImg) joyImg.style.display = 'none';
+    if (dropBtnEl) dropBtnEl.style.display = 'none';
+  } else {
+    arrow.classList.remove('visible');
+    if (joyImg) joyImg.style.display = '';
+    if (dropBtnEl) dropBtnEl.style.display = '';
+  }
+}
+
 function onDeviceOrientation(e) {
   if (e.gamma === null) return;
-  if (!_motionAvailable && !isIOS) tiltAngle = -e.gamma * Math.PI / 180;
+  if (!_motionAvailable && !isIOS) {
+    tiltAngle = -e.gamma * Math.PI / 180;
+    updateGyroArrow(-e.gamma);
+  }
 }
 
 function onDeviceMotion(e) {
@@ -286,26 +318,76 @@ function onDeviceMotion(e) {
   if (g && g.x != null && g.y != null) {
     const rawAngle = Math.atan2(g.x, -g.y);
     tiltAngle = tiltAngle * 0.7 + rawAngle * 0.3;
+    updateGyroArrow(tiltAngle * 180 / Math.PI);
   }
+
+  const a = e.acceleration;
+  if (a && a.x != null && _onShakeForce) {
+    const fx = a.x * SHAKE_FORCE_SCALE;
+    const fy = -a.y * SHAKE_FORCE_SCALE;
+    if (Math.abs(fx) > 0.05 || Math.abs(fy) > 0.05) {
+      _onShakeForce(fx, fy);
+    }
+  }
+}
+
+function _syncGyroBoth(v) {
+  ['gyro-cb', 'gyro-ls'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.checked = v;
+  });
+}
+
+function _requestMotionPermission(cb) {
+  if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+    DeviceMotionEvent.requestPermission()
+      .then(s => { if (s === 'granted') cb(); })
+      .catch(() => {});
+  } else {
+    cb();
+  }
+}
+
+export function enableGyro() {
+  window.addEventListener('deviceorientation', onDeviceOrientation);
+  _requestMotionPermission(() => {
+    window.addEventListener('devicemotion', onDeviceMotion);
+  });
+  gyroOn = true;
+  _syncGyroBoth(true);
+  showGyroArrow(true);
+}
+
+export function disableGyro() {
+  window.removeEventListener('deviceorientation', onDeviceOrientation);
+  window.removeEventListener('devicemotion', onDeviceMotion);
+  gyroOn = false;
+  tiltAngle = 0;
+  _motionAvailable = false;
+  _syncGyroBoth(false);
+  showGyroArrow(false);
 }
 
 export function toggleGyro() {
   if (gyroOn) {
-    window.removeEventListener('deviceorientation', onDeviceOrientation);
-    window.removeEventListener('devicemotion', onDeviceMotion);
-    gyroOn = false; tiltAngle = 0;
+    disableGyro();
     return;
   }
   if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-    DeviceOrientationEvent.requestPermission().then(state => {
-      if (state === 'granted') {
-        window.addEventListener('deviceorientation', onDeviceOrientation);
-        gyroOn = true;
-      }
-    }).catch(() => {});
+    DeviceOrientationEvent.requestPermission()
+      .then(state => {
+        if (state === 'granted') {
+          enableGyro();
+        } else {
+          alert('Tilt permission denied.');
+          _syncGyroBoth(false);
+        }
+      })
+      .catch(err => {
+        alert('Could not request tilt permission: ' + err);
+        _syncGyroBoth(false);
+      });
   } else {
-    window.addEventListener('deviceorientation', onDeviceOrientation);
-    window.addEventListener('devicemotion', onDeviceMotion);
-    gyroOn = true;
+    enableGyro();
   }
 }
