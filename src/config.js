@@ -1,4 +1,4 @@
-export const VERSION = 'v34';
+export const VERSION = 'v35';
 export const IS_DEBUG = false;
 export const IS_GP_DEBUG = false;
 
@@ -30,12 +30,12 @@ export const CLAW_OPEN_FRAMES = 18;
 export const PD = [null,
   { name: 'May', r: 30, body: '#8ee8ff', stroke: '#38a8d0' },
   { name: 'Bo', r: 41, body: '#4a8c40', stroke: '#245820' },
-  { name: 'Son', r: 52, body: '#f5f5f5', stroke: '#b8b8b8' },
+  { name: 'Shaun', r: 52, body: '#f5f5f5', stroke: '#b8b8b8' },
   { name: 'Ai Ai', r: 62, body: '#e83030', stroke: '#980808' },
-  { name: 'Baby Bunny', r: 73, physR: 66, body: '#fff0f8', stroke: '#d89ab8' },
+  { name: 'Baby', r: 73, physR: 66, body: '#fff0f8', stroke: '#d89ab8' },
   { name: 'Poko', r: 84, physR: 80, body: '#c87830', stroke: '#884808' },
-  { name: 'Papa', r: 95, physR: 91, body: '#f0c820', stroke: '#b08800' },
-  { name: 'Lala', r: 105, body: '#1090e8', stroke: '#0055b0' },
+  { name: 'Lapas', r: 95, physR: 91, body: '#f0c820', stroke: '#b08800' },
+  { name: 'Mama', r: 105, body: '#1090e8', stroke: '#0055b0' },
   { name: 'Bunny', r: 116, body: '#f060a0', stroke: '#a81858' },
   { name: 'Mimi', r: 125, body: '#9848d4', stroke: '#601898' },
   { name: 'Racoon', r: 136, physR: 129, body: '#282838', stroke: '#080818' },

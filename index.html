@@ -107,6 +107,14 @@
     <div id="fs-prompt-action"></div>
   </div>
 </div>
+<div id="gyro-prompt">
+  <div id="gyro-prompt-box">
+    <div class="gyro-prompt-icon">📱</div>
+    <div class="gyro-prompt-title">Mobile Feature</div>
+    <p class="gyro-prompt-desc">Gyroscope and tilt controls require physical motion sensors, available on mobile devices and tablets.</p>
+    <button id="gyro-prompt-close-btn">Got it!</button>
+  </div>
+</div>
 <div id="ov">
   <div id="ov-box">
     <div id="ov-polaroid">
@@ -125,7 +133,7 @@
     <div id="ov-hint"></div>
   </div>
 </div>
-<audio id="bgm-audio" src="Audio/Upbeat.mp3" loop preload="none"></audio>
+<audio id="bgm-audio" src="Audio/Upbeat.mp3" loop preload="auto"></audio>
 <div id="help-popup">
   <div id="help-box">
     <div id="help-tabs">
@@ -133,26 +141,28 @@
       <button id="help-tab-gp" class="help-tab-btn">🎮 Gamepad</button>
     </div>
     <table id="help-content-kb">
-      <tr><td colspan="2" class="help-section-hdr">Gameplay</td></tr>
-      <tr><td>← / →</td><td>Move aim (hold Shift for fast)</td></tr>
-      <tr><td>Space / ↓</td><td>Drop plushie</td></tr>
-      <tr><td>A</td><td>Cycle auto-drop speed (0→1→2→3)</td></tr>
-      <tr><td>? or /</td><td>Show this help</td></tr>
-      <tr><td>J</td><td>Toggle joystick display</td></tr>
+      <tbody>
+        <tr><td colspan="2" class="help-section-hdr">Gameplay</td></tr>
+        <tr><td>← / →</td><td>Move aim (hold Shift for fast)</td></tr>
+        <tr><td>Space / ↓</td><td>Drop plushie</td></tr>
+        <tr><td>A</td><td>Cycle auto-drop speed (0→1→2→3)</td></tr>
+        <tr><td>? or /</td><td>Show this help</td></tr>
+        <tr><td>J</td><td>Toggle joystick display</td></tr>
+      </tbody>
       <tbody id="help-debug-section">
-      <tr><td colspan="2" class="help-section-hdr">Debug</td></tr>
-      <tr><td>W</td><td>Force WIPE OUT</td></tr>
-      <tr><td>[ / ]</td><td>Decrease / increase polygon sides</td></tr>
-      <tr><td>C</td><td>Show polygon colliders</td></tr>
-      <tr><td>D</td><td>Debug overlay (velocity / spin)</td></tr>
-      <tr><td>H</td><td>Toggle solid n-gon shapes</td></tr>
-      <tr><td>S</td><td>Toggle spawn rate display</td></tr>
-      <tr><td>2–9, 0, 1</td><td>Spawn rank 2–11</td></tr>
-      <tr><td>G + mouse</td><td>Hold G, drag mouse ←→ to simulate tilt</td></tr>
-      <tr><td>F + mouse</td><td>Hold F, flick mouse fast to simulate shake</td></tr>
-      <tr><td>M</td><td>Toggle merge on/off <input type="checkbox" id="dbg-nomerge-cb"></td></tr>
-      <tr><td>P</td><td>Pause simulation</td></tr>
-      <tr><td>.</td><td>Step one frame (while paused)</td></tr>
+        <tr><td colspan="2" class="help-section-hdr">Debug</td></tr>
+        <tr><td>W</td><td>Force WIPE OUT</td></tr>
+        <tr><td>[ / ]</td><td>Decrease / increase polygon sides</td></tr>
+        <tr><td>C</td><td>Show polygon colliders</td></tr>
+        <tr><td>D</td><td>Debug overlay (velocity / spin)</td></tr>
+        <tr><td>H</td><td>Toggle solid n-gon shapes</td></tr>
+        <tr><td>S</td><td>Toggle spawn rate display</td></tr>
+        <tr><td>2–9, 0, 1</td><td>Spawn rank 2–11</td></tr>
+        <tr><td>G + mouse</td><td>Hold G, drag mouse ←→ to simulate tilt</td></tr>
+        <tr><td>F + mouse</td><td>Hold F, flick mouse fast to simulate shake</td></tr>
+        <tr><td>M</td><td>Toggle merge on/off <input type="checkbox" id="dbg-nomerge-cb"></td></tr>
+        <tr><td>P</td><td>Pause simulation</td></tr>
+        <tr><td>.</td><td>Step one frame (while paused)</td></tr>
       </tbody>
     </table>
     <table id="help-content-gp">

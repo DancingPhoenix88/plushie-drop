@@ -2,7 +2,16 @@
 
 ---
 
-## v33 (current)
+## v35
+- **Retouch new characters**: For a consistent art style among all the characters
+- **Fix retained labels on restart**: Name labels are cleared after wiping out or restarting
+- **Joystick**: Visible by default
+- **Gyro popup**: Show gyro on PC and guide player to open the game on mobile
+
+## v34
+- **Modular**: Split a monolith script into multiple ones by purpose
+
+## v33
 - **Replace characters at level 4, 7, 8**: Mini Dora => Ai Ai, Doraemi => Lapas, Doraemon => Mama
 
 ## v32

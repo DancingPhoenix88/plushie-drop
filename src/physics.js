@@ -1,10 +1,10 @@
 import { 
   PD, MASS, INV_MASS, NSIDES, GRAV, REST, FRIC, DAMP_DT, 
-  WIPEOUT_DAMP, SUBSTEPS, ITERS, V_EPS, AV_MAX, PAD, W, H, WALL, DROPY
+  WIPEOUT_DAMP, SUBSTEPS, ITERS, V_EPS, AV_MAX, PAD, W, H, WALL, DROPY, imgR 
 } from './config.js';
 
 export class Ball {
-  constructor(x, y, lvl) {
+  constructor(x, y, lvl, texture, shadowFilter, container) {
     this.x = x;
     this.y = y;
     this.r = PD[lvl].physR ?? PD[lvl].r;
@@ -30,6 +30,16 @@ export class Ball {
     this._dangerLevel = 0;
     this._polyText = null;
     this._nameText = null;
+
+    if (texture && container) {
+      this.sprite = new PIXI.Sprite(texture);
+      this.sprite.label = PD[lvl].name;
+      this.sprite.zIndex = 11 - lvl;
+      this.sprite.anchor.set(0.5, 0.5);
+      this.sprite.scale.set(PD[lvl].r / imgR(lvl));
+      if (shadowFilter) this.sprite.filters = [shadowFilter];
+      container.addChild(this.sprite);
+    }
   }
   get speed() {
     return Math.hypot(this.vx, this.vy);

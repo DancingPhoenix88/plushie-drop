@@ -1,24 +1,28 @@
 import { 
   W, H, DY, DROPY, PAD, PD, PTS, MERGE_DIST_SQ, CLAW_OPEN_FRAMES, 
-  TRAP_ANIM_SPEED, CONFETTI_COLORS, FS 
+  TRAP_ANIM_SPEED, CONFETTI_COLORS, FS, IS_DEBUG, AV_MAX 
 } from './config.js';
 import { Ball, stepPhysics, destroyBall } from './physics.js';
 import { 
   initPixi, loadSprites, renderScene, cleanRender, triggerGlare, tickGlare, 
-  drawAtFit, layerFx 
+  drawAtFit, layerFx, plushieTextures, makeShadow, layerPlushie, tickReflect,
+  refreshFontStyles 
 } from './renderer.js';
 import { 
   mx, tiltAngle, initInputHandlers, processGamepad, processKeyboardMovement, 
-  clampClaw, updateJoystick, flashDropBtn 
+  clampClaw, updateJoystick, flashDropBtn, setGpConnected, setInputSource 
 } from './input.js';
 import { 
   sfxDrop, sfxMerge, sfxWipeOut, sfxLevelUp, sfxGameOver, playCharacterName, 
-  startBGM, bgmOn, bgmRunning, muted 
+  startBGM, bgmOn, bgmRunning, muted, markUserInteracted, setBGMVolume 
 } from './audio.js';
 import { 
   fitToViewport, updateScoreUI, updateNextUI, buildEvoChart, updateEvoLabels, 
-  bindDOMEvents, loadCbPrefs, toggleHelp, showGameOverModal, hideGameOverModal, 
-  setPromptActionButton, dismissFsPrompt, enterFullscreen, initNextCanvas 
+  updateEvoUnlocks, bindDOMEvents, loadCbPrefs, toggleHelp, showGameOverModal, 
+  hideGameOverModal, setPromptActionButton, dismissFsPrompt, enterFullscreen, 
+  initNextCanvas, updateJoystickLayout, toggleUserJoy, showGyroHud, takePolaroid, 
+  shareScore, loadHighScore, saveHighScore, buildOvHint, updateGpVisuals, 
+  updateGpGuide 
 } from './ui.js';
 
 let plushies = [], parts = [], mergeQ = [];
@@ -28,6 +32,7 @@ let cooling = false, dead = false, tapHint = false, wipeOutActive = false;
 let trapDoorScale = 0, trapDoorOpen = false;
 let clawState = 'idle', clawOpenTimer = 0, clawLvl = 1, clawX = W / 2, clawDropX = W / 2;
 let sidesOffset = 0, dbg = false, dbgPoly = false, solidMode = false, noMerge = false, showSpawnRate = false;
+let stepMode = false;
 let apSpeed = 0, _apTimer = null;
 const AP_DELAYS = [0, 1200, 820, 500];
 
@@ -96,6 +101,10 @@ function computeSpawnRates() {
   return rates;
 }
 
+function resetClawForNewRound() {
+  tapHint = apSpeed === 0;
+}
+
 function drop() {
   if (cooling || dead || wipeOutActive) return;
   tapHint = false;
@@ -140,6 +149,23 @@ function burst(x, y, color) {
   for (let i = 0; i < 11; i++) {
     const a = Math.PI * 2 * i / 11 + Math.random() * .5, spd = 2 + Math.random() * 4;
     parts.push({ x, y, vx: Math.cos(a) * spd, vy: Math.sin(a) * spd, r: 3 + Math.random() * 4, color, life: 1 });
+  }
+}
+
+function triggerClear() {
+  triggerGlare();
+  scheduleAt(18, triggerGlare);
+  scheduleAt(37, triggerGlare);
+  sfxWipeOut();
+  for (let i = 0; i < 20; i++) {
+    scheduleAt(18 + i * 6, () => {
+      const baseR = 10 + Math.random() * 18;
+      sparkles.push({
+        x: PAD + Math.random() * (W - PAD * 2), y: Math.random() * H,
+        r: baseR, baseR, rot: 0, color: '#ffffff',
+        life: 1.2 + Math.random() * 0.8, delay: 0, phase: Math.random() * Math.PI * 2
+      });
+    });
   }
 }
 
@@ -204,6 +230,7 @@ function processMerges() {
     burst(px, py, PD[nl].body);
     updateScoreUI(score, gameLevel);
     sfxMerge(nl);
+    if (showSpawnRate) updateEvoLabels(showSpawnRate, computeSpawnRates);
     popups.push({ x: px, y: py, text: '+' + pts.toLocaleString(), color: PD[nl].body, life: 1 });
     if (!firstMerged.has(nl)) {
       firstMerged.add(nl);
@@ -215,8 +242,9 @@ function processMerges() {
   plushies.filter((_, idx) => toRemove.has(idx)).forEach(p => destroyBall(p, danger));
   plushies = plushies.filter((_, idx) => !toRemove.has(idx));
   for (const { x, y, lvl } of toAdd) {
-    const b = new Ball(x, y, lvl);
+    const b = new Ball(x, y, lvl, plushieTextures[lvl], makeShadow(), layerPlushie);
     b.vx = (Math.random() - .5) * 2; b.vy = -3;
+    b.av = (Math.random() - .5) * AV_MAX * 0.4;
     plushies.push(b);
   }
   if (wipeOutPos) triggerWipeOut(wipeOutPos.x, wipeOutPos.y);
@@ -228,12 +256,13 @@ function triggerWipeOut(x, y) {
   cur = rnd(); nxt = rnd(); updateNextUI(nxt, gameLevel, drawAtFit);
   clawX = W / 2; clawLvl = cur;
 
-  // Clear previous celebrations and popups before triggering WIPE OUT banner
   clearCelebrations();
   clearPopups();
 
   const OPEN_F = Math.round(1 / TRAP_ANIM_SPEED);
-  const CLOSE_F = OPEN_F * 2 + 60;
+  const fallF = Math.ceil(Math.sqrt(2 * (H + 136) / (0.38 * 6)) * 1.5);
+  const CLOSE_F = OPEN_F + OPEN_F + fallF;
+
   scheduleAt(OPEN_F, () => { trapDoorOpen = true; });
   scheduleAt(CLOSE_F, () => {
     plushies.forEach(p => destroyBall(p, danger));
@@ -242,23 +271,28 @@ function triggerWipeOut(x, y) {
   });
 
   let totalPts = 0;
-  for (const p of plushies) { totalPts += PTS_M[p.level]; p.vy = Math.max(p.vy, 1); }
+  for (const p of plushies) { totalPts += PTS_M[p.level]; p.vy = Math.max(p.vy, 1 + Math.random() * 2); }
+  danger = {}; mergeQ = [];
   score += totalPts;
+  if (score > best) best = score;
   updateScoreUI(score, gameLevel);
 
   for (let i = 0; i < 160; i++) {
-    const a = Math.random() * Math.PI * 2, spd = 4 + Math.random() * 8;
+    const fromTop = i < 50;
+    const cx = fromTop ? Math.random() * W : x, cy = fromTop ? -10 : y;
+    const a = fromTop ? (Math.PI / 2 + Math.random() * .8 - .4) : (Math.random() * Math.PI * 2);
+    const spd = fromTop ? (4 + Math.random() * 7) : (5 + Math.random() * 10);
     confetti.push({
-      x, y, vx: Math.cos(a) * spd, vy: Math.sin(a) * spd, r: 4 + Math.random() * 5,
+      x: cx, y: cy, vx: Math.cos(a) * spd, vy: Math.sin(a) * spd, r: 4 + Math.random() * 5,
       rot: Math.random() * Math.PI * 2, rv: (Math.random() - .5) * 0.3,
-      w: 6, h: 8, color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
+      w: 5 + Math.random() * 6, h: 7 + Math.random() * 9,
+      color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
       life: 1.2, shape: Math.random() < 0.6 ? 'rect' : 'circle'
     });
   }
   celebrations.push({ x: W / 2, y: H / 2 - 80, name: 'WIPE OUT!', level: 0, pts: totalPts, color: '#ff3030', stroke: '#800000', life: 1, scale: 0.1, phase: 'in', isWipeOut: true });
   if (totalPts > 0) popups.push({ x: W / 2, y: H / 2 + 60, text: '+' + totalPts.toLocaleString(), color: '#f0c500', life: 1.8, big: true });
-  sfxWipeOut();
-  triggerGlare();
+  triggerClear();
 }
 
 function tickTrapDoor() {
@@ -266,6 +300,9 @@ function tickTrapDoor() {
   if (trapDoorScale === target) return;
   const prev = trapDoorScale;
   trapDoorScale = target > prev ? Math.min(1, prev + TRAP_ANIM_SPEED) : Math.max(0, prev - TRAP_ANIM_SPEED);
+  if (prev < 1 && trapDoorScale >= 1 && wipeOutActive) {
+    for (const p of plushies) { p.av = (Math.random() - .5) * AV_MAX * 10; p.vx += (Math.random() - .5) * 3; }
+  }
   if (prev > 0 && trapDoorScale <= 0 && wipeOutActive) {
     wipeOutActive = false;
     gameLevel++;
@@ -273,9 +310,8 @@ function tickTrapDoor() {
     rebuildPtsTable();
     const glEl = document.getElementById('gl-ls'); if (glEl) glEl.textContent = gameLevel;
     firstMerged.clear();
-    buildEvoChart(firstMerged);
+    updateEvoUnlocks(firstMerged);
 
-    // Clean up wipeout celebration before introducing the new level banner
     clearCelebrations();
     clearPopups();
 
@@ -417,19 +453,22 @@ function checkDanger() {
 function gameOver() {
   dead = true;
   sfxGameOver();
-  const snap = cleanRender(plushies);
-  showGameOverModal(score, snap);
+  takePolaroid(cleanRender, plushies, layerFx);
+  const hs = loadHighScore();
+  const isNewHS = score > hs;
+  if (isNewHS) saveHighScore(score);
+  const hintHtml = buildOvHint(isNewHS, hs, firstMerged, gameLevel, PTS_M);
+  showGameOverModal(score, isNewHS, hintHtml);
 }
 
 function restart() {
   dead = false; cooling = false; wipeOutActive = false;
   trapDoorOpen = false; trapDoorScale = 0; gameLevel = 1; scoreMultiplier = 1;
+  stepMode = false;
   rebuildPtsTable();
 
-  // Cancel any scheduled callbacks
   _frameEvents = [];
 
-  // Clean all plushies
   plushies.forEach(p => destroyBall(p, danger));
   plushies = []; 
   parts = []; 
@@ -440,7 +479,6 @@ function restart() {
   firstMerged.clear(); 
   score = 0;
 
-  // Fully destroy any remaining PIXI celebration and popup nodes
   clearCelebrations();
   clearPopups();
 
@@ -448,6 +486,8 @@ function restart() {
   hideGameOverModal();
   cur = rnd(); nxt = rnd(); updateNextUI(nxt, gameLevel, drawAtFit);
   clawState = 'idle'; clawX = W / 2; clawLvl = cur;
+  resetClawForNewRound();
+  triggerClear();
 
   if (bgmOn && !muted) {
     const el = document.getElementById('bgm-audio');
@@ -458,21 +498,21 @@ function restart() {
   requestAnimationFrame(loop);
 }
 
-function shareScore() {
-  const url = window.location.href;
-  const text = `I scored ${score.toLocaleString()} in BB Tower 🧸! Can you beat me?\n${url}`;
-  if (navigator.share) {
-    navigator.share({ title: 'BB Tower', text }).catch(() => {});
-  } else {
-    navigator.clipboard.writeText(text).then(() => alert('Copied to clipboard!'));
-  }
+function handleShare() {
+  shareScore(score);
+}
+
+function applyShakeForce(fx, fy) {
+  plushies.forEach(p => { p.vx += fx; p.vy += fy; });
 }
 
 function loop() {
   tickScheduled();
+  tickReflect(performance.now());
   processGamepad({
-    cur, dead, onDrop: drop, onRestart: restart, onShare: shareScore,
-    onToggleHelp: () => toggleHelp(), onCycleAp: cycleAp
+    cur, dead, onDrop: drop, onRestart: restart, onShare: handleShare,
+    onToggleHelp: () => toggleHelp(), onCycleAp: cycleAp,
+    onSetBgmVolume: setBGMVolume, bgmVolume: parseFloat(localStorage.getItem('plushie_bgm_vol') || '0.4')
   });
   tickTrapDoor();
   processKeyboardMovement(cur, dead);
@@ -492,15 +532,24 @@ function loop() {
     if (clawOpenTimer === CLAW_OPEN_FRAMES - 2) {
       sfxDrop();
       if (bgmOn && !bgmRunning) startBGM();
-      const b = new Ball(clawDropX, DROPY, clawLvl);
-      b.av = (Math.random() - .5) * 0.03;
+      const b = new Ball(clawDropX, DROPY, clawLvl, plushieTextures[clawLvl], makeShadow(), layerPlushie);
+      b.av = (Math.random() - .5) * AV_MAX * 0.3;
       plushies.push(b);
-      cur = nxt; nxt = rnd(); updateNextUI(nxt, gameLevel, drawAtFit);
+      cur = nxt; 
+      nxt = rnd(); 
+      updateNextUI(nxt, gameLevel, drawAtFit);
     }
-    if (clawOpenTimer <= 0) { clawState = 'idle'; cooling = false; }
+    if (clawOpenTimer <= 0) { 
+      clawState = 'idle'; 
+      cooling = false; 
+    }
   }
 
   updateJoystick();
+  if (wipeOutActive) {
+    plushies.filter(p => p.y - p.r >= H + 80).forEach(p => destroyBall(p, danger));
+    plushies = plushies.filter(p => p.y - p.r < H + 80);
+  }
   parts = parts.filter(p => p.life > 0);
   parts.forEach(p => { p.x += p.vx; p.y += p.vy; p.vy += .18; p.life -= .044; p.r *= .93; });
   tickConfetti();
@@ -516,77 +565,186 @@ function loop() {
     solidMode, dbg, dbgPoly, sidesOffset
   });
 
-  if (!dead) requestAnimationFrame(loop);
+  if (!dead && !stepMode) requestAnimationFrame(loop);
 }
 
 async function boot() {
   rebuildPtsTable();
+
   const canvas = document.getElementById('gc');
   await initPixi(canvas);
   initNextCanvas();
 
+  loadSprites();
+  if (document.fonts) {
+    document.fonts.ready.then(() => refreshFontStyles()).catch(() => {});
+  }
+
+  if (!IS_DEBUG) {
+    const dbgSection = document.getElementById('help-debug-section');
+    if (dbgSection) dbgSection.style.display = 'none';
+  } else {
+    document.body.classList.add('debug-mode');
+  }
+
   bindDOMEvents({
     onRestart: restart,
-    onShare: shareScore,
+    onShare: handleShare,
     onCycleAp: cycleAp,
     onToggleNoMerge: checked => { noMerge = checked; }
   });
 
   window.addEventListener('keydown', e => {
-    if (e.key === 'j' || e.key === 'J') {
-      const joy = document.getElementById('joyctrl');
-      if (joy) joy.style.display = joy.style.display === 'flex' ? 'none' : 'flex';
+    setInputSource('keyboard');
+    if (dead && e.key === 'Enter') {
+      e.preventDefault();
+      restart();
+      return;
     }
-    if (e.key === 'a' || e.key === 'A') cycleAp();
-    if (e.key === '?' || e.key === '/') toggleHelp();
-    if (e.key === 'Escape') toggleHelp(false);
-    if (e.key === 's' || e.key === 'S') {
-      showSpawnRate = !showSpawnRate;
-      updateEvoLabels(showSpawnRate, computeSpawnRates);
+    if (e.key === 'j' || e.key === 'J') { toggleUserJoy(); return; }
+    if (e.key === 'a' || e.key === 'A') { cycleAp(); return; }
+    if (e.key === '?' || e.key === '/') { toggleHelp(); return; }
+    if (e.key === 'Escape') { toggleHelp(false); return; }
+
+    if (IS_DEBUG) {
+      if (e.key === 'm' || e.key === 'M') {
+        noMerge = !noMerge;
+        const cb = document.getElementById('dbg-nomerge-cb');
+        if (cb) cb.checked = noMerge;
+        showGyroHud(noMerge ? '🚫 MERGE OFF' : '✅ MERGE ON');
+        setTimeout(() => showGyroHud(null), 1500);
+        return;
+      }
+      if (e.key === 'p' || e.key === 'P') {
+        stepMode = !stepMode;
+        showGyroHud(stepMode ? '⏸ PAUSED  (. = next frame)' : '▶ RUNNING');
+        setTimeout(() => showGyroHud(null), 1200);
+        if (!stepMode && !dead) requestAnimationFrame(loop);
+        return;
+      }
+      if (e.key === '.' && stepMode && !dead) {
+        tickScheduled();
+        tickTrapDoor();
+        stepPhysics(plushies, { tiltAngle, wipeOutActive, trapDoorScale, sidesOffset });
+        detectMerges();
+        processMerges();
+        parts = parts.filter(p => p.life > 0);
+        parts.forEach(p => { p.x += p.vx; p.y += p.vy; p.vy += .18; p.life -= .044; p.r *= .93; });
+        tickConfetti(); tickSparkles(); tickPopups(); tickCelebrations(); tickGlare();
+        renderScene({
+          plushies, parts, confetti, sparkles, celebrations,
+          clawState, clawLvl, cur, clawX, clawOpenTimer,
+          tapHint, dead, wipeOutActive, trapDoorScale,
+          solidMode, dbg, dbgPoly, sidesOffset
+        });
+        return;
+      }
+      if (e.key === 's' || e.key === 'S') {
+        showSpawnRate = !showSpawnRate;
+        updateEvoLabels(showSpawnRate, computeSpawnRates);
+        return;
+      }
+      if (e.key === 'd' || e.key === 'D') {
+        dbg = !dbg;
+        if (dbg) dbgPoly = false;
+        return;
+      }
+      if (e.key === 'c' || e.key === 'C') {
+        dbgPoly = !dbgPoly;
+        if (dbgPoly) { dbg = false; solidMode = false; }
+        return;
+      }
+      if (e.key === 'h' || e.key === 'H') {
+        solidMode = !solidMode;
+        if (solidMode) dbgPoly = false;
+        return;
+      }
+      if (e.key === 'w' || e.key === 'W') {
+        if (!dead && !wipeOutActive) {
+          for (let i = 1; i <= 11; i++) firstMerged.add(i);
+          buildEvoChart(firstMerged);
+          triggerWipeOut(W / 2, H / 2);
+        }
+        return;
+      }
+      if (e.key === '[') {
+        e.preventDefault();
+        sidesOffset = Math.max(-1, sidesOffset - 1);
+        if (!solidMode) { dbg = false; dbgPoly = true; }
+        return;
+      }
+      if (e.key === ']') {
+        e.preventDefault();
+        sidesOffset = Math.min(18, sidesOffset + 1);
+        if (!solidMode) { dbg = false; dbgPoly = true; }
+        return;
+      }
+      const lvMap = { '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '0': 10, '1': 11 };
+      const lvl = lvMap[e.key];
+      if (lvl && !dead) {
+        const b = new Ball(clampClaw(mx, lvl), DROPY, lvl, plushieTextures[lvl], makeShadow(), layerPlushie);
+        b.av = (Math.random() - .5) * AV_MAX * 0.3;
+        plushies.push(b);
+        return;
+      }
     }
-    if (e.key === 'd' || e.key === 'D') { dbg = !dbg; if (dbg) dbgPoly = false; }
-    if (e.key === 'c' || e.key === 'C') { dbgPoly = !dbgPoly; if (dbgPoly) dbg = false; }
-    if (e.key === 'h' || e.key === 'H') { solidMode = !solidMode; }
-    if (e.key === 'w' || e.key === 'W') { if (!dead && !wipeOutActive) triggerWipeOut(W / 2, H / 2); }
   });
 
-  initInputHandlers({ onDrop: drop });
-  loadSprites(() => {
-    loadCbPrefs();
-    window.addEventListener('resize', fitToViewport);
+  window.addEventListener('gamepadconnected', () => {
+    setInputSource('gamepad');
+    setGpConnected(true);
+    updateGpVisuals();
+  });
+  window.addEventListener('gamepaddisconnected', () => {
+    setInputSource('keyboard');
+    setGpConnected(false);
+    updateGpVisuals();
+  });
+
+  initInputHandlers({ 
+    onDrop: drop, 
+    onShakeForce: applyShakeForce,
+    onGyroHud: showGyroHud 
+  });
+
+  loadCbPrefs();
+  window.addEventListener('resize', () => {
     fitToViewport();
-    buildEvoChart(firstMerged);
-    updateNextUI(nxt, gameLevel, drawAtFit);
-
-    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-    const isMobile = window.matchMedia('(pointer:coarse)').matches;
-    if (isIOS) {
-      const el = document.getElementById('fsp-ios'); if (el) el.style.display = '';
-      setPromptActionButton('Got it!', dismissFsPrompt);
-    } else if (isMobile) {
-      const el = document.getElementById('fsp-android'); if (el) el.style.display = '';
-      setPromptActionButton('Got it!', enterFullscreen);
-    } else {
-      const el = document.getElementById('fsp-pc'); if (el) el.style.display = '';
-      setPromptActionButton('Got it!', dismissFsPrompt);
-    }
-
-    const unlockAudio = () => { if (bgmOn && !muted) startBGM(); };
-    document.addEventListener('click', unlockAudio, { once: true });
-    document.addEventListener('touchstart', unlockAudio, { once: true });
-
-    requestAnimationFrame(loop);
+    updateJoystickLayout();
   });
+  fitToViewport();
+  updateJoystickLayout();
+  buildEvoChart(firstMerged);
+  updateNextUI(nxt, gameLevel, drawAtFit);
+  resetClawForNewRound();
+  updateGpVisuals();
+
+  const isIOS = typeof navigator !== 'undefined' && /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isMobile = window.matchMedia('(pointer:coarse)').matches;
+  if (isIOS) {
+    const el = document.getElementById('fsp-ios'); if (el) el.style.display = '';
+    setPromptActionButton('Got it!', dismissFsPrompt);
+  } else if (isMobile) {
+    const el = document.getElementById('fsp-android'); if (el) el.style.display = '';
+    setPromptActionButton('Got it!', enterFullscreen);
+  } else {
+    const el = document.getElementById('fsp-pc'); if (el) el.style.display = '';
+    setPromptActionButton('Got it!', dismissFsPrompt);
+  }
+
+  const unlockAudio = () => { 
+    markUserInteracted();
+    if (bgmOn && !muted) startBGM();
+  };
+  document.addEventListener('click', unlockAudio, { once: true });
+  document.addEventListener('touchstart', unlockAudio, { once: true });
+  document.addEventListener('keydown', unlockAudio, { once: true });
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js', { type: 'module' });
-    navigator.serviceWorker.addEventListener('message', e => {
-      if (e.data?.type === 'SW_UPDATED') {
-        const toast = document.getElementById('update-toast');
-        if (toast) toast.style.display = 'block';
-      }
-    });
   }
+
+  requestAnimationFrame(loop);
 }
 
 boot();

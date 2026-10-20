@@ -1,14 +1,16 @@
 import { 
   W, H, PD, DY, DROPY, FS, SOURCE_W, REFLECT_SCALE, REFLECT_VIS, 
-  CONFETTI_COLORS, CLAW_OPEN_FRAMES, imgR, cssHex, TD, VERSION
+  CONFETTI_COLORS, CLAW_OPEN_FRAMES, imgR, cssHex, TD, VERSION 
 } from './config.js';
 import { predictLanding, getSides, getVerts } from './physics.js';
 
 export const app = new PIXI.Application();
+
 Object.defineProperty(window, '__PIXI_DEVTOOLS__', {
   get: () => ({ app, stage: app.stage ?? undefined, renderer: app.renderer ?? undefined }),
   configurable: true
 });
+
 export let layerBg, layerUI, layerClaw, layerPlushie, layerFx;
 let gfxUI, gfxClaw, gfxFx;
 let clawSprBack, clawSprFront, clawHeldSpr, trapDoorSpr;
@@ -18,6 +20,11 @@ let _reflectSprLt = null, _reflectSprRt = null;
 let _coverTopLt = null, _coverTopRt = null, _coverBotLt = null, _coverBotRt = null;
 let _reflectFrame = 0;
 let _reflectEnabled = false;
+let _reflectState = 'probing';
+let _reflectWindowStart = 0;
+const REFLECT_WINDOW_MS = 2000, REFLECT_FPS_ON = 55, REFLECT_FPS_OFF = 55;
+const _rfpsD = new Float32Array(60); 
+let _rfpsI = 0, _rfpsPrev = 0;
 
 export const plushieTextures = new Array(12);
 let _clawTexBack, _clawTexFront, _clawTexOpen;
@@ -44,6 +51,13 @@ export function tickGlare() {
   }
 }
 
+export function makeShadow() {
+  const F = globalThis.PixiFilters || PIXI?.filters;
+  if (!F?.DropShadowFilter) return null;
+  const dpr = window.devicePixelRatio || 1;
+  return new F.DropShadowFilter({ offset: { x: 2, y: 5 }, blur: 4, alpha: 0.28, color: 0x000000, resolution: dpr });
+}
+
 export async function initPixi(canvas) {
   const isMobile = window.matchMedia('(pointer:coarse)').matches;
   const dpr = window.devicePixelRatio || 1;
@@ -61,6 +75,7 @@ export async function initPixi(canvas) {
   canvas.style.height = '';
 
   _reflectEnabled = !isMobile;
+  _reflectState = isMobile ? 'probing' : 'on';
 
   layerBg = new PIXI.Container();      layerBg.label = 'layer_bg';
   layerUI = new PIXI.Container();      layerUI.label = 'layer_ui';
@@ -99,72 +114,102 @@ export async function initPixi(canvas) {
   trapDoorSpr.visible = false;
   layerBg.addChild(trapDoorSpr);
 
-  _dangerText = new PIXI.Text({ text: 'DANGER', style: { fontFamily: "'Share Tech Mono',monospace", fontSize: Math.round(11 * FS), fontWeight: '700', fill: '#D23737' } });
+  // Initialize texts with system fallbacks immediately:
+  _dangerText = new PIXI.Text({ 
+    text: 'DANGER', 
+    style: { fontFamily: "'Share Tech Mono', monospace, sans-serif", fontSize: Math.round(11 * FS), fontWeight: '700', fill: '#D23737' } 
+  });
   _dangerText.x = W * 0.1 + 5; _dangerText.y = DY - Math.round(14 * FS);
   layerUI.addChild(_dangerText);
 
-  _versionText = new PIXI.Text({ text: VERSION, style: { fontFamily: "'Share Tech Mono',monospace", fontSize: Math.round(9 * FS), fontWeight: '700', fill: '#5a3820' } });
+  _versionText = new PIXI.Text({ 
+    text: VERSION, 
+    style: { fontFamily: "'Share Tech Mono', monospace, sans-serif", fontSize: Math.round(9 * FS), fontWeight: '700', fill: '#5a3820' } 
+  });
   _versionText.anchor.set(1, 1); _versionText.x = W - W * 0.1 - 4; _versionText.y = DY - 5; _versionText.alpha = 0.45;
   layerUI.addChild(_versionText);
 
-  _tapText = new PIXI.Text({ text: 'TAP TO DROP', style: { fontFamily: "'Cherry Bomb One',sans-serif", fontSize: Math.round(36 * FS), fill: '#5a3820', stroke: { color: '#ffffff', width: 3 } } });
+  _tapText = new PIXI.Text({ 
+    text: 'TAP TO DROP', 
+    style: { fontFamily: "'Cherry Bomb One', 'Segoe UI', system-ui, sans-serif", fontSize: Math.round(36 * FS), fill: '#5a3820', stroke: { color: '#ffffff', width: 3 } } 
+  });
   _tapText.anchor.set(0.5, 0.5); _tapText.x = W / 2; _tapText.y = H / 2; _tapText.visible = false;
   layerUI.addChild(_tapText);
 }
 
-export function loadSprites(cb) {
-  const total = 11 + 6; let done = 0;
-  const tick = () => { if (++done === total) _loadPixiAssets(cb); };
-  for (let lvl = 1; lvl <= 11; lvl++) {
-    const img = new Image(); img.onload = img.onerror = tick;
-    img.src = `Sprites/characters/level_${lvl}.png`; imgSprites[lvl] = img;
+// Export a hot-swap function for when Google Fonts finishes downloading
+export function refreshFontStyles() {
+  if (_tapText && !_tapText.destroyed) {
+    _tapText.style = {
+      fontFamily: "'Cherry Bomb One', 'Segoe UI', system-ui, sans-serif",
+      fontSize: Math.round(36 * FS),
+      fontWeight: '400',
+      fill: '#5a3820',
+      stroke: { color: '#ffffff', width: 3 }
+    };
   }
-  ['back', 'front', 'open'].forEach(k => {
-    const img = new Image(); img.onload = img.onerror = tick;
-    img.src = `Sprites/claw/claw_${k}.png`; _extraImgs[k] = img;
-  });
-  const floor = new Image(); floor.onload = floor.onerror = tick;
-  floor.src = 'Sprites/machine/claw_machine_floor_tile.png'; _extraImgs.floor = floor;
-  const ct = new Image(); ct.onload = ct.onerror = tick;
-  ct.src = 'Sprites/machine/claw_machine_top_left_reflection_cover.png'; _extraImgs.coverTopLt = ct;
-  const cb2 = new Image(); cb2.onload = cb2.onerror = tick;
-  cb2.src = 'Sprites/machine/claw_machine_bottom_left_reflection_cover.png'; _extraImgs.coverBotLt = cb2;
+  if (_dangerText && !_dangerText.destroyed) {
+    _dangerText.style.fontFamily = "'Share Tech Mono', monospace";
+  }
+  if (_versionText && !_versionText.destroyed) {
+    _versionText.style.fontFamily = "'Share Tech Mono', monospace";
+  }
 }
 
-function _loadPixiAssets(cb) {
-  for (let i = 1; i <= 11; i++) {
-    const img = imgSprites[i];
-    if (img && img.naturalWidth) plushieTextures[i] = PIXI.Texture.from(img);
+// Asynchronous, incremental sprite loading (never blocks boot)
+export function loadSprites() {
+  for (let lvl = 1; lvl <= 11; lvl++) {
+    const img = new Image();
+    img.src = `Sprites/characters/level_${lvl}.png`;
+    imgSprites[lvl] = img;
+    img.onload = () => {
+      plushieTextures[lvl] = PIXI.Texture.from(img);
+    };
   }
-  const mkTex = img => img && img.naturalWidth ? PIXI.Texture.from(img) : null;
-  _clawTexBack = mkTex(_extraImgs.back);
-  _clawTexFront = mkTex(_extraImgs.front);
-  _clawTexOpen = mkTex(_extraImgs.open);
-  if (_clawTexBack) clawSprBack.texture = _clawTexBack;
-  if (_clawTexFront) clawSprFront.texture = _clawTexFront;
-  const td = mkTex(_extraImgs.floor);
-  if (td) {
-    const ns = new PIXI.NineSliceSprite({ texture: td, leftWidth: 90, rightWidth: 90, topHeight: 0, bottomHeight: 0 });
-    ns.visible = false;
-    layerBg.removeChild(trapDoorSpr); trapDoorSpr.destroy();
-    trapDoorSpr = ns; layerBg.addChild(trapDoorSpr);
-  }
-  const mkCover = (spr, img, flipX) => {
-    if (!img || !img.naturalWidth) return;
-    spr.texture = PIXI.Texture.from(img);
-    spr.scale.x = flipX ? -1 : 1;
+
+  const loadExtra = (key, path, onLoaded) => {
+    const img = new Image();
+    img.src = path;
+    _extraImgs[key] = img;
+    img.onload = () => {
+      const tex = PIXI.Texture.from(img);
+      onLoaded(tex, img);
+    };
   };
-  mkCover(_coverTopLt, _extraImgs.coverTopLt, false);
-  mkCover(_coverTopRt, _extraImgs.coverTopLt, true);
-  mkCover(_coverBotLt, _extraImgs.coverBotLt, false);
-  mkCover(_coverBotRt, _extraImgs.coverBotLt, true);
-  if (_extraImgs.coverBotLt && _extraImgs.coverBotLt.naturalHeight) {
-    _coverBotLt.y = H - _extraImgs.coverBotLt.naturalHeight;
-    _coverBotRt.y = H - _extraImgs.coverBotLt.naturalHeight;
+
+  loadExtra('back', 'Sprites/claw/claw_back.png', tex => {
+    _clawTexBack = tex;
+    if (clawSprBack) clawSprBack.texture = tex;
+  });
+  loadExtra('front', 'Sprites/claw/claw_front.png', tex => {
+    _clawTexFront = tex;
+    if (clawSprFront) clawSprFront.texture = tex;
+  });
+  loadExtra('open', 'Sprites/claw/claw_open.png', tex => {
+    _clawTexOpen = tex;
+  });
+  loadExtra('floor', 'Sprites/machine/claw_machine_floor_tile.png', tex => {
+    const ns = new PIXI.NineSliceSprite({ texture: tex, leftWidth: 90, rightWidth: 90, topHeight: 0, bottomHeight: 0 });
+    ns.visible = false;
+    layerBg.removeChild(trapDoorSpr);
+    trapDoorSpr.destroy();
+    trapDoorSpr = ns;
+    layerBg.addChild(trapDoorSpr);
+  });
+  loadExtra('coverTopLt', 'Sprites/machine/claw_machine_top_left_reflection_cover.png', (tex, img) => {
+    _coverTopLt.texture = tex;
+    _coverTopRt.texture = tex;
+    _coverTopRt.scale.x = -1;
+    _coverTopRt.x = W;
+  });
+  loadExtra('coverBotLt', 'Sprites/machine/claw_machine_bottom_left_reflection_cover.png', (tex, img) => {
+    _coverBotLt.texture = tex;
+    _coverBotRt.texture = tex;
+    _coverBotRt.scale.x = -1;
+    _coverBotLt.y = H - img.naturalHeight;
+    _coverBotRt.y = H - img.naturalHeight;
     _coverBotRt.x = W;
-  }
-  _coverTopRt.x = W;
-  cb();
+  });
 }
 
 export function drawAtFit(c, cW, cH, lvl, alpha = 1) {
@@ -173,6 +218,29 @@ export function drawAtFit(c, cW, cH, lvl, alpha = 1) {
   const sc = Math.min(cW / img.naturalWidth, cH / img.naturalHeight);
   const w = img.naturalWidth * sc, h = img.naturalHeight * sc;
   c.save(); c.globalAlpha = alpha; c.drawImage(img, (cW - w) / 2, (cH - h) / 2, w, h); c.restore();
+}
+
+export function tickReflect(now) {
+  const isMobile = window.matchMedia('(pointer:coarse)').matches;
+  if (!isMobile) { _reflectEnabled = true; return; }
+  if (_reflectState === 'off_permanent') { _reflectEnabled = false; return; }
+  if (_rfpsPrev > 0) { _rfpsD[_rfpsI % 60] = now - _rfpsPrev; _rfpsI++; }
+  _rfpsPrev = now;
+  const n = Math.min(_rfpsI, 60); let avg = 0; for (let i = 0; i < n; i++) avg += _rfpsD[i];
+  const fps = n > 0 ? 1000 / (avg / n) : 60;
+  if (_reflectWindowStart === 0) _reflectWindowStart = now;
+  const elapsed = now - _reflectWindowStart;
+  if (_reflectState === 'probing') {
+    if (fps < REFLECT_FPS_ON) _reflectWindowStart = now;
+    else if (elapsed >= REFLECT_WINDOW_MS) { _reflectState = 'on'; _reflectEnabled = true; _reflectWindowStart = now; }
+  } else if (_reflectState === 'on') {
+    _reflectEnabled = true;
+    if (fps < REFLECT_FPS_OFF) {
+      if (elapsed >= REFLECT_WINDOW_MS) { _reflectState = 'off_permanent'; _reflectEnabled = false; }
+    } else {
+      _reflectWindowStart = now;
+    }
+  }
 }
 
 export function captureReflect() {
@@ -263,7 +331,7 @@ export function renderScene(state) {
   if (_tapText.visible) _tapText.alpha = (0.4 + 0.6 * Math.abs(Math.sin(now / 700))) * 0.75;
 
   clawSprBack.visible = false; clawSprFront.visible = false; clawHeldSpr.visible = false;
-  if (!state.dead) {
+  if (!state.dead && state.showClaw !== false) {
     const lvl = (state.clawState === 'opening') ? state.clawLvl : state.cur;
     const gr = PD[lvl].r, cx = state.clawX, cy = DROPY, cw = Math.max(70, gr * 3.0), imgY = cy - cw * 0.78;
     if (state.clawState === 'idle') {
@@ -289,6 +357,8 @@ export function renderScene(state) {
       p.sprite.zIndex = 11 - p.level;
       p.sprite.anchor.set(0.5, 0.5);
       p.sprite.scale.set(PD[p.level].r / imgR(p.level));
+      const sh = makeShadow();
+      if (sh) p.sprite.filters = [sh];
       layerPlushie.addChild(p.sprite);
     }
     if (p.sprite) {
@@ -308,8 +378,15 @@ export function renderScene(state) {
         const n = getSides(p.level, state.sidesOffset), r = PD[p.level].physR ?? PD[p.level].r, pts = [];
         for (let k = 0; k < n; k++) { const a = p.angle + 2 * Math.PI * k / n; pts.push(p.x + r * Math.cos(a), p.y + r * Math.sin(a)); }
         gfxFx.poly(pts).fill({ color: cssHex(PD[p.level].body) }).stroke({ width: 2, color: cssHex(PD[p.level].stroke) });
+        if (!p._nameText) {
+          p._nameText = new PIXI.Text({ text: PD[p.level].name, style: { fontFamily: 'monospace', fontSize: Math.max(8, Math.round(r * 0.28)), fontWeight: 'bold', fill: 'rgba(0,0,0,0.65)' } });
+          p._nameText.anchor.set(0.5, 0.5);
+          layerFx.addChild(p._nameText);
+        }
+        p._nameText.x = p.x; p._nameText.y = p.y; p._nameText.visible = true;
       } else {
         p.sprite.visible = true;
+        if (p._nameText) p._nameText.visible = false;
       }
     }
   }
